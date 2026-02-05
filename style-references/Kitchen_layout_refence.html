@@ -1,0 +1,1031 @@
+<html lang="en" vid="0">
+
+<head vid="1">
+    <meta charset="UTF-8" vid="2">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" vid="3">
+    <title vid="4">NutriTrack Kitchen</title>
+    <script src="https://cdn.tailwindcss.com/3.4.17" vid="5"></script>
+    <script src="https://unpkg.com/lucide@latest" vid="6"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=Playfair+Display:wght@400;600;700&amp;display=swap"
+        rel="stylesheet" vid="7">
+    <style vid="8">
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #2a2a2a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .font-serif {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .bg-cream {
+            background-color: #F5F1E8;
+        }
+
+        .text-emerald-deep {
+            color: #005C45;
+        }
+
+        .bg-emerald-deep {
+            background-color: #005C45;
+        }
+
+        .border-emerald-deep {
+            border-color: #005C45;
+        }
+    </style>
+</head>
+
+<body vid="9">
+
+
+    <div id="app-container"
+        class="relative w-full h-full max-w-[400px] max-h-[867px] aspect-[400/867] overflow-hidden bg-[#F5F1E8] shadow-2xl sm:rounded-[20px] text-gray-800 flex flex-col"
+        vid="10">
+
+
+        <div class="h-12 w-full flex justify-between items-center px-6 pt-2 z-50 shrink-0" vid="11">
+            <span class="font-medium text-sm" vid="12">9:41</span>
+            <div class="flex gap-1.5" vid="13">
+                <i data-lucide="signal" class="w-4 h-4 text-gray-800" vid="14"></i>
+                <i data-lucide="wifi" class="w-4 h-4 text-gray-800" vid="15"></i>
+                <div class="w-6 h-3 rounded bg-gray-800 relative overflow-hidden flex items-center px-0.5" vid="16">
+                    <div class="bg-white w-[80%] h-[70%] rounded-sm" vid="17"></div>
+                </div>
+            </div>
+        </div>
+
+
+        <div id="main-content" class="flex-1 overflow-y-auto hide-scrollbar relative bg-[#F5F1E8]" vid="18">
+
+        </div>
+
+
+        <div id="bottom-nav"
+            class="h-[84px] bg-white border-t border-[#E5E0D6] flex justify-around items-center pb-5 px-2 shrink-0 z-50 hidden"
+            vid="19">
+            <button onclick="router.navigate('fridge')"
+                class="nav-btn flex flex-col items-center gap-1 p-2 w-16 transition-colors" vid="20">
+                <i data-lucide="refrigerator" class="w-6 h-6" vid="21"></i>
+                <span class="text-[10px] font-medium tracking-wide" vid="22">Fridge</span>
+            </button>
+            <button onclick="router.navigate('recipes')"
+                class="nav-btn flex flex-col items-center gap-1 p-2 w-16 transition-colors" vid="23">
+                <i data-lucide="chef-hat" class="w-6 h-6" vid="24"></i>
+                <span class="text-[10px] font-medium tracking-wide" vid="25">Recipes</span>
+            </button>
+
+            <button onclick="router.navigate('add-groceries')"
+                class="-mt-8 bg-[#005C45] text-[#F5F1E8] rounded-full p-4 shadow-xl shadow-[#005C45]/30 hover:scale-105 transition-transform active:scale-95"
+                vid="26">
+                <i data-lucide="scan-barcode" class="w-7 h-7" vid="27"></i>
+            </button>
+            <button class="nav-btn flex flex-col items-center gap-1 p-2 w-16 text-gray-400" vid="28">
+                <i data-lucide="shopping-cart" class="w-6 h-6" vid="29"></i>
+                <span class="text-[10px] font-medium tracking-wide" vid="30">Shop</span>
+            </button>
+            <button class="nav-btn flex flex-col items-center gap-1 p-2 w-16 text-gray-400" vid="31">
+                <i data-lucide="user" class="w-6 h-6" vid="32"></i>
+                <span class="text-[10px] font-medium tracking-wide" vid="33">Profile</span>
+            </button>
+        </div>
+    </div>
+
+
+
+
+    <template id="view-fridge" vid="34">
+        <div class="px-6 pb-28 pt-4">
+
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">My Kitchen</h2>
+                    <h1 class="font-serif text-3xl font-bold text-[#005C45]">Inventory</h1>
+                </div>
+                <button onclick="router.navigate('add-groceries')"
+                    class="bg-[#E8F0EE] text-[#005C45] w-10 h-10 rounded-full flex items-center justify-center hover:bg-[#D1E3DE] transition-colors">
+                    <i data-lucide="plus" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+
+            <div class="relative mb-8">
+                <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                <input type="text" placeholder="Search ingredients..."
+                    class="w-full bg-white border border-[#E5E0D6] rounded-xl py-3.5 pl-10 pr-4 text-sm focus:outline-none focus:border-[#005C45] focus:ring-1 focus:ring-[#005C45] placeholder-gray-400 shadow-sm">
+            </div>
+
+
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                        <h3 class="font-serif text-lg font-bold text-gray-900">Use Soon (2-3 days)</h3>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+
+                    <div onclick="router.navigate('fridge-detail')"
+                        class="bg-white p-4 rounded-2xl shadow-sm border border-red-100 flex gap-4 relative overflow-hidden active:scale-[0.98] transition-transform duration-200 cursor-pointer">
+                        <div
+                            class="absolute top-0 right-0 bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded-bl-lg border-b border-l border-red-100">
+                            EXP: 2 DAYS</div>
+                        <div class="w-16 h-16 bg-gray-100 rounded-xl shrink-0 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1606728035253-49e8a23146de?w=150&amp;q=80"
+                                class="w-full h-full object-cover" alt="Pork belly">
+                        </div>
+                        <div class="flex-1 min-w-0 pr-12">
+                            <h4 class="font-bold text-gray-900 truncate">Thịt ba chỉ</h4>
+                            <p class="text-xs text-gray-500 mb-3 font-medium">500g • Meat</p>
+                            <div class="flex gap-2">
+                                <button onclick="event.stopPropagation()"
+                                    class="px-3 py-1.5 bg-[#005C45] text-[#F5F1E8] text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-[#004a37]">Use
+                                    now</button>
+                                <button onclick="event.stopPropagation()"
+                                    class="px-3 py-1.5 bg-gray-50 text-gray-600 border border-gray-200 text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-gray-100">Extend</button>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    <div onclick="router.navigate('fridge-detail')"
+                        class="bg-white p-4 rounded-2xl shadow-sm border border-red-100 flex gap-4 relative overflow-hidden active:scale-[0.98] transition-transform duration-200 cursor-pointer">
+                        <div
+                            class="absolute top-0 right-0 bg-red-50 text-red-600 text-[10px] font-bold px-2 py-1 rounded-bl-lg border-b border-l border-red-100">
+                            EXP: 3 DAYS</div>
+                        <div class="w-16 h-16 bg-gray-100 rounded-xl shrink-0 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1628795550275-d1fb78939c06?w=150&amp;q=80"
+                                class="w-full h-full object-cover" alt="Water spinach">
+                        </div>
+                        <div class="flex-1 min-w-0 pr-12">
+                            <h4 class="font-bold text-gray-900 truncate">Rau muống</h4>
+                            <p class="text-xs text-gray-500 mb-3 font-medium">200g • Veg</p>
+                            <div class="flex gap-2">
+                                <button onclick="event.stopPropagation()"
+                                    class="px-3 py-1.5 bg-[#005C45] text-[#F5F1E8] text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-[#004a37]">Use
+                                    now</button>
+                                <button onclick="event.stopPropagation()"
+                                    class="px-3 py-1.5 bg-gray-50 text-gray-600 border border-gray-200 text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-gray-100">Extend</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="mb-8">
+                <h3 class="font-serif text-lg font-bold text-gray-900 mb-4">This Week (4-7 days)</h3>
+                <div class="space-y-3">
+
+                    <div class="bg-white p-3 rounded-2xl shadow-sm border border-[#E5E0D6] flex items-center gap-4">
+                        <div class="w-12 h-12 bg-gray-100 rounded-lg shrink-0 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150&amp;q=80"
+                                class="w-full h-full object-cover" alt="Tomato">
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900 text-sm">Cà chua</h4>
+                            <p class="text-[11px] text-gray-500 font-medium">5 quả • Exp: 5 days</p>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+
+
+                    <div class="bg-white p-3 rounded-2xl shadow-sm border border-[#E5E0D6] flex items-center gap-4">
+                        <div class="w-12 h-12 bg-gray-100 rounded-lg shrink-0 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1587486913049-53fc88980cfc?w=150&amp;q=80"
+                                class="w-full h-full object-cover" alt="Eggs">
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900 text-sm">Trứng gà</h4>
+                            <p class="text-[11px] text-gray-500 font-medium">12 quả • Exp: 6 days</p>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+
+
+                    <div class="bg-white p-3 rounded-2xl shadow-sm border border-[#E5E0D6] flex items-center gap-4">
+                        <div class="w-12 h-12 bg-gray-100 rounded-lg shrink-0 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1615477218698-c9ceb555d7f0?w=150&amp;q=80"
+                                class="w-full h-full object-cover" alt="Garlic">
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900 text-sm">Tỏi</h4>
+                            <p class="text-[11px] text-gray-500 font-medium">3 củ • Exp: 7 days</p>
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="mb-4">
+                <h3 class="font-serif text-lg font-bold text-gray-900 mb-4">Long-term Storage</h3>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-white p-3 rounded-xl border border-[#E5E0D6] text-center shadow-sm">
+                        <div class="w-full aspect-square bg-gray-50 rounded-lg mb-2 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1586201375761-83865001e31c?w=150&amp;q=80"
+                                class="w-full h-full object-cover">
+                        </div>
+                        <p class="text-xs font-semibold text-gray-800 truncate">Gạo</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-[#E5E0D6] text-center shadow-sm">
+                        <div class="w-full aspect-square bg-gray-50 rounded-lg mb-2 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1599320986938-1a5c6020556e?w=150&amp;q=80"
+                                class="w-full h-full object-cover">
+                        </div>
+                        <p class="text-xs font-semibold text-gray-800 truncate">Nước mắm</p>
+                    </div>
+                    <div class="bg-white p-3 rounded-xl border border-[#E5E0D6] text-center shadow-sm">
+                        <div class="w-full aspect-square bg-gray-50 rounded-lg mb-2 overflow-hidden">
+                            <img src="https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=150&amp;q=80"
+                                class="w-full h-full object-cover">
+                        </div>
+                        <p class="text-xs font-semibold text-gray-800 truncate">Hành tây</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+
+    <template id="view-recipes" vid="35">
+        <div class="px-6 pb-28 pt-4">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Cook with AI</h2>
+                    <h1 class="font-serif text-3xl font-bold text-[#005C45]">Recipes</h1>
+                </div>
+
+                <button
+                    class="flex items-center gap-2 bg-white pl-4 pr-3 py-2 rounded-xl border border-[#E5E0D6] shadow-sm text-sm font-semibold text-[#005C45] hover:bg-gray-50">
+                    Flexible
+                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+
+            <div class="mb-8">
+                <div class="flex items-center gap-2 mb-4">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-yellow-500 fill-yellow-500"></i>
+                    <h3 class="font-serif text-lg font-bold text-gray-900">AI-Suggested (from your fridge)</h3>
+                </div>
+
+
+                <div onclick="router.navigate('recipe-detail')"
+                    class="bg-white rounded-[24px] overflow-hidden shadow-sm border border-[#E5E0D6] mb-6 active:scale-[0.98] transition-transform duration-200 cursor-pointer group">
+                    <div class="h-48 relative overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1598514983318-2f64f8f4796c?w=600&amp;q=80"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            alt="Thit kho trung">
+                        <div
+                            class="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-[#005C45] flex items-center gap-1.5 shadow-sm">
+                            <i data-lucide="clock" class="w-3 h-3"></i> 30 min
+                        </div>
+                        <div
+                            class="absolute bottom-4 left-4 bg-red-500/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-[10px] font-bold shadow-sm flex items-center gap-1.5">
+                            <i data-lucide="alert-circle" class="w-3 h-3"></i> Expires soon!
+                        </div>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="font-serif text-xl font-bold text-gray-900 leading-tight">Thịt Kho Trứng</h3>
+                            <span
+                                class="text-[10px] uppercase tracking-wider bg-green-100 text-green-800 px-2 py-1 rounded-md font-bold shrink-0 ml-2">Easy</span>
+                        </div>
+                        <div class="space-y-2.5">
+                            <div class="flex items-center gap-2.5 text-sm text-gray-700">
+                                <div
+                                    class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                                    <i data-lucide="check" class="w-3 h-3 text-green-700"></i>
+                                </div>
+                                <span class="font-medium">Thịt ba chỉ, Trứng</span>
+                            </div>
+                            <div class="flex items-center gap-2.5 text-sm text-orange-600">
+                                <div
+                                    class="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                                    <i data-lucide="shopping-cart" class="w-3 h-3 text-orange-600"></i>
+                                </div>
+                                <span class="font-medium">Nước mắm (~15k)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div onclick="router.navigate('recipe-detail')"
+                    class="bg-white rounded-[24px] overflow-hidden shadow-sm border border-[#E5E0D6] mb-4 active:scale-[0.98] transition-transform duration-200 cursor-pointer group">
+                    <div class="h-40 relative overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1610444645229-3b6b1076b6d8?w=600&amp;q=80"
+                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            alt="Rau muong xao">
+                        <div
+                            class="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-bold text-[#005C45] flex items-center gap-1.5 shadow-sm">
+                            <i data-lucide="clock" class="w-3 h-3"></i> 10 min
+                        </div>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="font-serif text-xl font-bold text-gray-900 leading-tight">Rau Muống Xào Tỏi</h3>
+                            <span
+                                class="text-[10px] uppercase tracking-wider bg-green-100 text-green-800 px-2 py-1 rounded-md font-bold shrink-0 ml-2">Super
+                                Easy</span>
+                        </div>
+                        <div
+                            class="flex items-center gap-2 text-xs text-[#005C45] font-bold bg-[#E8F0EE] px-3 py-2 rounded-lg inline-flex">
+                            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> All from fridge!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-serif text-lg font-bold text-gray-900">❤️ Favorites</h3>
+                    <span class="text-xs text-gray-500 font-bold tracking-wide">VIEW ALL</span>
+                </div>
+                <div class="flex gap-4 overflow-x-auto pb-4 hide-scrollbar -mx-6 px-6">
+
+                    <div class="w-36 shrink-0 group cursor-pointer">
+                        <div class="h-44 w-36 rounded-2xl overflow-hidden mb-2 relative shadow-md">
+                            <img src="https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=300&amp;q=80"
+                                class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent">
+                            </div>
+                            <span
+                                class="absolute bottom-3 left-3 text-white font-serif font-bold text-lg leading-tight">Phở<br>Bò</span>
+                        </div>
+                    </div>
+
+                    <div class="w-36 shrink-0 group cursor-pointer">
+                        <div class="h-44 w-36 rounded-2xl overflow-hidden mb-2 relative shadow-md">
+                            <img src="https://images.unsplash.com/photo-1579893963471-2b8849b28b48?w=300&amp;q=80"
+                                class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent">
+                            </div>
+                            <span
+                                class="absolute bottom-3 left-3 text-white font-serif font-bold text-lg leading-tight">Cơm<br>Gà</span>
+                        </div>
+                    </div>
+
+                    <div class="w-36 shrink-0 group cursor-pointer">
+                        <div class="h-44 w-36 rounded-2xl overflow-hidden mb-2 relative shadow-md">
+                            <img src="https://images.unsplash.com/photo-1563227812-0ea4c22e6cc8?w=300&amp;q=80"
+                                class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent">
+                            </div>
+                            <span
+                                class="absolute bottom-3 left-3 text-white font-serif font-bold text-lg leading-tight">Bún<br>Chả</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-serif text-lg font-bold text-gray-900">🔥 Trending</h3>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex items-center gap-4 bg-white p-3 rounded-2xl border border-[#E5E0D6] shadow-sm">
+                        <div class="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden shrink-0">
+                            <img src="https://images.unsplash.com/photo-1548507200-dd2e6b0631c9?w=150&amp;q=80"
+                                class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-900 font-serif text-lg">Gỏi Cuốn</h4>
+                            <p class="text-xs text-gray-500 font-medium">Fresh Spring Rolls • 250 kcal</p>
+                        </div>
+                        <button
+                            class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-[#005C45] hover:bg-gray-100">
+                            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-4 bg-white p-3 rounded-2xl border border-[#E5E0D6] shadow-sm">
+                        <div class="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden shrink-0">
+                            <img src="https://images.unsplash.com/photo-1511283674697-3f339f4277b1?w=150&amp;q=80"
+                                class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-gray-900 font-serif text-lg">Bánh Xèo</h4>
+                            <p class="text-xs text-gray-500 font-medium">Vietnamese Pancake • 520 kcal</p>
+                        </div>
+                        <button
+                            class="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-[#005C45] hover:bg-gray-100">
+                            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button
+                class="w-full py-4 text-[#005C45] font-bold text-sm border-2 border-[#005C45] rounded-xl hover:bg-[#E8F0EE] transition-colors mb-4">
+                Browse all recipes →
+            </button>
+        </div>
+    </template>
+
+
+    <template id="view-recipe-detail" vid="36">
+        <div class="bg-white min-h-full pb-28">
+
+            <div class="h-80 w-full relative">
+                <img src="https://images.unsplash.com/photo-1598514983318-2f64f8f4796c?w=600&amp;q=80"
+                    class="w-full h-full object-cover" alt="Thit Kho Trung Detail">
+
+
+                <div class="absolute top-0 left-0 w-full px-6 pt-6 flex justify-between items-center text-white z-20">
+                    <button onclick="router.back()"
+                        class="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center hover:bg-black/40 transition-colors border border-white/10">
+                        <i data-lucide="arrow-left" class="w-5 h-5 text-white"></i>
+                    </button>
+                    <div class="flex gap-3">
+                        <button
+                            class="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center hover:bg-black/40 transition-colors border border-white/10">
+                            <i data-lucide="heart" class="w-5 h-5 text-white"></i>
+                        </button>
+                        <button
+                            class="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center hover:bg-black/40 transition-colors border border-white/10">
+                            <i data-lucide="share-2" class="w-5 h-5 text-white"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/80"></div>
+
+                <div class="absolute bottom-0 left-0 w-full p-6 text-white pb-10">
+                    <h1 class="font-serif text-3xl font-bold mb-3 leading-tight">Thịt Kho Trứng</h1>
+                    <div class="flex items-center gap-4 text-xs font-bold uppercase tracking-wide opacity-90">
+                        <span class="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-2 py-1 rounded"><i
+                                data-lucide="clock" class="w-3.5 h-3.5"></i> 30 min</span>
+                        <span class="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-2 py-1 rounded"><i
+                                data-lucide="chef-hat" class="w-3.5 h-3.5"></i> Easy</span>
+                        <span class="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-2 py-1 rounded"><i
+                                data-lucide="flame" class="w-3.5 h-3.5"></i> 450 kcal</span>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="bg-white -mt-6 rounded-t-[32px] relative z-10 px-6 pt-8">
+                <div class="w-12 h-1 bg-gray-200 rounded-full mx-auto mb-6"></div>
+
+
+                <div class="bg-[#F0FDF4] border border-green-100 rounded-2xl p-4 flex items-start gap-3 mb-8 shadow-sm">
+                    <div
+                        class="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                        <i data-lucide="check" class="w-3.5 h-3.5 stroke-[3]"></i>
+                    </div>
+                    <div>
+                        <p class="text-green-800 font-bold text-sm">You have nearly all ingredients!</p>
+                        <p class="text-green-700 text-xs mt-0.5 font-medium opacity-80">Only missing 1 item.</p>
+                    </div>
+                </div>
+
+
+                <div class="mb-8">
+                    <h3 class="font-serif text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
+                        📋 Ingredients
+                        <span class="text-sm font-sans text-gray-400 font-normal bg-gray-50 px-2 py-1 rounded-full">(6
+                            items)</span>
+                    </h3>
+
+                    <div class="space-y-4">
+
+                        <div class="flex items-center justify-between group py-1">
+                            <div class="flex items-center gap-3.5">
+                                <div
+                                    class="w-5 h-5 rounded border border-gray-200 flex items-center justify-center text-white bg-[#005C45] border-[#005C45]">
+                                    <i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>
+                                </div>
+                                <span class="text-gray-400 font-medium line-through decoration-gray-300">Thịt ba chỉ
+                                    (500g)</span>
+                            </div>
+                            <span
+                                class="text-[10px] text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded font-bold uppercase tracking-wide">Expires
+                                soon</span>
+                        </div>
+
+
+                        <div class="flex items-center justify-between group py-1">
+                            <div class="flex items-center gap-3.5">
+                                <div
+                                    class="w-5 h-5 rounded border border-gray-200 flex items-center justify-center text-white bg-[#005C45] border-[#005C45]">
+                                    <i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>
+                                </div>
+                                <span class="text-gray-400 font-medium line-through decoration-gray-300">Trứng gà
+                                    (4)</span>
+                            </div>
+                        </div>
+
+
+                        <div class="flex items-center justify-between group py-1">
+                            <div class="flex items-center gap-3.5">
+                                <div
+                                    class="w-5 h-5 rounded border border-gray-200 flex items-center justify-center text-white bg-[#005C45] border-[#005C45]">
+                                    <i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>
+                                </div>
+                                <span class="text-gray-400 font-medium line-through decoration-gray-300">Nước dừa (1
+                                    lon)</span>
+                            </div>
+                        </div>
+
+
+                        <div
+                            class="flex items-center justify-between group py-1 bg-orange-50/50 -mx-2 px-2 rounded-lg border border-orange-100/50">
+                            <div class="flex items-center gap-3.5">
+                                <div
+                                    class="w-5 h-5 rounded-full border-2 border-orange-300 flex items-center justify-center bg-white">
+                                </div>
+                                <span class="text-gray-900 font-semibold">Nước mắm (3 tbsp)</span>
+                            </div>
+                            <span
+                                class="text-[10px] text-orange-600 bg-orange-100 px-2 py-0.5 rounded font-bold uppercase tracking-wide">Missing</span>
+                        </div>
+
+
+                        <div class="flex items-center justify-between group py-1">
+                            <div class="flex items-center gap-3.5">
+                                <div
+                                    class="w-5 h-5 rounded border border-gray-200 flex items-center justify-center text-white bg-[#005C45] border-[#005C45]">
+                                    <i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>
+                                </div>
+                                <span class="text-gray-400 font-medium line-through decoration-gray-300">Hành tím
+                                    (2)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        class="w-full mt-6 py-3.5 border border-[#E5E0D6] rounded-xl text-gray-700 font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors shadow-sm">
+                        <i data-lucide="shopping-cart" class="w-4 h-4"></i> Add missing to shopping list
+                    </button>
+                </div>
+
+
+                <div class="mb-10">
+                    <h3 class="font-serif text-xl font-bold text-gray-900 mb-6 flex justify-between items-center">
+                        📝 Instructions
+                        <button
+                            class="text-xs font-sans text-[#005C45] font-bold bg-[#E8F0EE] px-3 py-1.5 rounded-full">5
+                            STEPS</button>
+                    </h3>
+                    <div class="space-y-8 relative pl-4 border-l-2 border-[#E5E0D6] ml-2">
+                        <div class="relative pl-6">
+                            <div
+                                class="absolute -left-[23px] top-1 w-3.5 h-3.5 rounded-full bg-[#005C45] ring-4 ring-white">
+                            </div>
+                            <h4 class="font-bold text-gray-900 text-sm mb-2 uppercase tracking-wide">Step 1</h4>
+                            <p class="text-gray-600 text-sm leading-relaxed">Boil the eggs for 8 minutes, peel and set
+                                aside. Cut the pork belly into bite-sized chunks (approx 3cm).</p>
+                        </div>
+                        <div class="relative pl-6">
+                            <div
+                                class="absolute -left-[23px] top-1 w-3.5 h-3.5 rounded-full bg-[#E5E0D6] ring-4 ring-white">
+                            </div>
+                            <h4 class="font-bold text-gray-900 text-sm mb-2 uppercase tracking-wide">Step 2</h4>
+                            <p class="text-gray-600 text-sm leading-relaxed">Marinate pork with minced shallots, garlic,
+                                fish sauce, and sugar for at least 20 mins to absorb flavors.</p>
+                        </div>
+                        <div class="relative pl-6">
+                            <div
+                                class="absolute -left-[23px] top-1 w-3.5 h-3.5 rounded-full bg-[#E5E0D6] ring-4 ring-white">
+                            </div>
+                            <h4 class="font-bold text-gray-900 text-sm mb-2 uppercase tracking-wide">Step 3</h4>
+                            <p class="text-gray-600 text-sm leading-relaxed">Caramelize sugar in the pot until golden
+                                brown, then add pork and stir-fry until firm and coated.</p>
+                        </div>
+                    </div>
+                    <button
+                        class="w-full text-[#005C45] text-sm font-bold mt-6 flex items-center justify-center gap-1 py-2 hover:bg-gray-50 rounded-lg">
+                        View all steps <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+
+                <div class="mb-24">
+                    <h3 class="font-serif text-xl font-bold text-gray-900 mb-4">📊 Nutrition <span
+                            class="text-sm font-sans font-normal text-gray-500">(per serving)</span></h3>
+                    <div class="grid grid-cols-4 gap-2">
+                        <div class="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
+                            <span class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Protein</span>
+                            <span class="block font-bold text-lg text-[#005C45]">28g</span>
+                        </div>
+                        <div class="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
+                            <span class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Carbs</span>
+                            <span class="block font-bold text-lg text-[#005C45]">12g</span>
+                        </div>
+                        <div class="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
+                            <span class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Fat</span>
+                            <span class="block font-bold text-lg text-[#005C45]">32g</span>
+                        </div>
+                        <div class="bg-gray-50 rounded-2xl p-3 text-center border border-gray-100">
+                            <span class="block text-[10px] uppercase font-bold text-gray-400 mb-1">Fiber</span>
+                            <span class="block font-bold text-lg text-[#005C45]">2g</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div
+                class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[400px] p-6 bg-gradient-to-t from-white via-white/95 to-transparent z-30 rounded-b-[20px]">
+                <button
+                    class="w-full bg-[#005C45] text-white py-4 rounded-xl font-bold shadow-xl shadow-green-900/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 hover:bg-[#004a37]">
+                    <i data-lucide="play-circle" class="w-5 h-5"></i> Start Cooking
+                </button>
+            </div>
+        </div>
+    </template>
+
+
+    <template id="view-fridge-detail" vid="37">
+        <div class="min-h-full pb-6 bg-[#F5F1E8]">
+            <div class="relative bg-white pb-8 rounded-b-[40px] shadow-sm z-10">
+                <div class="absolute top-6 left-6 z-10">
+                    <button onclick="router.back()"
+                        class="w-10 h-10 rounded-full bg-white/60 backdrop-blur-md flex items-center justify-center hover:bg-white/90 transition-colors shadow-sm">
+                        <i data-lucide="arrow-left" class="w-6 h-6 text-gray-800"></i>
+                    </button>
+                </div>
+                <div class="h-72 w-full bg-gray-100 relative">
+                    <img src="https://images.unsplash.com/photo-1606728035253-49e8a23146de?w=600&amp;q=80"
+                        class="w-full h-full object-cover">
+                    <div class="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-white to-transparent"></div>
+                </div>
+                <div class="px-6 -mt-10 relative">
+                    <div class="flex justify-between items-start mb-1">
+                        <h1 class="font-serif text-4xl font-bold text-gray-900">Thịt ba chỉ</h1>
+                    </div>
+                    <p class="text-gray-500 font-medium text-sm flex items-center gap-2">
+                        <i data-lucide="clock" class="w-4 h-4"></i> Added 3 days ago
+                    </p>
+
+                    <div class="flex items-center justify-between mt-8">
+                        <div>
+                            <label
+                                class="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Quantity</label>
+                            <div class="flex items-center gap-4 bg-[#F5F1E8] p-1.5 rounded-2xl">
+                                <button
+                                    class="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center text-[#005C45] hover:bg-gray-50 active:scale-95 transition-transform"><i
+                                        data-lucide="minus" class="w-5 h-5"></i></button>
+                                <span class="font-bold text-gray-800 min-w-[3.5rem] text-center text-lg">500g</span>
+                                <button
+                                    class="w-10 h-10 rounded-xl bg-[#005C45] shadow-sm flex items-center justify-center text-white hover:bg-[#004a37] active:scale-95 transition-transform"><i
+                                        data-lucide="plus" class="w-5 h-5"></i></button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Expiry
+                                Date</label>
+                            <button
+                                class="bg-red-50 border border-red-100 px-5 py-3.5 rounded-2xl flex items-center gap-2 text-red-600 font-bold hover:bg-red-100 transition-colors">
+                                <i data-lucide="calendar-clock" class="w-5 h-5"></i>
+                                2 Days left
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-6 py-8">
+
+                <div class="bg-white p-6 rounded-[24px] shadow-sm border border-[#E5E0D6] mb-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-bold text-gray-900 text-sm flex items-center gap-2"><i data-lucide="bar-chart-2"
+                                class="w-4 h-4 text-gray-400"></i> Consumption History</h3>
+                        <div class="relative">
+                            <select
+                                class="appearance-none text-xs bg-gray-50 border border-gray-200 rounded-lg pl-3 pr-7 py-1.5 outline-none text-gray-600 font-medium">
+                                <option>Last 30 Days</option>
+                            </select>
+                            <i data-lucide="chevron-down"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500 pointer-events-none"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-end gap-3 h-32 w-full pt-4 px-2">
+                        <div
+                            class="flex-1 bg-gray-100 rounded-t-lg h-[40%] relative group hover:bg-green-100 transition-colors">
+                        </div>
+                        <div
+                            class="flex-1 bg-gray-100 rounded-t-lg h-[60%] relative group hover:bg-green-100 transition-colors">
+                        </div>
+                        <div
+                            class="flex-1 bg-[#005C45] rounded-t-lg h-[85%] relative group shadow-lg shadow-green-900/20">
+                            <div
+                                class="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] font-bold py-1 px-2 rounded opacity-100 transition-opacity">
+                                500g</div>
+                        </div>
+                        <div
+                            class="flex-1 bg-gray-100 rounded-t-lg h-[30%] relative group hover:bg-green-100 transition-colors">
+                        </div>
+                        <div
+                            class="flex-1 bg-gray-100 rounded-t-lg h-[50%] relative group hover:bg-green-100 transition-colors">
+                        </div>
+                        <div
+                            class="flex-1 bg-gray-100 rounded-t-lg h-[45%] relative group hover:bg-green-100 transition-colors">
+                        </div>
+                    </div>
+                    <div
+                        class="flex justify-between text-[10px] text-gray-400 mt-3 font-medium uppercase tracking-wider px-1">
+                        <span>1 Nov</span>
+                        <span>Today</span>
+                    </div>
+                </div>
+
+
+                <h3 class="font-bold text-gray-400 text-xs uppercase tracking-widest mb-4">Quick Actions</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <button
+                        class="col-span-2 bg-[#005C45] text-white py-4 rounded-xl font-bold shadow-lg shadow-green-900/10 flex items-center justify-center gap-2 hover:bg-[#004a37] active:scale-[0.98] transition-all">
+                        <i data-lucide="utensils" class="w-5 h-5"></i> Find Recipes
+                    </button>
+                    <button
+                        class="bg-white border border-[#E5E0D6] text-gray-700 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-50 active:scale-[0.98] transition-all shadow-sm">
+                        <i data-lucide="edit-3" class="w-4 h-4"></i> Edit
+                    </button>
+                    <button
+                        class="bg-white border border-[#E5E0D6] text-red-600 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-red-50 active:scale-[0.98] transition-all shadow-sm">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i> Discard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+
+    <template id="view-add-groceries" vid="38">
+        <div class="flex flex-col h-full bg-[#F5F1E8]">
+
+            <div class="bg-white px-6 py-4 border-b border-[#E5E0D6] flex items-center justify-between shrink-0">
+                <button onclick="router.back()" class="text-gray-500 hover:text-gray-800 p-1"><i data-lucide="x"
+                        class="w-6 h-6"></i></button>
+                <h1 class="font-serif font-bold text-xl text-gray-900">Scan Results</h1>
+                <button class="text-[#005C45] font-bold text-sm bg-green-50 px-3 py-1 rounded-lg">Rescan</button>
+            </div>
+
+
+            <div class="h-56 w-full bg-gray-900 relative overflow-hidden shrink-0 group">
+                <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&amp;q=80"
+                    class="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity duration-300">
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div
+                        class="border-2 border-white/60 w-[85%] h-[75%] rounded-2xl relative shadow-[0_0_0_1000px_rgba(0,0,0,0.3)]">
+                        <div
+                            class="absolute top-0 left-0 w-6 h-6 border-t-[3px] border-l-[3px] border-white -mt-[2px] -ml-[2px] rounded-tl-lg">
+                        </div>
+                        <div
+                            class="absolute top-0 right-0 w-6 h-6 border-t-[3px] border-r-[3px] border-white -mt-[2px] -mr-[2px] rounded-tr-lg">
+                        </div>
+                        <div
+                            class="absolute bottom-0 left-0 w-6 h-6 border-b-[3px] border-l-[3px] border-white -mb-[2px] -ml-[2px] rounded-bl-lg">
+                        </div>
+                        <div
+                            class="absolute bottom-0 right-0 w-6 h-6 border-b-[3px] border-r-[3px] border-white -mb-[2px] -mr-[2px] rounded-br-lg">
+                        </div>
+                    </div>
+                </div>
+                <div class="absolute bottom-4 left-0 w-full text-center">
+                    <span
+                        class="bg-black/70 text-white text-xs font-bold px-4 py-1.5 rounded-full backdrop-blur-md shadow-lg border border-white/10">8
+                        items detected</span>
+                </div>
+            </div>
+
+
+            <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                <div class="flex justify-between items-center mb-2 px-2">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-wide">Detected Items</span>
+                    <button class="text-xs text-[#005C45] font-bold uppercase tracking-wide">Uncheck all</button>
+                </div>
+
+
+                <div
+                    class="bg-white p-3 rounded-2xl border border-[#E5E0D6] flex items-center gap-3 shadow-sm hover:border-[#005C45] transition-colors cursor-pointer group">
+                    <div class="flex items-center justify-center h-full pl-1">
+                        <input type="checkbox" checked=""
+                            class="w-5 h-5 rounded border-gray-300 text-[#005C45] focus:ring-[#005C45] cursor-pointer">
+                    </div>
+                    <div class="w-12 h-12 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100">
+                        <img src="https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150&amp;q=80"
+                            class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0 py-1">
+                        <div class="flex justify-between mb-1">
+                            <h4 class="font-bold text-gray-900 text-sm truncate">Cà chua</h4>
+                            <span class="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">3
+                                quả</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-500 font-medium">250g approx</span>
+                            <span
+                                class="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-100">Exp:
+                                +5 days</span>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div
+                    class="bg-white p-3 rounded-2xl border border-[#E5E0D6] flex items-center gap-3 shadow-sm hover:border-[#005C45] transition-colors cursor-pointer group">
+                    <div class="flex items-center justify-center h-full pl-1">
+                        <input type="checkbox" checked=""
+                            class="w-5 h-5 rounded border-gray-300 text-[#005C45] focus:ring-[#005C45] cursor-pointer">
+                    </div>
+                    <div class="w-12 h-12 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100">
+                        <img src="https://images.unsplash.com/photo-1615485500704-8e99099928b3?w=150&amp;q=80"
+                            class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0 py-1">
+                        <div class="flex justify-between mb-1">
+                            <h4 class="font-bold text-gray-900 text-sm truncate">Thịt bò</h4>
+                            <span
+                                class="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">500g</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-500 font-medium">Fillet</span>
+                            <span
+                                class="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-100">Exp:
+                                +3 days</span>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div
+                    class="bg-white p-3 rounded-2xl border border-[#E5E0D6] flex items-center gap-3 shadow-sm hover:border-[#005C45] transition-colors cursor-pointer group">
+                    <div class="flex items-center justify-center h-full pl-1">
+                        <input type="checkbox" checked=""
+                            class="w-5 h-5 rounded border-gray-300 text-[#005C45] focus:ring-[#005C45] cursor-pointer">
+                    </div>
+                    <div class="w-12 h-12 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100">
+                        <img src="https://images.unsplash.com/photo-1550989460-0adf9ea622e2?w=150&amp;q=80"
+                            class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0 py-1">
+                        <div class="flex justify-between mb-1">
+                            <h4 class="font-bold text-gray-900 text-sm truncate">Xà lách</h4>
+                            <span class="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">1
+                                búp</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-500 font-medium">Fresh</span>
+                            <span
+                                class="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-100">Exp:
+                                +4 days</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-white p-3 rounded-2xl border border-[#E5E0D6] flex items-center gap-3 shadow-sm hover:border-[#005C45] transition-colors cursor-pointer group">
+                    <div class="flex items-center justify-center h-full pl-1">
+                        <input type="checkbox"
+                            class="w-5 h-5 rounded border-gray-300 text-[#005C45] focus:ring-[#005C45] cursor-pointer">
+                    </div>
+                    <div class="w-12 h-12 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-100">
+                        <img src="https://images.unsplash.com/photo-1596395819057-d375223c7930?w=150&amp;q=80"
+                            class="w-full h-full object-cover">
+                    </div>
+                    <div class="flex-1 min-w-0 py-1">
+                        <div class="flex justify-between mb-1">
+                            <h4 class="font-bold text-gray-900 text-sm truncate">Dưa leo</h4>
+                            <span class="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">2
+                                quả</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-500 font-medium">Organic</span>
+                            <span
+                                class="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded border border-green-100">Exp:
+                                +6 days</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div
+                class="p-6 bg-white border-t border-[#E5E0D6] shrink-0 rounded-t-[24px] shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-20">
+                <div class="flex justify-between items-center mb-5 text-sm">
+                    <span class="text-gray-500 font-medium">Storage Location</span>
+                    <button
+                        class="text-[#005C45] font-bold flex items-center gap-1 bg-[#E8F0EE] px-3 py-1.5 rounded-lg">
+                        Main Fridge <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="flex gap-3">
+                    <button
+                        class="flex-1 py-4 bg-white border-2 border-gray-200 text-gray-700 font-bold rounded-2xl text-sm hover:bg-gray-50 hover:border-gray-300 transition-colors">Adjust</button>
+                    <button onclick="router.navigate('fridge')"
+                        class="flex-[2] py-4 bg-[#005C45] text-white font-bold rounded-2xl text-sm shadow-xl shadow-green-900/20 active:scale-[0.98] transition-transform flex items-center justify-center gap-2 hover:bg-[#004a37]">
+                        <i data-lucide="snowflake" class="w-4 h-4"></i> Add All to Fridge (4)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script vid="39">
+        const router = {
+            currentView: 'fridge',
+
+            navigate: function (viewId) {
+                this.currentView = viewId;
+                this.render();
+            },
+
+            back: function () {
+                const backMap = {
+                    'recipe-detail': 'recipes',
+                    'fridge-detail': 'fridge',
+                    'add-groceries': 'fridge'
+                };
+                this.navigate(backMap[this.currentView] || 'fridge');
+            },
+
+            render: function () {
+                const mainContent = document.getElementById('main-content');
+                const template = document.getElementById(`view-${this.currentView}`);
+                const bottomNav = document.getElementById('bottom-nav');
+
+
+                mainContent.style.opacity = '0';
+
+                setTimeout(() => {
+                    mainContent.innerHTML = '';
+                    if (template) {
+                        const clone = template.content.cloneNode(true);
+                        mainContent.appendChild(clone);
+                        lucide.createIcons();
+                        window.scrollTo(0, 0);
+                    }
+
+
+                    if (['fridge', 'recipes'].includes(this.currentView)) {
+                        bottomNav.classList.remove('hidden');
+                        bottomNav.classList.add('flex');
+                        this.updateActiveTab();
+                    } else {
+                        bottomNav.classList.add('hidden');
+                        bottomNav.classList.remove('flex');
+                    }
+
+
+                    mainContent.style.opacity = '1';
+                }, 150);
+            },
+
+            updateActiveTab: function () {
+                const tabs = document.querySelectorAll('.nav-btn');
+                tabs.forEach(tab => {
+                    tab.className = "nav-btn flex flex-col items-center gap-1 p-2 w-16 text-gray-400";
+                });
+
+                if (this.currentView === 'fridge') {
+                    tabs[0].className = "nav-btn flex flex-col items-center gap-1 p-2 w-16 text-[#005C45]";
+                } else if (this.currentView === 'recipes') {
+                    tabs[1].className = "nav-btn flex flex-col items-center gap-1 p-2 w-16 text-[#005C45]";
+                }
+
+                lucide.createIcons();
+            }
+        };
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            router.render();
+        });
+
+        const style = document.createElement('style');
+        style.textContent = `
+            #main-content {
+                transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+
+</body>
+
+</html>
