@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomSheet from '@gorhom/bottom-sheet';
 import LogSheet from '../../components/LogSheet';
-import { Colors, Shadows, BorderRadius } from '../../constants/Theme';
+import { Colors, Shadows } from '../../constants/Theme';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
