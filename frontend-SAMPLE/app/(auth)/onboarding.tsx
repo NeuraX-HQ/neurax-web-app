@@ -37,7 +37,7 @@ const DIETARY_RESTRICTIONS = [
 ];
 
 export default function OnboardingScreen() {
-    const { completeOnboarding, updateOnboardingStep, isLoading } = useAuth();
+    const { completeOnboarding, isLoading } = useAuth();
     const [currentStep, setCurrentStep] = useState(1);
 
     // Form state
