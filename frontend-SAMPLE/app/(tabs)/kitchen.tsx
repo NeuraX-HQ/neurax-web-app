@@ -62,7 +62,7 @@ const RecipeCard = React.memo(function RecipeCard({ recipe, onPress }: RecipeCar
 });
 
 export default function KitchenScreen() {
-    const { fridgeItems, recipes, removeFridgeItem } = useApp();
+    const { fridgeItems, recipes } = useApp();
     const [activeTab, setActiveTab] = useState<TabType>('fridge');
 
     // Sort fridge items by expiry
