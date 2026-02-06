@@ -6,6 +6,11 @@ export const Colors = {
     primaryHover: '#004936',
     primaryDark: '#004d3a',
 
+    // Kitchen theme (from Kitchen_layout_refence.html)
+    cream: '#F5F1E8',
+    borderCream: '#E5E0D6',
+    emeraldLight: '#E8F0EE',
+
     // Surface & Background
     surface: '#FFFFFF',
     background: '#F2F6F9',

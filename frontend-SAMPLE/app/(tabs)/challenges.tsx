@@ -1,23 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     Pressable,
-    FlatList,
     Image,
     ScrollView,
+    RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Colors, Shadows, BorderRadius } from '../../constants/Theme';
+import { useAuth } from '../../contexts/AuthContext';
+import { Colors, Shadows, BorderRadius, Spacing } from '../../constants/Theme';
 
-// ============== Types ==============
+// Types
 interface Challenge {
     id: string;
     title: string;
-    type: 'protein' | 'streak' | 'macro' | 'consistency';
+    type: 'protein' | 'streak' | 'macro';
     emoji: string;
     opponent?: {
         name: string;
@@ -27,23 +28,12 @@ interface Challenge {
     userProgress: number;
     targetDays: number;
     daysLeft: number;
-    spectators?: { avatar: string }[];
+    spectators?: number;
     unreadMessages?: number;
+    stakes?: string;
 }
 
-interface RecommendedChallenge {
-    id: string;
-    title: string;
-    description: string;
-    emoji: string;
-    bgColor: string;
-    textColor: string;
-    buttonStyle: 'primary' | 'warning' | 'success';
-    buttonText: string;
-    hasIcon?: boolean;
-}
-
-// ============== Mock Data ==============
+// Mock Data - More realistic
 const activeChallenges: Challenge[] = [
     {
         id: '1',
@@ -51,18 +41,16 @@ const activeChallenges: Challenge[] = [
         type: 'protein',
         emoji: '🏆',
         opponent: {
-            name: '@john_doe',
+            name: 'John',
             avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100',
             progress: 3,
         },
         userProgress: 4,
         targetDays: 7,
         daysLeft: 2,
-        spectators: [
-            { avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=64' },
-            { avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=64' },
-        ],
+        spectators: 3,
         unreadMessages: 2,
+        stakes: 'Loser buys protein shake 🥤',
     },
     {
         id: '2',
@@ -70,243 +58,147 @@ const activeChallenges: Challenge[] = [
         type: 'streak',
         emoji: '🔥',
         opponent: {
-            name: '@sarah_nguyen',
+            name: 'Sarah',
+            avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
             progress: 6,
         },
         userProgress: 5,
         targetDays: 7,
         daysLeft: 5,
+        stakes: 'Bragging rights only 😎',
     },
 ];
 
-const recommendedChallenges: RecommendedChallenge[] = [
-    {
-        id: 'r1',
-        title: '30-Day Consistency',
-        description: 'Log your meals every day for 30 days straight to build a habit.',
-        emoji: '🎯',
-        bgColor: '#E0F2FE',
-        textColor: '#0284C7',
-        buttonStyle: 'primary',
-        buttonText: 'Start Solo Challenge',
-    },
-    {
-        id: 'r2',
-        title: 'Weekend Warrior',
-        description: 'Stay on track by hitting your macro goals this Saturday & Sunday.',
-        emoji: '💪',
-        bgColor: '#FEF3C7',
-        textColor: '#D97706',
-        buttonStyle: 'warning',
-        buttonText: 'Challenge a Friend',
-        hasIcon: true,
-    },
-    {
-        id: 'r3',
-        title: 'Macro Maestro',
-        description: 'Hit all 3 macro goals (Protein, Carbs, Fat) for 5 days this week.',
-        emoji: '🥗',
-        bgColor: '#DCFCE7',
-        textColor: '#166534',
-        buttonStyle: 'success',
-        buttonText: 'Start Solo Challenge',
-    },
-];
-
-// ============== Components ==============
-
-// Section Header Component
-const SectionHeader = ({ title, count, badgeColor = Colors.success }: { title: string; count?: number; badgeColor?: string }) => (
-    <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {count !== undefined && (
-            <View style={[styles.sectionBadge, { backgroundColor: badgeColor }]}>
-                <Text style={styles.sectionBadgeText}>{count}</Text>
-            </View>
-        )}
-    </View>
-);
-
-// AI Badge
-const AIBadge = () => (
-    <View style={styles.aiBadge}>
-        <Text style={styles.aiBadgeText}>AI</Text>
-    </View>
-);
-
-// Active Challenge Card (Protein type with progress bars)
-const ProteinChallengeCard = ({ challenge, onPress }: { challenge: Challenge; onPress: () => void }) => {
+// Challenge Card - Human, not robotic
+const ChallengeCard = ({ challenge, onPress }: { challenge: Challenge; onPress: () => void }) => {
     const userPercent = (challenge.userProgress / challenge.targetDays) * 100;
     const opponentPercent = challenge.opponent ? (challenge.opponent.progress / challenge.targetDays) * 100 : 0;
+    const isWinning = challenge.userProgress > (challenge.opponent?.progress || 0);
+    const isTied = challenge.userProgress === (challenge.opponent?.progress || 0);
 
     return (
-        <Pressable style={[styles.challengeCard, styles.proteinCard]} onPress={onPress}>
-            {/* Green left border */}
-            <View style={[styles.cardBorder, { backgroundColor: Colors.success }]} />
+        <Pressable
+            style={styles.challengeCard}
+            onPress={onPress}
+        >
+            {/* Left accent based on status */}
+            <View style={[styles.cardAccent, { backgroundColor: isWinning ? Colors.success : isTied ? '#F59E0B' : Colors.error }]} />
 
-            {/* Header */}
-            <View style={styles.cardHeader}>
-                <View>
-                    <View style={styles.cardTitleRow}>
+            {/* Main content */}
+            <View style={styles.cardContent}>
+                {/* Header row */}
+                <View style={styles.cardHeader}>
+                    <View style={styles.titleRow}>
                         <Text style={styles.cardEmoji}>{challenge.emoji}</Text>
-                        <Text style={styles.cardTitle}>{challenge.title}</Text>
-                    </View>
-                    <Text style={styles.cardOpponent}>
-                        vs <Text style={styles.cardOpponentName}>{challenge.opponent?.name}</Text>
-                    </Text>
-                </View>
-                <View style={styles.daysLeftBadge}>
-                    <Ionicons name="time-outline" size={12} color={Colors.primary} />
-                    <Text style={styles.daysLeftText}>{challenge.daysLeft} days left</Text>
-                </View>
-            </View>
-
-            {/* Progress Section */}
-            <View style={styles.progressSection}>
-                {/* User Progress */}
-                <View style={styles.progressRow}>
-                    <Text style={styles.progressLabelUser}>You</Text>
-                    <Text style={styles.progressValueGreen}>{challenge.userProgress}/{challenge.targetDays} days</Text>
-                </View>
-                <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: `${userPercent}%`, backgroundColor: Colors.primary }]} />
-                </View>
-
-                {/* Opponent Progress */}
-                {challenge.opponent && (
-                    <>
-                        <View style={styles.progressRow}>
-                            <Text style={styles.progressLabelOpponent}>{challenge.opponent.name.replace('@', '')}</Text>
-                            <Text style={styles.progressValueGray}>{challenge.opponent.progress}/{challenge.targetDays} days</Text>
+                        <View>
+                            <Text style={styles.cardTitle}>{challenge.title}</Text>
+                            <Text style={styles.cardSubtitle}>
+                                vs <Text style={styles.opponentName}>{challenge.opponent?.name}</Text>
+                            </Text>
                         </View>
-                        <View style={styles.progressBar}>
+                    </View>
+
+                    {/* Time left - pill style from Home */}
+                    <View style={styles.timePill}>
+                        <Ionicons name="time-outline" size={12} color={challenge.daysLeft <= 2 ? '#DC2626' : Colors.primary} />
+                        <Text style={[styles.timeText, challenge.daysLeft <= 2 && styles.timeTextUrgent]}>
+                            {challenge.daysLeft}d left
+                        </Text>
+                    </View>
+                </View>
+
+                {/* Progress comparison - visual, not just bars */}
+                <View style={styles.progressComparison}>
+                    {/* Your progress */}
+                    <View style={styles.playerProgress}>
+                        <View style={styles.playerInfo}>
+                            <Text style={styles.playerLabel}>You</Text>
+                            <Text style={styles.progressDays}>
+                                {challenge.userProgress}<Text style={styles.progressTotal}>/{challenge.targetDays}</Text>
+                            </Text>
+                        </View>
+                        <View style={styles.progressTrack}>
+                            <View style={[styles.progressFill, { width: `${userPercent}%`, backgroundColor: Colors.primary }]} />
+                        </View>
+                    </View>
+
+                    {/* VS divider */}
+                    <View style={styles.vsDivider}>
+                        <Text style={styles.vsText}>vs</Text>
+                    </View>
+
+                    {/* Opponent progress */}
+                    <View style={styles.playerProgress}>
+                        <View style={styles.playerInfo}>
+                            <Text style={styles.playerLabelOpponent}>{challenge.opponent?.name}</Text>
+                            <Text style={styles.progressDaysOpponent}>
+                                {challenge.opponent?.progress}<Text style={styles.progressTotal}>/{challenge.targetDays}</Text>
+                            </Text>
+                        </View>
+                        <View style={styles.progressTrack}>
                             <View style={[styles.progressFill, { width: `${opponentPercent}%`, backgroundColor: Colors.textLight }]} />
                         </View>
-                    </>
-                )}
-            </View>
-
-            {/* Footer */}
-            <View style={styles.cardFooter}>
-                <View style={styles.spectatorsRow}>
-                    <View style={styles.spectatorAvatars}>
-                        {challenge.spectators?.slice(0, 2).map((s, i) => (
-                            <Image
-                                key={i}
-                                source={{ uri: s.avatar }}
-                                style={[styles.spectatorAvatar, { marginLeft: i > 0 ? -8 : 0 }]}
-                            />
-                        ))}
                     </View>
-                    <Text style={styles.spectatorText}>+1 spectator</Text>
                 </View>
-                {challenge.unreadMessages && challenge.unreadMessages > 0 && (
-                    <Pressable style={styles.chatButton}>
-                        <Ionicons name="chatbubble-outline" size={14} color={Colors.primary} />
-                        <Text style={styles.chatButtonText}>{challenge.unreadMessages} new</Text>
-                    </Pressable>
+
+                {/* Stakes - the fun part */}
+                {challenge.stakes && (
+                    <View style={styles.stakesRow}>
+                        <Text style={styles.stakesLabel}>🎁 Stakes:</Text>
+                        <Text style={styles.stakesText}>{challenge.stakes}</Text>
+                    </View>
                 )}
+
+                {/* Footer with social proof */}
+                <View style={styles.cardFooter}>
+                    {challenge.spectators && challenge.spectators > 0 && (
+                        <View style={styles.spectatorInfo}>
+                            <Ionicons name="eye-outline" size={14} color={Colors.textLight} />
+                            <Text style={styles.spectatorText}>{challenge.spectators} watching</Text>
+                        </View>
+                    )}
+
+                    {challenge.unreadMessages && challenge.unreadMessages > 0 && (
+                        <View style={styles.messagesBadge}>
+                            <Ionicons name="chatbubble" size={12} color={Colors.surface} />
+                            <Text style={styles.messagesText}>{challenge.unreadMessages}</Text>
+                        </View>
+                    )}
+                </View>
             </View>
         </Pressable>
     );
 };
 
-// Streak Challenge Card (Fire comparison)
-const StreakChallengeCard = ({ challenge, onPress }: { challenge: Challenge; onPress: () => void }) => (
-    <Pressable style={[styles.challengeCard, styles.streakCard]} onPress={onPress}>
-        {/* Orange left border */}
-        <View style={[styles.cardBorder, { backgroundColor: '#F59E0B' }]} />
-
-        {/* Header */}
-        <View style={styles.cardHeader}>
-            <View>
-                <View style={styles.cardTitleRow}>
-                    <Text style={styles.cardEmoji}>{challenge.emoji}</Text>
-                    <Text style={styles.cardTitle}>{challenge.title}</Text>
-                </View>
-                <Text style={styles.cardOpponent}>
-                    vs <Text style={styles.cardOpponentName}>{challenge.opponent?.name}</Text>
-                </Text>
-            </View>
-            <View style={[styles.daysLeftBadge, { backgroundColor: '#FFFBEB' }]}>
-                <Ionicons name="time-outline" size={12} color="#D97706" />
-                <Text style={[styles.daysLeftText, { color: '#D97706' }]}>{challenge.daysLeft} days left</Text>
-            </View>
+// Quick Start Card - Friendly, not robotic
+const QuickStartCard = ({ title, description, emoji, color, onPress }: {
+    title: string;
+    description: string;
+    emoji: string;
+    color: string;
+    onPress: () => void;
+}) => (
+    <Pressable style={styles.quickStartCard} onPress={onPress}>
+        <View style={[styles.quickStartIcon, { backgroundColor: color + '20' }]}>
+            <Text style={styles.quickStartEmoji}>{emoji}</Text>
         </View>
-
-        {/* Fire Comparison */}
-        <View style={styles.fireComparison}>
-            <View style={styles.firePlayer}>
-                <Text style={styles.fireCount}>
-                    {challenge.userProgress}<Text style={styles.fireEmoji}>🔥</Text>
-                </Text>
-                <Text style={styles.fireLabel}>YOU</Text>
-            </View>
-            <View style={styles.fireDivider} />
-            <View style={styles.firePlayer}>
-                <Text style={styles.fireCount}>
-                    {challenge.opponent?.progress}<Text style={styles.fireEmoji}>🔥</Text>
-                </Text>
-                <Text style={styles.fireLabel}>{challenge.opponent?.name.replace('@', '').toUpperCase()}</Text>
-            </View>
+        <View style={styles.quickStartContent}>
+            <Text style={styles.quickStartTitle}>{title}</Text>
+            <Text style={styles.quickStartDesc}>{description}</Text>
         </View>
+        <Ionicons name="chevron-forward" size={18} color={Colors.textLight} />
     </Pressable>
 );
 
-// Collapsible Completed Section
-const CompletedSection = () => {
-    const [isExpanded, setIsExpanded] = useState(false);
-
-    return (
-        <Pressable style={styles.completedSection} onPress={() => setIsExpanded(!isExpanded)}>
-            <Text style={styles.completedText}>Completed Challenges (3)</Text>
-            <Ionicons
-                name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                size={16}
-                color={Colors.textLight}
-            />
-        </Pressable>
-    );
-};
-
-// Recommended Challenge Card
-const RecommendedCard = ({ challenge }: { challenge: RecommendedChallenge }) => {
-    const buttonStyles = {
-        primary: { bg: Colors.primaryLight, text: Colors.primary, border: 'transparent' },
-        warning: { bg: '#FFFBEB', text: '#D97706', border: '#FDE68A' },
-        success: { bg: '#DCFCE7', text: '#166534', border: 'transparent' },
-    };
-    const style = buttonStyles[challenge.buttonStyle];
-
-    return (
-        <View style={styles.recommendedCard}>
-            <View style={[styles.recommendedIcon, { backgroundColor: challenge.bgColor }]}>
-                <Text style={styles.recommendedEmoji}>{challenge.emoji}</Text>
-            </View>
-            <View style={styles.recommendedContent}>
-                <Text style={styles.recommendedTitle}>{challenge.title}</Text>
-                <Text style={styles.recommendedDesc}>{challenge.description}</Text>
-                <Pressable
-                    style={[
-                        styles.recommendedButton,
-                        { backgroundColor: style.bg, borderColor: style.border, borderWidth: style.border !== 'transparent' ? 1 : 0 }
-                    ]}
-                >
-                    {challenge.hasIcon && (
-                        <Ionicons name="add" size={12} color={style.text} style={{ marginRight: 4 }} />
-                    )}
-                    <Text style={[styles.recommendedButtonText, { color: style.text }]}>
-                        {challenge.buttonText}
-                    </Text>
-                </Pressable>
-            </View>
-        </View>
-    );
-};
-
-// ============== Main Screen ==============
 export default function ChallengesScreen() {
     const router = useRouter();
+    const { user } = useAuth();
+    const [refreshing, setRefreshing] = useState(false);
+
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        setTimeout(() => setRefreshing(false), 1000);
+    }, []);
 
     const handleChallengePress = (challengeId: string) => {
         router.push(`/challenge/${challengeId}`);
@@ -318,54 +210,99 @@ export default function ChallengesScreen() {
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={Colors.primary}
+                    />
+                }
             >
-                {/* Header */}
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Challenges</Text>
-                    <Pressable style={styles.fabAdd}>
-                        <Ionicons name="add" size={24} color={Colors.primary} />
+                {/* Header - Matches Home exactly */}
+                <View style={styles.headerTop}>
+                    <View style={styles.headerLeft}>
+                        <Text style={styles.greetingTitle}>Challenges</Text>
+                        <Text style={styles.greetingSubtitle}>
+                            You're winning {activeChallenges.filter(c => c.userProgress > (c.opponent?.progress || 0)).length} of {activeChallenges.length} 🎯
+                        </Text>
+                    </View>
+                    <View style={styles.headerRight}>
+                        <Pressable style={styles.iconButton}>
+                            <Ionicons name="trophy-outline" size={24} color={Colors.textDark} />
+                        </Pressable>
+                        <Image
+                            source={{ uri: user?.avatar || 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100' }}
+                            style={styles.avatar}
+                        />
+                    </View>
+                </View>
+
+                {/* Active Challenges */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Active Battles</Text>
+                        <View style={styles.countPill}>
+                            <Text style={styles.countText}>{activeChallenges.length}</Text>
+                        </View>
+                    </View>
+
+                    {activeChallenges.map(challenge => (
+                        <ChallengeCard
+                            key={challenge.id}
+                            challenge={challenge}
+                            onPress={() => handleChallengePress(challenge.id)}
+                        />
+                    ))}
+                </View>
+
+                {/* Quick Start Section */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Start Something New</Text>
+                    </View>
+
+                    <QuickStartCard
+                        title="Challenge a Friend"
+                        description="Bet on who can hit their goals"
+                        emoji="👊"
+                        color={Colors.primary}
+                        onPress={() => { }}
+                    />
+                    <QuickStartCard
+                        title="Solo Challenge"
+                        description="Push yourself with personal goals"
+                        emoji="🎯"
+                        color="#F59E0B"
+                        onPress={() => { }}
+                    />
+                    <QuickStartCard
+                        title="Join Community"
+                        description="Compete in group challenges"
+                        emoji="🌍"
+                        color="#8B5CF6"
+                        onPress={() => { }}
+                    />
+                </View>
+
+                {/* Completed - Collapsed */}
+                <View style={styles.section}>
+                    <Pressable style={styles.collapsedRow}>
+                        <Text style={styles.collapsedText}>Past Challenges (3)</Text>
+                        <Ionicons name="chevron-down" size={16} color={Colors.textLight} />
                     </Pressable>
                 </View>
 
-                {/* Active Battles Section */}
-                <View style={styles.section}>
-                    <SectionHeader title="ACTIVE BATTLES" count={activeChallenges.length} />
-
-                    {/* Protein Challenge Card */}
-                    <ProteinChallengeCard
-                        challenge={activeChallenges[0]}
-                        onPress={() => handleChallengePress(activeChallenges[0].id)}
-                    />
-
-                    {/* Streak Challenge Card */}
-                    <StreakChallengeCard
-                        challenge={activeChallenges[1]}
-                        onPress={() => handleChallengePress(activeChallenges[1].id)}
-                    />
-                </View>
-
-                {/* Completed Section (Collapsible) */}
-                <View style={styles.section}>
-                    <CompletedSection />
-                </View>
-
-                {/* Recommended Section */}
-                <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>RECOMMENDED FOR YOU</Text>
-                        <AIBadge />
-                    </View>
-
-                    {recommendedChallenges.map((challenge) => (
-                        <RecommendedCard key={challenge.id} challenge={challenge} />
-                    ))}
-                </View>
+                <View style={{ height: 100 }} />
             </ScrollView>
+
+            {/* FAB - Same as Home */}
+            <Pressable style={styles.fab}>
+                <Ionicons name="add" size={28} color={Colors.surface} />
+            </Pressable>
         </SafeAreaView>
     );
 }
 
-// ============== Styles ==============
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -375,317 +312,306 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        padding: 24,
-        paddingBottom: 120,
+        paddingHorizontal: Spacing.md,
+        paddingTop: 16,
     },
-
-    // Header
-    header: {
+    // Header - Exact match to Home
+    headerTop: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         marginBottom: 24,
-        paddingTop: 8,
     },
-    headerTitle: {
-        fontSize: 32,
-        fontWeight: '700',
+    headerLeft: {
+        flex: 1,
+    },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    greetingTitle: {
+        fontSize: 28,
+        fontWeight: '600',
         color: Colors.textDark,
         fontFamily: 'Playfair Display',
+        marginBottom: 4,
+        lineHeight: 34,
     },
-    fabAdd: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: Colors.primaryLight,
+    greetingSubtitle: {
+        fontSize: 16,
+        color: Colors.textMedium,
+    },
+    iconButton: {
+        padding: 4,
+        minWidth: 44,
+        minHeight: 44,
         alignItems: 'center',
         justifyContent: 'center',
     },
-
-    // Section
+    avatar: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        borderWidth: 2,
+        borderColor: Colors.surface,
+        ...Shadows.soft,
+    },
+    // Sections
     section: {
-        marginBottom: 32,
+        marginBottom: 28,
     },
     sectionHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        justifyContent: 'space-between',
         marginBottom: 16,
     },
     sectionTitle: {
-        fontSize: 11,
+        fontSize: 18,
+        fontWeight: '600',
+        color: Colors.textDark,
+        fontFamily: 'Playfair Display',
+    },
+    countPill: {
+        backgroundColor: Colors.primary,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    countText: {
+        fontSize: 12,
         fontWeight: '700',
-        color: Colors.textMedium,
-        letterSpacing: 0.5,
-        textTransform: 'uppercase',
+        color: Colors.surface,
     },
-    sectionBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 999,
-    },
-    sectionBadgeText: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: '#FFFFFF',
-    },
-
-    // AI Badge
-    aiBadge: {
-        backgroundColor: '#3B82F6',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
-    },
-    aiBadgeText: {
-        fontSize: 9,
-        fontWeight: '700',
-        color: '#FFFFFF',
-    },
-
-    // Challenge Card Base
+    // Challenge Card
     challengeCard: {
         backgroundColor: Colors.surface,
-        borderRadius: 32,
-        padding: 20,
+        borderRadius: BorderRadius.md,
         marginBottom: 16,
-        position: 'relative',
+        flexDirection: 'row',
         overflow: 'hidden',
-        ...Shadows.card,
+        ...Shadows.soft,
     },
-    proteinCard: {},
-    streakCard: {},
-    cardBorder: {
-        position: 'absolute',
-        left: 0,
-        top: 0,
-        bottom: 0,
+    cardAccent: {
         width: 4,
     },
-
-    // Card Header
+    cardContent: {
+        flex: 1,
+        padding: 18,
+    },
     cardHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         marginBottom: 16,
-        paddingLeft: 8,
     },
-    cardTitleRow: {
+    titleRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        marginBottom: 4,
+        gap: 12,
     },
     cardEmoji: {
-        fontSize: 20,
+        fontSize: 28,
     },
     cardTitle: {
-        fontSize: 18,
+        fontSize: 17,
         fontWeight: '700',
         color: Colors.textDark,
+        marginBottom: 2,
     },
-    cardOpponent: {
-        fontSize: 14,
+    cardSubtitle: {
+        fontSize: 13,
         color: Colors.textMedium,
     },
-    cardOpponentName: {
+    opponentName: {
         fontWeight: '600',
         color: Colors.primary,
     },
-    daysLeftBadge: {
+    timePill: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
         backgroundColor: Colors.primaryLight,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: BorderRadius.pill,
+        gap: 4,
     },
-    daysLeftText: {
+    timeText: {
         fontSize: 12,
         fontWeight: '600',
         color: Colors.primary,
     },
-
-    // Progress Section
-    progressSection: {
-        marginBottom: 16,
-        paddingLeft: 8,
+    timeTextUrgent: {
+        color: '#DC2626',
     },
-    progressRow: {
+    // Progress comparison
+    progressComparison: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 14,
+        gap: 8,
+    },
+    playerProgress: {
+        flex: 1,
+    },
+    playerInfo: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 6,
     },
-    progressLabelUser: {
+    playerLabel: {
         fontSize: 12,
         fontWeight: '600',
         color: Colors.textDark,
     },
-    progressLabelOpponent: {
+    playerLabelOpponent: {
         fontSize: 12,
         fontWeight: '600',
-        color: Colors.textMedium,
+        color: Colors.textLight,
     },
-    progressValueGreen: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: Colors.success,
+    progressDays: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: Colors.primary,
     },
-    progressValueGray: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: Colors.textMedium,
+    progressDaysOpponent: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: Colors.textLight,
     },
-    progressBar: {
-        height: 8,
+    progressTotal: {
+        fontWeight: '400',
+        color: Colors.textLight,
+    },
+    progressTrack: {
+        height: 6,
         backgroundColor: '#E5E7EB',
-        borderRadius: 4,
-        marginBottom: 12,
+        borderRadius: 3,
         overflow: 'hidden',
     },
     progressFill: {
         height: '100%',
-        borderRadius: 4,
+        borderRadius: 3,
     },
-
-    // Card Footer
+    vsDivider: {
+        paddingHorizontal: 6,
+    },
+    vsText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: Colors.textLight,
+    },
+    // Stakes
+    stakesRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FEF3C7',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        marginBottom: 14,
+        gap: 6,
+    },
+    stakesLabel: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#92400E',
+    },
+    stakesText: {
+        fontSize: 12,
+        color: '#78350F',
+        flex: 1,
+    },
+    // Card footer
     cardFooter: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingTop: 16,
+        paddingTop: 12,
         borderTopWidth: 1,
         borderTopColor: '#F3F4F6',
-        paddingLeft: 8,
     },
-    spectatorsRow: {
+    spectatorInfo: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-    },
-    spectatorAvatars: {
-        flexDirection: 'row',
-    },
-    spectatorAvatar: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: Colors.surface,
+        gap: 6,
     },
     spectatorText: {
         fontSize: 12,
         color: Colors.textLight,
     },
-    chatButton: {
+    messagesBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        backgroundColor: Colors.primaryLight,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 999,
+        backgroundColor: Colors.primary,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: BorderRadius.pill,
+        gap: 4,
     },
-    chatButtonText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: Colors.primary,
+    messagesText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: Colors.surface,
     },
-
-    // Fire Comparison (Streak)
-    fireComparison: {
+    // Quick Start Cards
+    quickStartCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-around',
-        paddingVertical: 8,
-        paddingLeft: 8,
+        backgroundColor: Colors.surface,
+        borderRadius: BorderRadius.md,
+        padding: 16,
+        marginBottom: 12,
+        gap: 14,
+        ...Shadows.soft,
     },
-    firePlayer: {
+    quickStartIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 14,
         alignItems: 'center',
+        justifyContent: 'center',
+    },
+    quickStartEmoji: {
+        fontSize: 22,
+    },
+    quickStartContent: {
         flex: 1,
     },
-    fireCount: {
-        fontSize: 24,
-        fontWeight: '700',
+    quickStartTitle: {
+        fontSize: 15,
+        fontWeight: '600',
         color: Colors.textDark,
+        marginBottom: 2,
     },
-    fireEmoji: {
-        fontSize: 18,
+    quickStartDesc: {
+        fontSize: 13,
+        color: Colors.textMedium,
     },
-    fireLabel: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: Colors.textLight,
-        marginTop: 4,
-        letterSpacing: 0.5,
-    },
-    fireDivider: {
-        width: 1,
-        height: 32,
-        backgroundColor: '#E5E7EB',
-    },
-
-    // Completed Section
-    completedSection: {
+    // Collapsed row
+    collapsedRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 8,
+        paddingVertical: 12,
     },
-    completedText: {
-        fontSize: 11,
-        fontWeight: '700',
+    collapsedText: {
+        fontSize: 14,
+        fontWeight: '500',
         color: Colors.textLight,
-        letterSpacing: 0.5,
-        textTransform: 'uppercase',
     },
-
-    // Recommended Cards
-    recommendedCard: {
-        backgroundColor: Colors.surface,
-        borderRadius: 32,
-        padding: 20,
-        marginBottom: 16,
-        flexDirection: 'row',
-        gap: 16,
-        ...Shadows.card,
-    },
-    recommendedIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 16,
+    // FAB
+    fab: {
+        position: 'absolute',
+        bottom: 24,
+        right: 24,
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: Colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    recommendedEmoji: {
-        fontSize: 20,
-    },
-    recommendedContent: {
-        flex: 1,
-    },
-    recommendedTitle: {
-        fontSize: 15,
-        fontWeight: '700',
-        color: Colors.textDark,
-        marginBottom: 4,
-    },
-    recommendedDesc: {
-        fontSize: 12,
-        color: Colors.textMedium,
-        lineHeight: 18,
-        marginBottom: 12,
-    },
-    recommendedButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 10,
-        borderRadius: 999,
-    },
-    recommendedButtonText: {
-        fontSize: 12,
-        fontWeight: '700',
+        ...Shadows.float,
     },
 });
