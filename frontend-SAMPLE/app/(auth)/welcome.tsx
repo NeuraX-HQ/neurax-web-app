@@ -6,7 +6,6 @@ import {
     FlatList,
     Dimensions,
     StyleSheet,
-    Image,
 } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";

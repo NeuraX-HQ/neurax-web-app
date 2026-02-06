@@ -14,13 +14,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../contexts/AuthContext";
 import { Colors, Shadows } from "../../constants/Theme";
 
-const STEPS = [
-    { id: 1, title: "Goals & Privacy" },
-    { id: 2, title: "Basic Measurements" },
-    { id: 3, title: "Dietary Preferences" },
-    { id: 4, title: "Notifications" },
-];
-
 const GOALS = [
     { id: "lose_weight", label: "Giảm cân", icon: "🎯" },
     { id: "muscle_gain", label: "Tăng cơ", icon: "💪" },
@@ -44,7 +37,7 @@ const DIETARY_RESTRICTIONS = [
 ];
 
 export default function OnboardingScreen() {
-    const { completeOnboarding, updateOnboardingStep, isLoading } = useAuth();
+    const { completeOnboarding, isLoading } = useAuth();
     const [currentStep, setCurrentStep] = useState(1);
 
     // Form state
