@@ -68,6 +68,7 @@ export interface FridgeItem {
     expiresAt: Date;
     addedAt: Date;
     category: 'produce' | 'meat' | 'dairy' | 'condiment' | 'dry' | 'other';
+    imageUrl?: string;
 }
 
 export interface Recipe {
@@ -327,6 +328,7 @@ export const MOCK_FRIDGE_ITEMS: FridgeItem[] = [
         expiresAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days
         addedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
         category: 'meat',
+        imageUrl: 'https://images.unsplash.com/photo-1606728035253-49e8a23146de?w=150&q=80',
     },
     {
         id: 'fridge-002',
@@ -336,6 +338,7 @@ export const MOCK_FRIDGE_ITEMS: FridgeItem[] = [
         expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
         addedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
         category: 'dairy',
+        imageUrl: 'https://images.unsplash.com/photo-1587486913049-53fc88980cfc?w=150&q=80',
     },
     {
         id: 'fridge-003',
@@ -346,6 +349,7 @@ export const MOCK_FRIDGE_ITEMS: FridgeItem[] = [
         expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
         addedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
         category: 'produce',
+        imageUrl: 'https://images.unsplash.com/photo-1628795550275-d1fb78939c06?w=150&q=80',
     },
     {
         id: 'fridge-004',
@@ -356,6 +360,7 @@ export const MOCK_FRIDGE_ITEMS: FridgeItem[] = [
         expiresAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
         addedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
         category: 'produce',
+        imageUrl: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=150&q=80',
     },
     {
         id: 'fridge-005',
@@ -365,6 +370,7 @@ export const MOCK_FRIDGE_ITEMS: FridgeItem[] = [
         expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
         addedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         category: 'condiment',
+        imageUrl: 'https://images.unsplash.com/photo-1599320986938-1a5c6020556e?w=150&q=80',
     },
     {
         id: 'fridge-006',
@@ -375,6 +381,27 @@ export const MOCK_FRIDGE_ITEMS: FridgeItem[] = [
         expiresAt: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
         addedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         category: 'dry',
+        imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=150&q=80',
+    },
+    {
+        id: 'fridge-007',
+        name: 'Garlic',
+        nameVi: 'Tỏi',
+        quantity: '3 củ',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        addedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+        category: 'produce',
+        imageUrl: 'https://images.unsplash.com/photo-1615477218698-c9ceb555d7f0?w=150&q=80',
+    },
+    {
+        id: 'fridge-008',
+        name: 'Onion',
+        nameVi: 'Hành tây',
+        quantity: '2 củ',
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        addedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        category: 'produce',
+        imageUrl: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=150&q=80',
     },
 ];
 
@@ -391,7 +418,7 @@ export const MOCK_RECIPES: Recipe[] = [
         carbs: 15,
         fat: 28,
         ingredients: ['Pork Belly', 'Eggs', 'Fish Sauce', 'Sugar', 'Coconut Water'],
-        matchedFromFridge: 3,
+        matchedFromFridge: 4,
         difficulty: 'easy',
         image: 'https://images.unsplash.com/photo-1623689046286-01f2390a7659?w=400',
     },
@@ -407,8 +434,9 @@ export const MOCK_RECIPES: Recipe[] = [
         carbs: 8,
         fat: 4,
         ingredients: ['Morning Glory', 'Garlic', 'Fish Sauce', 'Oil'],
-        matchedFromFridge: 2,
+        matchedFromFridge: 5,
         difficulty: 'easy',
+        image: 'https://images.unsplash.com/photo-1604147706283-d7119b5b822c?w=400',
     },
     {
         id: 'recipe-003',
@@ -424,6 +452,71 @@ export const MOCK_RECIPES: Recipe[] = [
         ingredients: ['Tomatoes', 'Eggs', 'Fish Sauce', 'Green Onion'],
         matchedFromFridge: 3,
         difficulty: 'easy',
+        image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=400',
+    },
+    {
+        id: 'recipe-004',
+        name: 'Vietnamese Spring Rolls',
+        nameVi: 'Gỏi cuốn',
+        description: 'Fresh, healthy rolls with peanut dipping sauce',
+        prepTime: 20,
+        cookTime: 0,
+        calories: 180,
+        protein: 12,
+        carbs: 22,
+        fat: 5,
+        ingredients: ['Rice Paper', 'Shrimp', 'Pork', 'Rice Noodles', 'Lettuce'],
+        matchedFromFridge: 2,
+        difficulty: 'medium',
+        image: 'https://images.unsplash.com/photo-1553621042-f6e147245754?w=400',
+    },
+    {
+        id: 'recipe-005',
+        name: 'Lemongrass Chicken',
+        nameVi: 'Gà xào sả ớt',
+        description: 'Fragrant stir-fry with bold Vietnamese flavors',
+        prepTime: 15,
+        cookTime: 20,
+        calories: 320,
+        protein: 28,
+        carbs: 12,
+        fat: 18,
+        ingredients: ['Chicken Thigh', 'Lemongrass', 'Chili', 'Garlic', 'Fish Sauce'],
+        matchedFromFridge: 2,
+        difficulty: 'easy',
+        image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=400',
+    },
+    {
+        id: 'recipe-006',
+        name: 'Crispy Vietnamese Pancake',
+        nameVi: 'Bánh xèo',
+        description: 'Crispy savory crepe with shrimp and pork',
+        prepTime: 20,
+        cookTime: 30,
+        calories: 450,
+        protein: 18,
+        carbs: 45,
+        fat: 22,
+        ingredients: ['Rice Flour', 'Turmeric', 'Shrimp', 'Pork', 'Bean Sprouts'],
+        matchedFromFridge: 1,
+        difficulty: 'medium',
+        image: 'https://images.unsplash.com/photo-1562967916-eb82221dfb98?w=400',
+    },
+    {
+        id: 'recipe-007',
+        name: 'Garlic Fried Rice',
+        nameVi: 'Cơm chiên tỏi',
+        description: 'Simple fried rice using leftover rice and eggs',
+        prepTime: 5,
+        cookTime: 10,
+        calories: 380,
+        protein: 12,
+        carbs: 58,
+        fat: 12,
+        ingredients: ['Rice', 'Eggs', 'Garlic', 'Fish Sauce', 'Green Onion'],
+        matchedFromFridge: 4,
+        difficulty: 'easy',
+        image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400',
     },
 ];
 

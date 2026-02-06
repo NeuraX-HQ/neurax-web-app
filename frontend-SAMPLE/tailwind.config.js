@@ -16,6 +16,10 @@ module.exports = {
                     hover: '#004936',
                     dark: '#004d3a',
                 },
+                // Kitchen theme (from Kitchen_layout_refence.html)
+                cream: '#F5F1E8',
+                'border-cream': '#E5E0D6',
+                'emerald-light': '#E8F0EE',
                 // Surface & Background
                 surface: '#FFFFFF',
                 background: '#F2F6F9',
