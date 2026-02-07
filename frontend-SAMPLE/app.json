@@ -1,0 +1,47 @@
+{
+  "name": "nutritrack-mobile",
+  "slug": "nutritrack-mobile",
+  "version": "2.0.0",
+  "orientation": "portrait",
+  "icon": "./assets/images/icon.png",
+  "scheme": "nutritrack",
+  "userInterfaceStyle": "light",
+  "newArchEnabled": true,
+  "ios": {
+    "supportsTablet": true,
+    "bundleIdentifier": "com.neurax.nutritrack"
+  },
+  "android": {
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/images/adaptive-icon.png",
+      "backgroundColor": "#005C45"
+    },
+    "package": "com.neurax.nutritrack"
+  },
+  "web": {
+    "bundler": "metro",
+    "output": "static",
+    "favicon": "./assets/images/favicon.png"
+  },
+  "plugins": [
+    "expo-router",
+    "expo-secure-store",
+    "expo-font"
+  ],
+  "experiments": {
+    "typedRoutes": true
+  },
+  "splash": {
+    "image": "./assets/images/splash-icon.png",
+    "resizeMode": "contain",
+    "backgroundColor": "#005C45"
+  },
+  "extra": {
+    "router": {
+      "origin": false
+    },
+    "eas": {
+      "projectId": "nutritrack-2"
+    }
+  }
+}

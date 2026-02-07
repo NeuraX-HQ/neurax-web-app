@@ -1,0 +1,513 @@
+<html lang="en" vid="0">
+
+<head vid="1">
+    <meta charset="UTF-8" vid="2">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" vid="3">
+    <title vid="4">NutriTrack - Challenges</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Playfair+Display:wght@400;600;700&amp;display=swap"
+        rel="stylesheet" vid="5">
+    <script src="https://cdn.tailwindcss.com/3.4.17" vid="6"></script>
+    <style vid="7">
+        :root {
+            --primary: #005C45;
+            --primary-dark: #004936;
+            --primary-light: #E8F3F0;
+            --primary-light-hover: #D1E5E0;
+            --accent-glass: rgba(255, 255, 255, 0.65);
+            --surface: #FFFFFF;
+            --bg-app: #F2F6F9;
+
+            --text-dark: #0B231E;
+            --text-medium: #4A635D;
+            --text-light: #8FA6A0;
+
+            --success: #10B981;
+            --warning: #D97706;
+            --danger: #EF4444;
+            --info: #0284C7;
+
+            --radius-sm: 12px;
+            --radius-md: 20px;
+            --radius-lg: 32px;
+            --radius-pill: 999px;
+
+            --shadow-soft: 0 4px 20px rgba(0, 92, 69, 0.06);
+            --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.04);
+            --shadow-float: 0 12px 32px rgba(0, 92, 69, 0.15);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #DDE5EB;
+            color: var(--text-dark);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .app-container {
+            width: 100%;
+            height: 100%;
+            max-width: 414px;
+            max-height: 896px;
+            background-color: var(--bg-app);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (min-width: 420px) {
+            .app-container {
+                height: 90vh;
+                border-radius: 40px;
+                border: 8px solid #FFFFFF;
+            }
+        }
+
+        h1,
+        h2,
+        h3,
+        .serif {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .challenge-card {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-card);
+            transition: transform 0.2s;
+        }
+
+        .challenge-card:active {
+            transform: scale(0.98);
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #E5E7EB;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 4px;
+            transition: width 0.5s ease-out;
+        }
+
+        .user-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #E5E7EB;
+            object-fit: cover;
+        }
+
+        .badge-pill {
+            padding: 4px 10px;
+            border-radius: var(--radius-pill);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .fab-add {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .fab-add:active {
+            background: var(--primary-light-hover);
+        }
+
+
+        .bottom-nav {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: var(--surface);
+            padding: 12px 24px;
+            padding-bottom: max(32px, env(safe-area-inset-bottom));
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.04);
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-light);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .fab-center {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--primary) 0%, #004d3a 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-float);
+            color: white;
+            z-index: 101;
+            border: 4px solid var(--surface);
+            cursor: pointer;
+        }
+
+        .screen-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            padding-bottom: 110px;
+        }
+
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-enter {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body vid="8">
+
+    <div class="app-container" vid="9">
+
+
+        <div class="screen-content hide-scrollbar" vid="10">
+
+
+            <div class="flex justify-between items-center mb-6 pt-2" vid="11">
+                <h1 class="text-[32px] font-bold text-[#0B231E]" vid="12">Challenges</h1>
+                <button class="fab-add shadow-sm" vid="13">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round" vid="14">
+                        <line x1="12" y1="5" x2="12" y2="19" vid="15"></line>
+                        <line x1="5" y1="12" x2="19" y2="12" vid="16"></line>
+                    </svg>
+                </button>
+            </div>
+
+
+            <div class="mb-8 animate-enter" style="animation-delay: 0.1s;" vid="17">
+                <div class="flex items-center gap-2 mb-4" vid="18">
+                    <span class="text-xs font-bold tracking-wider text-[#4A635D] uppercase" vid="19">Active
+                        Battles</span>
+                    <span class="bg-[#10B981] text-white text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        vid="20">2</span>
+                </div>
+
+
+                <div class="challenge-card relative overflow-hidden group" vid="21">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-[#10B981]" vid="22"></div>
+
+                    <div class="flex justify-between items-start mb-4 pl-2" vid="23">
+                        <div vid="24">
+                            <div class="flex items-center gap-2 mb-1" vid="25">
+                                <span class="text-xl" vid="26">🏆</span>
+                                <h3 class="text-lg font-bold text-[#0B231E]" vid="27">Protein Battle</h3>
+                            </div>
+                            <p class="text-sm text-[#4A635D]" vid="28">vs <span class="font-semibold text-[#005C45]"
+                                    vid="29">@john_doe</span></p>
+                        </div>
+                        <div class="bg-[#E8F3F0] text-[#005C45] px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1"
+                            vid="30">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" vid="31">
+                                <circle cx="12" cy="12" r="10" vid="32"></circle>
+                                <polyline points="12 6 12 12 16 14" vid="33"></polyline>
+                            </svg>
+                            2 days left
+                        </div>
+                    </div>
+
+
+                    <div class="space-y-3 mb-4 pl-2" vid="34">
+
+                        <div vid="35">
+                            <div class="flex justify-between text-xs font-semibold mb-1" vid="36">
+                                <span class="text-[#0B231E]" vid="37">You</span>
+                                <span class="text-[#10B981]" vid="38">4/7 days</span>
+                            </div>
+                            <div class="progress-bar" vid="39">
+                                <div class="progress-fill" style="width: 57%;" vid="40"></div>
+                            </div>
+                        </div>
+
+                        <div vid="41">
+                            <div class="flex justify-between text-xs font-semibold mb-1" vid="42">
+                                <span class="text-[#4A635D]" vid="43">John</span>
+                                <span class="text-[#4A635D]" vid="44">3/7 days</span>
+                            </div>
+                            <div class="progress-bar" vid="45">
+                                <div class="progress-fill bg-[#8FA6A0]" style="width: 42%;" vid="46"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pl-2 pt-2 border-t border-gray-100" vid="47">
+                        <div class="flex items-center gap-2" vid="48">
+                            <div class="flex -space-x-2" vid="49">
+                                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&amp;auto=format&amp;fit=crop&amp;w=64&amp;q=80"
+                                    class="w-6 h-6 rounded-full border-2 border-white" vid="50">
+                                <img src="https://images.unsplash.com/photo-1599566150163-29194dcaad36?ixlib=rb-1.2.1&amp;auto=format&amp;fit=crop&amp;w=64&amp;q=80"
+                                    class="w-6 h-6 rounded-full border-2 border-white" vid="51">
+                            </div>
+                            <span class="text-xs text-[#8FA6A0]" vid="52">+1 spectator</span>
+                        </div>
+                        <button
+                            class="flex items-center gap-1.5 text-xs font-semibold text-[#005C45] bg-[#E8F3F0] px-3 py-1.5 rounded-full active:bg-[#D1E5E0] transition-colors"
+                            vid="53">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vid="54">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" vid="55"></path>
+                            </svg>
+                            2 new
+                        </button>
+                    </div>
+                </div>
+
+
+                <div class="challenge-card relative overflow-hidden" vid="56">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-[#F59E0B]" vid="57"></div>
+
+                    <div class="flex justify-between items-start mb-2 pl-2" vid="58">
+                        <div vid="59">
+                            <div class="flex items-center gap-2 mb-1" vid="60">
+                                <span class="text-xl" vid="61">🔥</span>
+                                <h3 class="text-lg font-bold text-[#0B231E]" vid="62">7-Day Streak</h3>
+                            </div>
+                            <p class="text-sm text-[#4A635D]" vid="63">vs <span class="font-semibold text-[#005C45]"
+                                    vid="64">@sarah_nguyen</span></p>
+                        </div>
+                        <div class="bg-[#FFFBEB] text-[#D97706] px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1"
+                            vid="65">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" vid="66">
+                                <circle cx="12" cy="12" r="10" vid="67"></circle>
+                                <polyline points="12 6 12 12 16 14" vid="68"></polyline>
+                            </svg>
+                            5 days left
+                        </div>
+                    </div>
+
+
+                    <div class="flex items-center justify-around py-2 pl-2" vid="69">
+                        <div class="text-center" vid="70">
+                            <div class="text-2xl font-bold text-[#0B231E]" vid="71">5<span class="text-lg"
+                                    vid="72">🔥</span></div>
+                            <div class="text-[10px] uppercase font-bold text-[#8FA6A0] mt-1" vid="73">You</div>
+                        </div>
+                        <div class="h-8 w-[1px] bg-gray-200" vid="74"></div>
+                        <div class="text-center" vid="75">
+                            <div class="text-2xl font-bold text-[#0B231E]" vid="76">6<span class="text-lg"
+                                    vid="77">🔥</span></div>
+                            <div class="text-[10px] uppercase font-bold text-[#8FA6A0] mt-1" vid="78">Sarah</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="mb-8 animate-enter" style="animation-delay: 0.2s;" vid="79">
+                <button class="w-full flex justify-between items-center py-2 px-1 mb-2 group" vid="80">
+                    <span
+                        class="text-xs font-bold tracking-wider text-[#8FA6A0] uppercase group-hover:text-[#4A635D] transition-colors"
+                        vid="81">Completed Challenges (3)</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8FA6A0" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round"
+                        class="transform transition-transform group-hover:text-[#4A635D]" vid="82">
+                        <polyline points="6 9 12 15 18 9" vid="83"></polyline>
+                    </svg>
+                </button>
+            </div>
+
+
+            <div class="animate-enter" style="animation-delay: 0.3s;" vid="84">
+                <div class="flex items-center gap-2 mb-4" vid="85">
+                    <span class="text-xs font-bold tracking-wider text-[#4A635D] uppercase" vid="86">Recommended for
+                        You</span>
+                    <span class="bg-[#3B82F6] text-white text-[9px] font-bold px-1.5 py-0.5 rounded" vid="87">AI</span>
+                </div>
+
+
+                <div class="challenge-card !mb-4 border border-transparent hover:border-[#E8F3F0]" vid="88">
+                    <div class="flex gap-4" vid="89">
+                        <div class="w-12 h-12 rounded-2xl bg-[#E0F2FE] text-[#0284C7] flex items-center justify-center text-xl shrink-0"
+                            vid="90">
+                            🎯
+                        </div>
+                        <div class="flex-1" vid="91">
+                            <h3 class="font-bold text-[#0B231E] mb-1" vid="92">30-Day Consistency</h3>
+                            <p class="text-xs text-[#4A635D] leading-relaxed mb-3" vid="93">Log your meals every day for
+                                30 days straight to build a habit.</p>
+                            <button
+                                class="text-xs font-bold text-[#005C45] bg-[#E8F3F0] px-4 py-2 rounded-full w-full hover:bg-[#D1E5E0] transition-colors"
+                                vid="94">
+                                Start Solo Challenge
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="challenge-card !mb-4 border border-transparent hover:border-[#FEF3C7]" vid="95">
+                    <div class="flex gap-4" vid="96">
+                        <div class="w-12 h-12 rounded-2xl bg-[#FEF3C7] text-[#D97706] flex items-center justify-center text-xl shrink-0"
+                            vid="97">
+                            💪
+                        </div>
+                        <div class="flex-1" vid="98">
+                            <h3 class="font-bold text-[#0B231E] mb-1" vid="99">Weekend Warrior</h3>
+                            <p class="text-xs text-[#4A635D] leading-relaxed mb-3" vid="100">Stay on track by hitting
+                                your macro goals this Saturday &amp; Sunday.</p>
+                            <button
+                                class="text-xs font-bold text-[#D97706] bg-[#FFFBEB] px-4 py-2 rounded-full w-full border border-[#FDE68A] hover:bg-[#FEF3C7] transition-colors flex justify-center items-center gap-2"
+                                vid="101">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="3" vid="102">
+                                    <line x1="12" y1="5" x2="12" y2="19" vid="103"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12" vid="104"></line>
+                                </svg>
+                                Challenge a Friend
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="challenge-card border border-transparent hover:border-[#E8F3F0]" vid="105">
+                    <div class="flex gap-4" vid="106">
+                        <div class="w-12 h-12 rounded-2xl bg-[#DCFCE7] text-[#166534] flex items-center justify-center text-xl shrink-0"
+                            vid="107">
+                            🥗
+                        </div>
+                        <div class="flex-1" vid="108">
+                            <h3 class="font-bold text-[#0B231E] mb-1" vid="109">Macro Maestro</h3>
+                            <p class="text-xs text-[#4A635D] leading-relaxed mb-3" vid="110">Hit all 3 macro goals
+                                (Protein, Carbs, Fat) for 5 days this week.</p>
+                            <button
+                                class="text-xs font-bold text-[#166534] bg-[#DCFCE7] px-4 py-2 rounded-full w-full hover:bg-[#BBF7D0] transition-colors"
+                                vid="111">
+                                Start Solo Challenge
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="fab-center" vid="112">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                stroke-linecap="round" stroke-linejoin="round" vid="113">
+                <line x1="12" y1="5" x2="12" y2="19" vid="114"></line>
+                <line x1="5" y1="12" x2="19" y2="12" vid="115"></line>
+            </svg>
+        </div>
+
+
+        <nav class="bottom-nav" vid="116">
+            <div class="nav-item" vid="117">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" vid="118">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" vid="119"></path>
+                    <polyline points="9 22 9 12 15 12 15 22" vid="120"></polyline>
+                </svg>
+                <span vid="121">Home</span>
+            </div>
+            <div class="nav-item active" vid="122">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" vid="123">
+                    <circle cx="12" cy="8" r="7" vid="124"></circle>
+                    <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" vid="125"></polyline>
+                </svg>
+                <span vid="126">Challenges</span>
+            </div>
+            <div style="width: 64px;" vid="127"></div>
+            <div class="nav-item" vid="128">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round" vid="129">
+                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" vid="130"></path>
+                    <line x1="3" y1="6" x2="21" y2="6" vid="131"></line>
+                    <path d="M16 10a4 4 0 0 1-8 0" vid="132"></path>
+                </svg>
+                <span vid="133">Kitchen</span>
+            </div>
+            <div class="nav-item" vid="134">
+                <div class="w-6 h-6 rounded-full bg-gray-300 overflow-hidden" vid="135">
+                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&amp;auto=format&amp;fit=crop&amp;w=100&amp;q=80"
+                        class="w-full h-full object-cover" vid="136">
+                </div>
+                <span vid="137">Profile</span>
+            </div>
+        </nav>
+
+    </div>
+
+
+</body>
+
+</html>
