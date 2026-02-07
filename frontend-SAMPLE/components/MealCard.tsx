@@ -63,6 +63,8 @@ const MealCard = memo(function MealCard({
                     <Text style={styles.macroText}>{protein}g protein</Text>
                     <Text style={styles.macroDivider}>|</Text>
                     <Text style={styles.macroText}>{carbs}g carbs</Text>
+                    <Text style={styles.macroDivider}>|</Text>
+                    <Text style={styles.macroText}>{fat}g fat</Text>
                 </View>
                 <Text style={styles.time}>{formatTime(meal.timestamp)}</Text>
             </View>
