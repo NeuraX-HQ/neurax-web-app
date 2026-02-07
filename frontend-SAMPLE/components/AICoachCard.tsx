@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Shadows } from '../constants/Theme';
+import { Colors } from '../constants/Theme';
 import { AI_BAO_MESSAGES } from '../data/mockData';
 
 interface AICoachCardProps {
