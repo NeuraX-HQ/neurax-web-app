@@ -1,7 +1,7 @@
 import React, { memo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Shadows } from '../constants/Theme';
+import { Colors } from '../constants/Theme';
 import { MealLog } from '../data/mockData';
 import MealCard from './MealCard';
 
