@@ -1,0 +1,732 @@
+<html lang="en" vid="0">
+
+<head vid="1">
+    <meta charset="UTF-8" vid="2">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" vid="3">
+    <title vid="4">Challenge Detail - NutriTrack</title>
+    <script src="https://cdn.tailwindcss.com/3.4.17" vid="5"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Playfair+Display:wght@400;600;700&amp;display=swap"
+        rel="stylesheet" vid="6">
+    <style vid="7">
+        :root {
+            --primary: #005C45;
+            --primary-light: #E8F3F0;
+            --primary-hover: #004936;
+            --accent-glass: rgba(255, 255, 255, 0.65);
+            --surface: #FFFFFF;
+            --bg-app: #F2F6F9;
+
+            --text-dark: #0B231E;
+            --text-medium: #4A635D;
+            --text-light: #8FA6A0;
+            --text-on-primary: #FFFFFF;
+
+            --success: #10B981;
+            --warning: #D97706;
+            --error: #EF4444;
+            --info: #0284C7;
+
+            --radius-sm: 12px;
+            --radius-md: 20px;
+            --radius-lg: 32px;
+            --radius-pill: 999px;
+
+            --space-xs: 8px;
+            --space-sm: 16px;
+            --space-md: 24px;
+            --space-lg: 32px;
+
+            --shadow-soft: 0 4px 20px rgba(0, 92, 69, 0.06);
+            --shadow-float: 0 12px 32px rgba(0, 92, 69, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #DDE5EB;
+            color: var(--text-dark);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .app-container {
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-app);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (min-width: 420px) {
+            .app-container {
+                max-width: 390px;
+                max-height: 844px;
+                height: 90vh;
+                border-radius: 40px;
+                border: 8px solid #FFFFFF;
+            }
+        }
+
+        h1,
+        h2,
+        h3,
+        .serif-display {
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .text-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+            color: var(--text-medium);
+        }
+
+
+        .header {
+            padding: 20px 24px;
+            padding-top: max(20px, env(safe-area-inset-top));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-app);
+            z-index: 10;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .icon-btn:active {
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+
+        .content-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 var(--space-md) var(--space-lg);
+        }
+
+
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-bottom: var(--space-md);
+            box-shadow: var(--shadow-soft);
+        }
+
+
+        .challenge-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .challenge-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .countdown-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--text-dark);
+            color: white;
+            padding: 6px 12px;
+            border-radius: var(--radius-pill);
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .stakes-box {
+            background: #FEF3C7;
+            border: 1px solid #FCD34D;
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            color: #92400E;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            margin-top: 8px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            color: var(--text-dark);
+            margin: 0;
+        }
+
+
+        .leader-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #F3F4F6;
+        }
+
+        .leader-row:last-child {
+            border-bottom: none;
+        }
+
+        .rank-num {
+            width: 24px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-light);
+            text-align: center;
+        }
+
+        .rank-num.top {
+            color: var(--warning);
+        }
+
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ddd;
+            object-fit: cover;
+        }
+
+        .player-info {
+            flex: 1;
+        }
+
+        .player-name {
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .player-stats {
+            font-size: 12px;
+            color: var(--text-medium);
+            margin-top: 2px;
+        }
+
+        .days-progress {
+            display: flex;
+            gap: 2px;
+            margin-top: 6px;
+        }
+
+        .day-segment {
+            flex: 1;
+            height: 6px;
+            background: #E5E7EB;
+            border-radius: 2px;
+        }
+
+        .day-segment.filled {
+            background: var(--primary);
+        }
+
+        .day-segment.filled-opponent {
+            background: var(--text-light);
+        }
+
+
+        .progress-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .progress-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            padding: 12px 16px;
+            border-radius: var(--radius-sm);
+            border: 1px solid transparent;
+        }
+
+        .progress-item.missed {
+            background: #FEF2F2;
+            border-color: #FECACA;
+        }
+
+        .progress-item.active {
+            background: var(--primary-light);
+            border-color: #A7F3D0;
+        }
+
+        .date-col {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            width: 80px;
+        }
+
+        .status-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .status-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .status-fail {
+            background: var(--error);
+            color: white;
+        }
+
+        .status-pending {
+            background: #E5E7EB;
+            color: var(--text-light);
+            font-size: 12px;
+        }
+
+        .val-col {
+            flex: 1;
+            text-align: right;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .val-sub {
+            font-size: 11px;
+            color: var(--text-light);
+            margin-left: 4px;
+        }
+
+        .missed-label {
+            color: var(--error);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .chat-msg {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+        }
+
+        .chat-msg.left {
+            align-self: flex-start;
+        }
+
+        .chat-msg.right {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .msg-bubble {
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+            position: relative;
+        }
+
+        .left .msg-bubble {
+            background: #F3F4F6;
+            color: var(--text-dark);
+            border-bottom-left-radius: 4px;
+        }
+
+        .right .msg-bubble {
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-meta {
+            font-size: 10px;
+            color: var(--text-light);
+            margin-top: 4px;
+            margin-left: 4px;
+        }
+
+        .right .msg-meta {
+            margin-right: 4px;
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .chat-input {
+            flex: 1;
+            background: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 20px;
+            padding: 10px 16px;
+            font-size: 14px;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary);
+        }
+
+        .send-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 0 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+
+        .bottom-actions {
+            background: var(--surface);
+            padding: 16px 24px;
+            padding-bottom: max(32px, env(safe-area-inset-bottom));
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, #004d3a 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0, 92, 69, 0.2);
+        }
+
+        .btn-outline-danger {
+            background: transparent;
+            border: 1px solid #FECACA;
+            color: var(--error);
+        }
+
+        .icon {
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+</head>
+
+<body vid="8">
+
+    <div class="app-container" vid="9">
+
+
+        <div class="header" vid="10">
+            <div class="icon-btn" onclick="history.back()" vid="11">
+                <svg class="icon" viewBox="0 0 24 24" vid="12">
+                    <path d="M19 12H5M12 19l-7-7 7-7" vid="13"></path>
+                </svg>
+            </div>
+            <div class="header-title" vid="14">Protein Battle</div>
+            <div class="icon-btn" vid="15">
+                <svg class="icon" viewBox="0 0 24 24" vid="16">
+                    <circle cx="12" cy="12" r="1" vid="17"></circle>
+                    <circle cx="12" cy="5" r="1" vid="18"></circle>
+                    <circle cx="12" cy="19" r="1" vid="19"></circle>
+                </svg>
+            </div>
+        </div>
+
+        <div class="content-scroll" vid="20">
+
+
+            <div class="card" style="text-align: center; padding-bottom: 24px;" vid="21">
+                <div style="font-size: 64px; line-height: 1; margin: 12px 0 16px;" vid="22">🏆</div>
+                <h2 style="font-size: 24px; margin-bottom: 8px;" vid="23">Protein Battle</h2>
+                <p style="color: var(--text-medium); margin-bottom: 16px; font-size: 15px;" vid="24">Hit protein goal 5
+                    out of 7 days</p>
+
+                <div class="countdown-badge" vid="25">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        vid="26">
+                        <circle cx="12" cy="12" r="10" vid="27"></circle>
+                        <polyline points="12 6 12 12 16 14" vid="28"></polyline>
+                    </svg>
+                    Ends in 2 days
+                </div>
+
+                <div class="stakes-box" vid="29">
+                    <span style="font-size: 20px;" vid="30">🎁</span>
+                    <span vid="31">Loser buys winner a protein shake 🥤</span>
+                </div>
+            </div>
+
+
+            <div class="section-header" vid="32">
+                <h3 class="section-title" vid="33">Leaderboard</h3>
+            </div>
+
+            <div class="card" style="padding: 0 20px;" vid="34">
+
+                <div class="leader-row" vid="35">
+                    <div class="rank-num top" vid="36">1</div>
+                    <div class="player-avatar"
+                        style="background-image: url('https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&amp;auto=format&amp;fit=crop&amp;w=100&amp;q=80'); background-size: cover;"
+                        vid="37"></div>
+                    <div class="player-info" vid="38">
+                        <div class="player-name" vid="39">
+                            You <span style="font-size: 14px;" vid="40">🔥</span>
+                            <span style="margin-left: auto; font-size: 13px; font-weight: 700;" vid="41">4/7 days</span>
+                        </div>
+                        <div class="player-stats" vid="42">Current: 85/120g protein</div>
+                        <div class="days-progress" vid="43">
+                            <div class="day-segment filled" vid="44"></div>
+                            <div class="day-segment filled" vid="45"></div>
+                            <div class="day-segment filled" vid="46"></div>
+                            <div class="day-segment filled" vid="47"></div>
+                            <div class="day-segment" vid="48"></div>
+                            <div class="day-segment" vid="49"></div>
+                            <div class="day-segment" vid="50"></div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="leader-row" vid="51">
+                    <div class="rank-num" vid="52">2</div>
+                    <div class="player-avatar"
+                        style="background-image: url('https://images.unsplash.com/photo-1599566150163-29194dcaad36?ixlib=rb-1.2.1&amp;auto=format&amp;fit=crop&amp;w=100&amp;q=80'); background-size: cover;"
+                        vid="53"></div>
+                    <div class="player-info" vid="54">
+                        <div class="player-name" vid="55">
+                            @john_doe
+                            <span
+                                style="margin-left: auto; font-size: 13px; font-weight: 600; color: var(--text-medium);"
+                                vid="56">3/7 days</span>
+                        </div>
+                        <div class="player-stats" vid="57">Current: 92/120g protein</div>
+                        <div class="days-progress" vid="58">
+                            <div class="day-segment filled-opponent" vid="59"></div>
+                            <div class="day-segment filled-opponent" vid="60"></div>
+                            <div class="day-segment filled-opponent" vid="61"></div>
+                            <div class="day-segment" vid="62"></div>
+                            <div class="day-segment" vid="63"></div>
+                            <div class="day-segment" vid="64"></div>
+                            <div class="day-segment" vid="65"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="section-header" vid="66">
+                <h3 class="section-title" vid="67">Your Progress</h3>
+            </div>
+
+            <div class="progress-list" vid="68">
+
+                <div class="progress-item" vid="69">
+                    <div class="date-col" vid="70">
+                        <div class="status-icon status-success" vid="71">✓</div>
+                        <span vid="72">Mon</span>
+                    </div>
+                    <div class="val-col" vid="73">
+                        125g <span class="val-sub" vid="74">(Goal: 120g)</span>
+                    </div>
+                </div>
+
+
+                <div class="progress-item" vid="75">
+                    <div class="date-col" vid="76">
+                        <div class="status-icon status-success" vid="77">✓</div>
+                        <span vid="78">Tue</span>
+                    </div>
+                    <div class="val-col" vid="79">
+                        130g
+                    </div>
+                </div>
+
+
+                <div class="progress-item" vid="80">
+                    <div class="date-col" vid="81">
+                        <div class="status-icon status-success" vid="82">✓</div>
+                        <span vid="83">Wed</span>
+                    </div>
+                    <div class="val-col" vid="84">
+                        118g <span class="val-sub" style="color: var(--success);" vid="85">+2g bonus</span>
+                    </div>
+                </div>
+
+
+                <div class="progress-item missed" vid="86">
+                    <div class="date-col" vid="87">
+                        <div class="status-icon status-fail" vid="88">✕</div>
+                        <span style="color: var(--error);" vid="89">Thu</span>
+                    </div>
+                    <div class="val-col" vid="90">
+                        <div style="font-weight: 600;" vid="91">95g</div>
+                        <div class="missed-label" vid="92">Missed by 25g</div>
+                    </div>
+                </div>
+
+
+                <div class="progress-item" vid="93">
+                    <div class="date-col" vid="94">
+                        <div class="status-icon status-success" vid="95">✓</div>
+                        <span vid="96">Fri</span>
+                    </div>
+                    <div class="val-col" vid="97">
+                        140g
+                    </div>
+                </div>
+
+
+                <div class="progress-item active" vid="98">
+                    <div class="date-col" vid="99">
+                        <div class="status-icon status-pending" style="background: var(--primary); color: white;"
+                            vid="100">?</div>
+                        <span style="color: var(--primary);" vid="101">Sat</span>
+                    </div>
+                    <div class="val-col" vid="102">
+                        <div style="color: var(--primary); font-weight: 700;" vid="103">85g so far</div>
+                        <div class="val-sub" style="color: var(--primary); opacity: 0.8;" vid="104">Today</div>
+                    </div>
+                </div>
+
+
+                <div class="progress-item" style="background: transparent; border: 1px dashed #D1D5DB;" vid="105">
+                    <div class="date-col" style="opacity: 0.5;" vid="106">
+                        <div class="status-icon status-pending" vid="107">?</div>
+                        <span vid="108">Sun</span>
+                    </div>
+                    <div class="val-col" style="opacity: 0.5;" vid="109">
+                        --
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="section-header" style="margin-top: 32px;" vid="110">
+                <h3 class="section-title" vid="111">Trash Talk <span
+                        style="font-size: 14px; font-weight: 500; color: var(--primary); background: var(--primary-light); padding: 2px 8px; border-radius: 8px; margin-left: 8px;"
+                        vid="112">2 unread</span></h3>
+            </div>
+
+            <div class="card" vid="113">
+                <div class="chat-container" vid="114">
+
+                    <div class="chat-msg left" vid="115">
+                        <div style="font-size: 12px; font-weight: 600; margin-bottom: 2px; margin-left: 4px;" vid="116">
+                            John</div>
+                        <div class="msg-bubble" vid="117">Gonna catch up today! 💪</div>
+                        <div class="msg-meta" vid="118">6:30 PM</div>
+                    </div>
+
+
+                    <div class="chat-msg right" vid="119">
+                        <div class="msg-bubble" vid="120">Bring it on! 😎</div>
+                        <div class="msg-meta" vid="121">7:00 PM</div>
+                    </div>
+                </div>
+
+                <div class="chat-input-area" vid="122">
+                    <input type="text" class="chat-input" placeholder="Type message..." vid="123">
+                    <button class="send-btn" vid="124">Send</button>
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="bottom-actions" vid="125">
+            <button class="btn btn-primary" vid="126">
+                <svg class="icon" viewBox="0 0 24 24" style="margin-right: 8px; width: 18px; height: 18px;" vid="127">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" vid="128"></path>
+                    <polyline points="16 6 12 2 8 6" vid="129"></polyline>
+                    <line x1="12" y1="2" x2="12" y2="15" vid="130"></line>
+                </svg>
+                Share Progress
+            </button>
+            <button class="btn btn-outline-danger" vid="131">Quit Challenge</button>
+        </div>
+
+    </div>
+
+
+</body>
+
+</html>
