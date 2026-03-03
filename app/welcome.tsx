@@ -1,0 +1,284 @@
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    View, Text, StyleSheet, TouchableOpacity,
+    Animated, Dimensions, Platform,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const { width, height } = Dimensions.get('window');
+
+const WELCOME_IMAGES = [
+    require('../assets/images/welcome0.jpg'),
+    require('../assets/images/welcome5.jpg'),
+    require('../assets/images/friends.png'),
+];
+
+const FEATURES = [
+    {
+        title: <></>,  // will be replaced below
+        titleStr: 'Your AI Nutrition\nPartner',
+        subtitle: 'Track meals, challenge friends, and meet AI Bảo — your personal health coach.',
+    },
+    {
+        titleStr: 'Smart Meal\nPlanning',
+        subtitle: 'Get personalized recipes tailored to your goals and dietary preferences.',
+    },
+    {
+        titleStr: 'Challenge Friends,\nWin Together',
+        subtitle: 'Join weekly health challenges and compete with your community.',
+    },
+];
+
+const STATS = [
+    { label: 'Users', value: '10K+' },
+    { label: 'Recipes', value: '500+' },
+    { label: 'Rating', value: '4.9★' },
+];
+
+export default function WelcomeScreen() {
+    const router = useRouter();
+    const insets = useSafeAreaInsets();
+
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [nextIndex, setNextIndex] = useState(1);
+
+    // Image crossfade: currentImg fades out, nextImg fades in
+    const imgFade = useRef(new Animated.Value(1)).current;   // current image opacity
+    const nextFade = useRef(new Animated.Value(0)).current;  // next image opacity
+
+    // Text fade: text fades out then in
+    const textOpacity = useRef(new Animated.Value(1)).current;
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const next = (currentIndex + 1) % WELCOME_IMAGES.length;
+            setNextIndex(next);
+
+            // Reset next image to invisible
+            nextFade.setValue(0);
+
+            // Phase 1: crossfade images + fade out text simultaneously
+            Animated.parallel([
+                Animated.timing(nextFade, {
+                    toValue: 1,
+                    duration: 900,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(textOpacity, {
+                    toValue: 0,
+                    duration: 350,
+                    useNativeDriver: true,
+                }),
+            ]).start(() => {
+                // Swap indices
+                setCurrentIndex(next);
+                imgFade.setValue(1);
+                nextFade.setValue(0);
+
+                // Phase 2: fade text back in
+                Animated.timing(textOpacity, {
+                    toValue: 1,
+                    duration: 350,
+                    useNativeDriver: true,
+                }).start();
+            });
+        }, 4000);
+
+        return () => clearInterval(interval);
+    }, [currentIndex]);
+
+    const feature = FEATURES[currentIndex];
+
+    return (
+        <View style={styles.container}>
+            {/* Background images — full screen, stacked */}
+            {WELCOME_IMAGES.map((img, i) => (
+                <Animated.Image
+                    key={i}
+                    source={img}
+                    style={[
+                        styles.bgImage,
+                        {
+                            opacity: i === currentIndex
+                                ? imgFade
+                                : i === nextIndex
+                                    ? nextFade
+                                    : 0,
+                            zIndex: i === nextIndex ? 2 : i === currentIndex ? 1 : 0,
+                        },
+                    ]}
+                    resizeMode="cover"
+                />
+            ))}
+
+            {/* Gradient overlay — white fade from transparent → cream white */}
+            <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.72)', '#000000']}
+                locations={[0, 0.42, 1]}
+                style={styles.gradient}
+            />
+
+            {/* Content overlay — sits on top of image */}
+            <Animated.View
+                style={[
+                    styles.content,
+                    {
+                        opacity: textOpacity,
+                        paddingBottom: Math.max(insets.bottom, 24),
+                    },
+                ]}
+            >
+                {/* Pagination dots */}
+                <View style={styles.pagination}>
+                    {WELCOME_IMAGES.map((_, i) => (
+                        <View
+                            key={i}
+                            style={[styles.dot, i === currentIndex && styles.dotActive]}
+                        />
+                    ))}
+                </View>
+
+                <Text style={styles.title}>{feature.titleStr}</Text>
+                <Text style={styles.subtitle}>{feature.subtitle}</Text>
+
+                {/* Stats row */}
+                <View style={styles.statsRow}>
+                    {STATS.map((stat, i) => (
+                        <View key={i} style={styles.statCard}>
+                            <Text style={styles.statValue}>{stat.value}</Text>
+                            <Text style={styles.statLabel}>{stat.label}</Text>
+                        </View>
+                    ))}
+                </View>
+
+                {/* CTA */}
+                <TouchableOpacity
+                    style={styles.primaryButton}
+                    onPress={() => router.push('/onboarding/step1')}
+                    activeOpacity={0.85}
+                >
+                    <Text style={styles.primaryButtonText}>Get Started</Text>
+                </TouchableOpacity>
+
+                <View style={styles.loginFooter}>
+                    <Text style={styles.loginText}>Already have an account? </Text>
+                    <TouchableOpacity onPress={() => router.push('/login' as any)}>
+                        <Text style={styles.loginLink}>Log In</Text>
+                    </TouchableOpacity>
+                </View>
+            </Animated.View>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#111111',
+    },
+    bgImage: {
+        position: 'absolute',
+        width,
+        height,
+    },
+    gradient: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: height * 0.62,
+        zIndex: 10,
+    },
+    content: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 20,
+        paddingHorizontal: 24,
+        paddingTop: 16,
+    },
+    pagination: {
+        flexDirection: 'row',
+        marginBottom: 14,
+    },
+    dot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: 'rgba(255,255,255,0.25)',
+        marginRight: 6,
+    },
+    dotActive: {
+        width: 24,
+        backgroundColor: '#FFFFFF',
+    },
+    title: {
+        fontSize: height > 700 ? 26 : 22,
+        fontWeight: '900',
+        color: '#FFFFFF',
+        lineHeight: height > 700 ? 34 : 30,
+        marginBottom: 10,
+    },
+    subtitle: {
+        fontSize: 15,
+        color: 'rgba(255,255,255,0.92)',
+        lineHeight: 22,
+        marginBottom: 20,
+    },
+    statsRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 22,
+    },
+    statCard: {
+        flex: 1,
+        backgroundColor: 'rgba(255,255,255,0.12)',
+        borderRadius: 16,
+        paddingVertical: 12,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.18)',
+    },
+    statValue: {
+        fontSize: 17,
+        fontWeight: '800',
+        color: '#5eb684ff',
+        marginBottom: 2,
+    },
+    statLabel: {
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.6)',
+        fontWeight: '500',
+    },
+    primaryButton: {
+        backgroundColor: '#2b533cff',
+        borderRadius: 20,
+        paddingVertical: 17,
+        alignItems: 'center',
+        marginBottom: 14,
+    },
+    primaryButtonText: {
+        color: '#FFFFFF',
+        fontSize: 17,
+        fontWeight: '700',
+    },
+    loginFooter: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    loginText: {
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.72)',
+    },
+    loginLink: {
+        fontSize: 13,
+        color: '#FFFFFF',
+        fontWeight: '700',
+        textDecorationLine: 'underline',
+    },
+});
