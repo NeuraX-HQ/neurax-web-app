@@ -5,7 +5,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
-import { parseVoiceToFood, NutritionInfo } from '../services/geminiService';
+import { parseVoiceToFood, transcribeAudio, NutritionInfo } from '../services/geminiService';
+import { startRecording, stopRecording, cancelRecording } from '../services/audioService';
 import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
@@ -27,6 +28,7 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
     const [listening, setListening] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [analyzing, setAnalyzing] = useState(false);
+    const [transcribing, setTranscribing] = useState(false);
     const [foodData, setFoodData] = useState<NutritionInfo | null>(null);
 
     useEffect(() => {
@@ -35,14 +37,27 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
             setTranscript('');
             setFoodData(null);
             setAnalyzing(false);
+            setTranscribing(false);
         }
     }, [visible]);
 
-    const startListening = () => {
+    const startListening = async () => {
         setListening(true);
         setTranscript('');
         setFoodData(null);
-        
+
+        // Start audio recording
+        console.log('VoiceModal: Starting audio recording...');
+        const started = await startRecording();
+
+        if (!started) {
+            console.error('VoiceModal: Failed to start recording');
+            Alert.alert('Lỗi', 'Không thể bắt đầu ghi âm. Vui lòng cấp quyền microphone.');
+            setListening(false);
+            return;
+        }
+        console.log('VoiceModal: Recording started successfully');
+
         // Pulse animation
         Animated.loop(
             Animated.sequence([
@@ -50,7 +65,7 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
                 Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
             ])
         ).start();
-        
+
         // Wave bars
         waveAnims.forEach((anim, i) => {
             Animated.loop(
@@ -61,30 +76,50 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
                 ])
             ).start();
         });
-        
-        // Simulate voice recognition for 3 seconds
-        setTimeout(() => {
-            // In production, this would be real speech-to-text
-            // For now, we'll use a sample transcript
-            const sampleTranscript = 'Tôi vừa ăn một tô phở bò';
-            setTranscript(sampleTranscript);
-            stopListening();
-            analyzeVoiceInput(sampleTranscript);
-        }, 3000);
     };
 
-    const stopListening = () => {
+    const stopListening = async () => {
         setListening(false);
         pulseAnim.stopAnimation();
         waveAnims.forEach(a => a.stopAnimation());
+
+        // Stop recording and get audio
+        setTranscribing(true);
+        console.log('VoiceModal: Stopping recording...');
+        const result = await stopRecording();
+        console.log('VoiceModal: Stop result:', { success: result.success, hasBase64: !!result.base64, base64Length: result.base64?.length, error: result.error });
+
+        if (!result.success || !result.base64) {
+            Alert.alert('Lỗi', result.error || 'Không thể lưu ghi âm');
+            setTranscribing(false);
+            return;
+        }
+
+        // Transcribe audio with Gemini
+        console.log('VoiceModal: Sending audio to Gemini for transcription...');
+        const transcription = await transcribeAudio(result.base64);
+        console.log('VoiceModal: Transcription result:', { success: transcription.success, text: transcription.text, error: transcription.error });
+
+        if (!transcription.success || !transcription.text) {
+            Alert.alert('Lỗi', transcription.error || 'Không thể chuyển đổi giọng nói');
+            setTranscribing(false);
+            return;
+        }
+
+        setTranscript(transcription.text);
+        setTranscribing(false);
+
+        // Analyze the transcribed text
+        console.log('VoiceModal: Analyzing transcribed text:', transcription.text);
+        analyzeVoiceInput(transcription.text);
     };
 
     const analyzeVoiceInput = async (text: string) => {
         setAnalyzing(true);
-        
+
         try {
             const result = await parseVoiceToFood(text);
-            
+
             if (result.success && result.data) {
                 setFoodData(result.data);
             } else {
@@ -120,7 +155,11 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
 
                     <Text style={vStyles.title}>Tìm bằng giọng nói</Text>
                     <Text style={vStyles.subtitle}>
-                        {listening ? 'Đang nghe...' : 'Nhấn micro và nói tên món ăn'}
+                        {transcribing
+                            ? 'Đang chuyển đổi giọng nói...'
+                            : listening
+                                ? 'Đang nghe... Nhấn để dừng'
+                                : 'Nhấn micro và nói tên món ăn'}
                     </Text>
 
                     {/* Mic button */}
@@ -149,14 +188,21 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
                     )}
 
                     {/* Transcript */}
-                    {analyzing && (
+                    {transcribing && (
                         <View style={vStyles.transcriptBox}>
                             <ActivityIndicator size="large" color={Colors.primary} />
-                            <Text style={vStyles.analyzingText}>Đang phân tích...</Text>
+                            <Text style={vStyles.analyzingText}>Đang chuyển đổi giọng nói...</Text>
                         </View>
                     )}
 
-                    {foodData && !analyzing && (
+                    {analyzing && !transcribing && (
+                        <View style={vStyles.transcriptBox}>
+                            <ActivityIndicator size="large" color={Colors.primary} />
+                            <Text style={vStyles.analyzingText}>Đang phân tích món ăn...</Text>
+                        </View>
+                    )}
+
+                    {foodData && !analyzing && !transcribing && (
                         <View style={vStyles.transcriptBox}>
                             <Text style={vStyles.transcriptLabel}>Nhận diện được:</Text>
                             <Text style={vStyles.transcriptText}>"{foodData.name}"</Text>
@@ -172,7 +218,7 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
                         </View>
                     )}
 
-                    {transcript && !foodData && !analyzing && (
+                    {transcript && !foodData && !analyzing && !transcribing && (
                         <View style={vStyles.transcriptBox}>
                             <Text style={vStyles.transcriptLabel}>Bạn nói:</Text>
                             <Text style={vStyles.transcriptText}>"{transcript}"</Text>

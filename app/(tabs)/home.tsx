@@ -194,7 +194,22 @@ export default function HomeScreen() {
                     <TouchableOpacity
                         key={meal.id}
                         style={[styles.mealCard, Shadows.small]}
-                        onPress={() => router.push('/food-detail')}
+                        onPress={() => router.push({
+                            pathname: '/food-detail',
+                            params: {
+                                foodData: JSON.stringify({
+                                    name: meal.name,
+                                    calories: meal.calories,
+                                    protein: meal.protein,
+                                    carbs: meal.carbs,
+                                    fat: meal.fat,
+                                    servingSize: meal.servingSize,
+                                    ingredients: meal.ingredients,
+                                }),
+                                source: 'meal',
+                                mealId: meal.id,
+                            }
+                        })}
                     >
                         <View style={styles.mealImage}>
                             <Text style={styles.mealEmoji}>{meal.image}</Text>
@@ -228,7 +243,22 @@ export default function HomeScreen() {
                     <TouchableOpacity
                         key={meal.id}
                         style={[styles.mealCard, Shadows.small]}
-                        onPress={() => router.push('/food-detail')}
+                        onPress={() => router.push({
+                            pathname: '/food-detail',
+                            params: {
+                                foodData: JSON.stringify({
+                                    name: meal.name,
+                                    calories: meal.calories,
+                                    protein: meal.protein,
+                                    carbs: meal.carbs,
+                                    fat: meal.fat,
+                                    servingSize: meal.servingSize,
+                                    ingredients: meal.ingredients,
+                                }),
+                                source: 'meal',
+                                mealId: meal.id,
+                            }
+                        })}
                     >
                         <View style={styles.mealImage}>
                             <Text style={styles.mealEmoji}>{meal.image}</Text>
@@ -262,7 +292,22 @@ export default function HomeScreen() {
                     <TouchableOpacity
                         key={meal.id}
                         style={[styles.mealCard, Shadows.small]}
-                        onPress={() => router.push('/food-detail')}
+                        onPress={() => router.push({
+                            pathname: '/food-detail',
+                            params: {
+                                foodData: JSON.stringify({
+                                    name: meal.name,
+                                    calories: meal.calories,
+                                    protein: meal.protein,
+                                    carbs: meal.carbs,
+                                    fat: meal.fat,
+                                    servingSize: meal.servingSize,
+                                    ingredients: meal.ingredients,
+                                }),
+                                source: 'meal',
+                                mealId: meal.id,
+                            }
+                        })}
                     >
                         <View style={styles.mealImage}>
                             <Text style={styles.mealEmoji}>{meal.image}</Text>
@@ -296,7 +341,22 @@ export default function HomeScreen() {
                     <TouchableOpacity
                         key={meal.id}
                         style={[styles.mealCard, Shadows.small]}
-                        onPress={() => router.push('/food-detail')}
+                        onPress={() => router.push({
+                            pathname: '/food-detail',
+                            params: {
+                                foodData: JSON.stringify({
+                                    name: meal.name,
+                                    calories: meal.calories,
+                                    protein: meal.protein,
+                                    carbs: meal.carbs,
+                                    fat: meal.fat,
+                                    servingSize: meal.servingSize,
+                                    ingredients: meal.ingredients,
+                                }),
+                                source: 'meal',
+                                mealId: meal.id,
+                            }
+                        })}
                     >
                         <View style={styles.mealImage}>
                             <Text style={styles.mealEmoji}>{meal.image}</Text>

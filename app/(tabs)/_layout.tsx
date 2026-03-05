@@ -7,7 +7,7 @@ import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { HomeIcon, BattleIcon, ScanIcon, KitchenIcon, AICoachIcon } from '../../src/components/TabIcons';
 import { VoiceModal } from '../../src/components/VoiceModal';
-import { CameraScanner } from '../../src/components/CameraScanner';
+import { CameraScannerWithLoading } from '../../src/components/CameraScannerWithLoading';
 import { SearchScanner } from '../../src/components/SearchScanner';
 
 function TabItem({ icon, label, focused }: { icon: React.ReactNode; label: string; focused: boolean }) {
@@ -218,7 +218,7 @@ export default function TabsLayout() {
 
             {/* Scan Modals Shared */}
             <VoiceModal visible={directVoiceVisible} onClose={() => setDirectVoiceVisible(false)} />
-            <CameraScanner visible={cameraVisible} onClose={() => setCameraVisible(false)} />
+            <CameraScannerWithLoading visible={cameraVisible} onClose={() => setCameraVisible(false)} />
             <SearchScanner visible={searchVisible} onClose={() => setSearchVisible(false)} />
         </View>
     );

@@ -1,11 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    Animated, Dimensions, Platform,
+    Animated, Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
+import { Asset } from 'expo-asset';
 
 const { width, height } = Dimensions.get('window');
 
@@ -17,7 +19,6 @@ const WELCOME_IMAGES = [
 
 const FEATURES = [
     {
-        title: <></>,  // will be replaced below
         titleStr: 'Your AI Nutrition\nPartner',
         subtitle: 'Track meals, challenge friends, and meet AI Bảo — your personal health coach.',
     },
@@ -42,76 +43,50 @@ export default function WelcomeScreen() {
     const insets = useSafeAreaInsets();
 
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [nextIndex, setNextIndex] = useState(1);
-
-    // Image crossfade: currentImg fades out, nextImg fades in
-    const imgFade = useRef(new Animated.Value(1)).current;   // current image opacity
-    const nextFade = useRef(new Animated.Value(0)).current;  // next image opacity
 
     // Text fade: text fades out then in
-    const textOpacity = useRef(new Animated.Value(1)).current;
+    const textOpacity = React.useRef(new Animated.Value(1)).current;
+
+    // Pre-fetch images on mount
+    useEffect(() => {
+        Asset.loadAsync(WELCOME_IMAGES).catch(console.warn);
+    }, []);
 
     useEffect(() => {
         const interval = setInterval(() => {
-            const next = (currentIndex + 1) % WELCOME_IMAGES.length;
-            setNextIndex(next);
+            // Phase 1: Fade out text
+            Animated.timing(textOpacity, {
+                toValue: 0,
+                duration: 400,
+                useNativeDriver: true,
+            }).start(() => {
+                // Change index after text is hidden
+                setCurrentIndex((prev) => (prev + 1) % WELCOME_IMAGES.length);
 
-            // Reset next image to invisible
-            nextFade.setValue(0);
-
-            // Phase 1: crossfade images + fade out text simultaneously
-            Animated.parallel([
-                Animated.timing(nextFade, {
-                    toValue: 1,
-                    duration: 900,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(textOpacity, {
-                    toValue: 0,
-                    duration: 350,
-                    useNativeDriver: true,
-                }),
-            ]).start(() => {
-                // Swap indices
-                setCurrentIndex(next);
-                imgFade.setValue(1);
-                nextFade.setValue(0);
-
-                // Phase 2: fade text back in
+                // Phase 2: Fade text back in
                 Animated.timing(textOpacity, {
                     toValue: 1,
-                    duration: 350,
+                    duration: 400,
                     useNativeDriver: true,
                 }).start();
             });
-        }, 4000);
+        }, 5000);
 
         return () => clearInterval(interval);
-    }, [currentIndex]);
+    }, []);
 
     const feature = FEATURES[currentIndex];
 
     return (
         <View style={styles.container}>
-            {/* Background images — full screen, stacked */}
-            {WELCOME_IMAGES.map((img, i) => (
-                <Animated.Image
-                    key={i}
-                    source={img}
-                    style={[
-                        styles.bgImage,
-                        {
-                            opacity: i === currentIndex
-                                ? imgFade
-                                : i === nextIndex
-                                    ? nextFade
-                                    : 0,
-                            zIndex: i === nextIndex ? 2 : i === currentIndex ? 1 : 0,
-                        },
-                    ]}
-                    resizeMode="cover"
-                />
-            ))}
+            {/* Background image — using expo-image native transition */}
+            <Image
+                source={WELCOME_IMAGES[currentIndex]}
+                style={styles.bgImage}
+                contentFit="cover"
+                transition={1000}
+                cachePolicy="memory-disk"
+            />
 
             {/* Gradient overlay — white fade from transparent → cream white */}
             <LinearGradient

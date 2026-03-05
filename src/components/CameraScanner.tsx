@@ -6,9 +6,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Colors } from '../constants/colors';
 import { analyzeFoodImage, NutritionInfo } from '../services/geminiService';
 import { useRouter } from 'expo-router';
+import { LoadingAnalysis } from './LoadingAnalysis';
 
 const { width } = Dimensions.get('window');
 
@@ -17,56 +20,91 @@ type CameraMode = 'AI Scan' | 'Barcode';
 interface CameraScannerProps {
     visible: boolean;
     onClose: () => void;
+    onAnalyzing?: (analyzing: boolean) => void;
 }
 
-export function CameraScanner({ visible, onClose }: CameraScannerProps) {
+export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerProps) {
     const router = useRouter();
     const cameraRef = useRef<any>(null);
     const [mode, setMode] = useState<CameraMode>('AI Scan');
     const [analyzing, setAnalyzing] = useState(false);
     const [foodData, setFoodData] = useState<NutritionInfo | null>(null);
     const [permission, requestPermission] = useCameraPermissions();
+    const [isCameraReady, setIsCameraReady] = useState(false);
 
     const handleCapture = async () => {
-        if (!cameraRef.current || analyzing) return;
+        if (analyzing) return;
 
         setAnalyzing(true);
+        onAnalyzing?.(true);
         setFoodData(null);
 
         try {
-            // Take photo
-            const photo = await cameraRef.current.takePictureAsync({
-                quality: 0.7,
+            // Close the custom camera modal first
+            onClose();
+
+            console.log('Launching native camera via ImagePicker...');
+
+            // Use ImagePicker to launch native camera (more reliable than CameraView.takePictureAsync)
+            const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ['images'],
+                quality: 0.6,
                 base64: true,
+                allowsEditing: false,
             });
 
-            if (!photo.base64) {
-                throw new Error('Failed to capture image');
+            if (result.canceled || !result.assets || result.assets.length === 0) {
+                console.log('Camera cancelled by user');
+                return;
             }
 
-            // Analyze with Gemini
-            const result = await analyzeFoodImage(photo.base64);
+            const asset = result.assets[0];
+            console.log('Photo captured:', { hasUri: !!asset.uri, hasBase64: !!asset.base64 });
 
-            if (result.success && result.data) {
-                setFoodData(result.data);
-                // Navigate to food detail screen
+            let base64Data = asset.base64;
+
+            // If base64 not available from ImagePicker, read file
+            if (!base64Data && asset.uri) {
+                console.log('Reading photo as base64 from file...');
+                base64Data = await FileSystem.readAsStringAsync(asset.uri, {
+                    encoding: 'base64' as any,
+                });
+            }
+
+            if (!base64Data) {
+                throw new Error('Không thể đọc dữ liệu ảnh');
+            }
+
+            console.log('Base64 ready, length:', base64Data.length);
+            console.log('Sending to Gemini for analysis...');
+
+            // Analyze with Gemini
+            const analysisResult = await analyzeFoodImage(base64Data);
+
+            console.log('Gemini result:', { success: analysisResult.success, hasData: !!analysisResult.data });
+
+            if (analysisResult.success && analysisResult.data) {
+                setFoodData(analysisResult.data);
                 router.push({
                     pathname: '/food-detail',
                     params: {
-                        foodData: JSON.stringify(result.data),
+                        foodData: JSON.stringify(analysisResult.data),
                         source: 'camera',
-                        image: photo.uri,
+                        image: asset.uri,
                     }
                 });
-                onClose();
             } else {
-                Alert.alert('Lỗi', result.error || 'Không thể phân tích món ăn');
+                Alert.alert('Lỗi', analysisResult.error || 'Không thể phân tích món ăn');
             }
         } catch (error) {
             console.error('Camera capture error:', error);
-            Alert.alert('Lỗi', 'Có lỗi xảy ra khi chụp ảnh');
+            Alert.alert(
+                'Lỗi chụp ảnh',
+                error instanceof Error ? error.message : 'Có lỗi xảy ra khi chụp ảnh. Vui lòng thử lại.'
+            );
         } finally {
             setAnalyzing(false);
+            onAnalyzing?.(false);
         }
     };
 
@@ -98,29 +136,39 @@ export function CameraScanner({ visible, onClose }: CameraScannerProps) {
     return (
         <Modal visible={visible} animationType="slide" transparent={false}>
             <View style={camStyles.container}>
-                <CameraView 
+                {/* Camera View - NO CHILDREN */}
+                <CameraView
                     ref={cameraRef}
-                    style={camStyles.cameraArea} 
+                    style={camStyles.cameraArea}
                     facing="back"
-                >
-                    <View style={camStyles.scanFrame}>
-                        <View style={[camStyles.corner, camStyles.cornerTL]} />
-                        <View style={[camStyles.corner, camStyles.cornerTR]} />
-                        <View style={[camStyles.corner, camStyles.cornerBL]} />
-                        <View style={[camStyles.corner, camStyles.cornerBR]} />
-                        <Ionicons name="scan-outline" size={32} color="rgba(255,255,255,0.5)" style={camStyles.focusIcon} />
-                    </View>
+                    onCameraReady={() => {
+                        console.log('Camera is ready!');
+                        setIsCameraReady(true);
+                    }}
+                    onMountError={(error) => {
+                        console.error('Camera mount error:', error);
+                        Alert.alert('Lỗi Camera', 'Không thể khởi tạo camera. Vui lòng thử lại.');
+                    }}
+                />
 
-                    {analyzing && (
-                        <View style={camStyles.analyzingBanner}>
-                            <Ionicons name="nutrition-outline" size={22} color="#FFF" />
-                            <View>
-                                <Text style={camStyles.analyzingTitle}>Phân tích món ăn...</Text>
-                                <Text style={camStyles.analyzingDesc}>Giữ chắc điện thoại</Text>
-                            </View>
+                {/* Overlays - Positioned absolutely */}
+                <View style={camStyles.scanFrame}>
+                    <View style={[camStyles.corner, camStyles.cornerTL]} />
+                    <View style={[camStyles.corner, camStyles.cornerTR]} />
+                    <View style={[camStyles.corner, camStyles.cornerBL]} />
+                    <View style={[camStyles.corner, camStyles.cornerBR]} />
+                    <Ionicons name="scan-outline" size={32} color="rgba(255,255,255,0.5)" style={camStyles.focusIcon} />
+                </View>
+
+                {analyzing && (
+                    <View style={camStyles.analyzingBanner}>
+                        <Ionicons name="nutrition-outline" size={22} color="#FFF" />
+                        <View>
+                            <Text style={camStyles.analyzingTitle}>Phân tích món ăn...</Text>
+                            <Text style={camStyles.analyzingDesc}>Giữ chắc điện thoại</Text>
                         </View>
-                    )}
-                </CameraView>
+                    </View>
+                )}
 
                 <SafeAreaView style={camStyles.overlayHeader}>
                     <View style={camStyles.header}>
@@ -189,13 +237,23 @@ const camStyles = StyleSheet.create({
     dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2ECC71' },
     aiText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
     cameraArea: {
-        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-        justifyContent: 'center', alignItems: 'center',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
     },
     scanFrame: {
-        width: width * 0.72, height: 220,
-        justifyContent: 'center', alignItems: 'center',
-        position: 'relative', overflow: 'hidden',
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        marginTop: -110 - 85, // Half height + offset
+        marginLeft: -(width * 0.72) / 2, // Half width
+        width: width * 0.72,
+        height: 220,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden',
         marginBottom: 170,
     },
     corner: { position: 'absolute', width: 36, height: 36, borderColor: '#FFF', borderWidth: 3 },
