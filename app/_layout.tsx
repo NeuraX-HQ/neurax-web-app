@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, AppState, AppStateStatus } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
@@ -14,10 +14,25 @@ export default function RootLayout() {
     const [isReady, setIsReady] = useState(false);
 
     useEffect(() => {
-        if (Platform.OS === 'android') {
-            NavigationBar.setVisibilityAsync('hidden');
-            NavigationBar.setBehaviorAsync('overlay-swipe');
-        }
+        const hideNavigationBar = async () => {
+            if (Platform.OS === 'android') {
+                await NavigationBar.setVisibilityAsync('hidden');
+                await NavigationBar.setBehaviorAsync('overlay-swipe');
+            }
+        };
+
+        hideNavigationBar();
+
+        // Re-hide the navigation bar when the app returns from the background (e.g., after using Camera)
+        const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+            if (nextAppState === 'active') {
+                hideNavigationBar();
+            }
+        });
+
+        return () => {
+            subscription.remove();
+        };
     }, []);
 
     useEffect(() => {
