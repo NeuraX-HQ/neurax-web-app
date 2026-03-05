@@ -8,7 +8,7 @@ interface AuthState {
     biometricEnabled: boolean;
     biometricSupported: boolean;
     biometricEnrolled: boolean;
-    
+
     // Actions
     login: (email: string, userId: string, token: string) => Promise<void>;
     logout: () => Promise<void>;
@@ -33,9 +33,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             token,
             loginTime: Date.now(),
         };
-        
+
         await authService.saveSession(session);
-        
+
         set({
             isAuthenticated: true,
             userId,
@@ -45,7 +45,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     logout: async () => {
         await authService.clearSession();
-        
+
         set({
             isAuthenticated: false,
             userId: null,
@@ -55,7 +55,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     checkSession: async () => {
         const session = await authService.getSession();
-        
+
         if (session) {
             set({
                 isAuthenticated: true,
@@ -64,7 +64,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             });
             return true;
         }
-        
+
         return false;
     },
 
@@ -77,7 +77,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const supported = await authService.isBiometricSupported();
         const enrolled = await authService.isBiometricEnrolled();
         const enabled = await authService.isBiometricEnabled();
-        
+
         set({
             biometricSupported: supported,
             biometricEnrolled: enrolled,
@@ -87,11 +87,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     authenticateWithBiometric: async (message?: string) => {
         const { biometricEnabled, biometricSupported, biometricEnrolled } = get();
-        
+
         if (!biometricEnabled || !biometricSupported || !biometricEnrolled) {
             return true; // Skip if not enabled or not available
         }
-        
+
         return await authService.authenticateWithBiometric(message);
     },
 }));

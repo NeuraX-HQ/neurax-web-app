@@ -22,7 +22,7 @@ interface MealState {
     meals: Meal[];
     isLoading: boolean;
     error: string | null;
-    
+
     // Actions
     addMeal: (meal: Omit<Meal, 'id' | 'time' | 'date'>) => Promise<void>;
     removeMeal: (id: string) => Promise<void>;
@@ -36,6 +36,7 @@ interface MealState {
         totalFat: number;
     };
     loadMeals: () => Promise<void>;
+    loadMockData: () => Promise<void>;
     clearAllMeals: () => Promise<void>;
 }
 
@@ -89,9 +90,9 @@ export const useMealStore = create<MealState>((set, get) => ({
             set({ isLoading: false });
         } catch (error) {
             console.error('Error adding meal:', error);
-            set({ 
+            set({
                 error: error instanceof Error ? error.message : 'Failed to add meal',
-                isLoading: false 
+                isLoading: false
             });
         }
     },
@@ -108,9 +109,9 @@ export const useMealStore = create<MealState>((set, get) => ({
             set({ isLoading: false });
         } catch (error) {
             console.error('Error removing meal:', error);
-            set({ 
+            set({
                 error: error instanceof Error ? error.message : 'Failed to remove meal',
-                isLoading: false 
+                isLoading: false
             });
         }
     },
@@ -129,9 +130,9 @@ export const useMealStore = create<MealState>((set, get) => ({
             set({ isLoading: false });
         } catch (error) {
             console.error('Error updating meal:', error);
-            set({ 
+            set({
                 error: error instanceof Error ? error.message : 'Failed to update meal',
-                isLoading: false 
+                isLoading: false
             });
         }
     },
@@ -147,7 +148,7 @@ export const useMealStore = create<MealState>((set, get) => ({
 
     getTodayStats: () => {
         const todayMeals = get().getTodayMeals();
-        
+
         return todayMeals.reduce(
             (acc, meal) => ({
                 totalCalories: acc.totalCalories + meal.calories,
@@ -164,35 +165,80 @@ export const useMealStore = create<MealState>((set, get) => ({
             set({ isLoading: true, error: null });
 
             const storedMeals = await AsyncStorage.getItem(STORAGE_KEY);
-            
+
             if (storedMeals) {
                 const meals = JSON.parse(storedMeals);
                 set({ meals });
+            } else {
+                // If no stored meals, load mock data
+                await get().loadMockData();
             }
 
             set({ isLoading: false });
         } catch (error) {
             console.error('Error loading meals:', error);
-            set({ 
+            set({
                 error: error instanceof Error ? error.message : 'Failed to load meals',
-                isLoading: false 
+                isLoading: false
             });
+        }
+    },
+
+    loadMockData: async () => {
+        try {
+            const today = getTodayDate();
+
+            const mockMeals: Meal[] = [
+                {
+                    id: 'mock_1',
+                    name: 'Phở Bò',
+                    type: 'BREAKFAST',
+                    calories: 450,
+                    protein: 25,
+                    carbs: 60,
+                    fat: 12,
+                    servingSize: '1 tô lớn',
+                    ingredients: ['Bánh phở', 'Thịt bò', 'Hành lá', 'Ngò gai', 'Giá đỗ'],
+                    time: '07:30 AM',
+                    date: today,
+                    image: '🍜',
+                },
+                {
+                    id: 'mock_2',
+                    name: 'Bánh Mì Thịt',
+                    type: 'BREAKFAST',
+                    calories: 420,
+                    protein: 18,
+                    carbs: 45,
+                    fat: 16,
+                    servingSize: '1 ổ',
+                    ingredients: ['Bánh mì', 'Thịt nguội', 'Pate', 'Rau thơm', 'Dưa leo'],
+                    time: '07:45 AM',
+                    date: today,
+                    image: '🥖',
+                },
+            ];
+
+            set({ meals: mockMeals });
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(mockMeals));
+        } catch (error) {
+            console.error('Error loading mock data:', error);
         }
     },
 
     clearAllMeals: async () => {
         try {
             set({ isLoading: true, error: null });
-            
+
             await AsyncStorage.removeItem(STORAGE_KEY);
             set({ meals: [] });
 
             set({ isLoading: false });
         } catch (error) {
             console.error('Error clearing meals:', error);
-            set({ 
+            set({
                 error: error instanceof Error ? error.message : 'Failed to clear meals',
-                isLoading: false 
+                isLoading: false
             });
         }
     },

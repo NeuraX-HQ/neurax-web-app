@@ -1,13 +1,23 @@
-﻿import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+﻿import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadows } from '../../src/constants/colors';
 import { mockFridgeItems, mockRecipes } from '../../src/data/mockData';
+import { useFridgeStore } from '../../src/store/fridgeStore';
 
 export default function KitchenScreen() {
     const [tab, setTab] = useState<'fridge' | 'recipes'>('fridge');
-    const expiring = mockFridgeItems.filter(i => i.expiring);
-    const fresh = mockFridgeItems.filter(i => !i.expiring);
+    const { items, loadItems, isLoading } = useFridgeStore();
+
+    useEffect(() => {
+        loadItems();
+    }, []);
+
+    // Combine store items with mock data if store is empty
+    const displayItems = items.length > 0 ? items : mockFridgeItems;
+
+    const expiring = displayItems.filter(i => i.daysLeft <= 3);
+    const fresh = displayItems.filter(i => i.daysLeft > 3);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -28,49 +38,60 @@ export default function KitchenScreen() {
                 {tab === 'fridge' ? (
                     <View style={styles.content}>
                         <View style={styles.searchRow}>
-                            <TextInput style={styles.search} placeholder="Search ingredients..." placeholderTextColor={Colors.textLight} />
+                            <TextInput style={styles.search} placeholder="Tìm kiếm nguyên liệu..." placeholderTextColor={Colors.textLight} />
                             <TouchableOpacity style={styles.filterBtn}>
                                 <Text>🔍</Text>
                             </TouchableOpacity>
                         </View>
 
-                        {/* Expiring Soon */}
-                        <Text style={styles.sectionTitle}>⚠️ Expiring Soon</Text>
-                        {expiring.map((item) => (
-                            <View key={item.id} style={[styles.fridgeItem, Shadows.small]}>
-                                <View style={styles.fridgeEmoji}>
-                                    <Text style={{ fontSize: 28 }}>{item.emoji}</Text>
-                                </View>
-                                <View style={styles.fridgeInfo}>
-                                    <Text style={styles.fridgeName}>{item.name}</Text>
-                                    <Text style={styles.fridgeDetail}>{item.amount} • {item.location}</Text>
-                                </View>
-                                <View style={[styles.expiryBadge, { backgroundColor: Colors.redLight }]}>
-                                    <Text style={[styles.expiryText, { color: Colors.red }]}>
-                                        {item.daysLeft}d left
-                                    </Text>
-                                </View>
-                            </View>
-                        ))}
+                        {isLoading && items.length === 0 ? (
+                            <ActivityIndicator size="large" color={Colors.accent} style={{ marginTop: 40 }} />
+                        ) : (
+                            <>
+                                {/* Expiring Soon */}
+                                <Text style={styles.sectionTitle}>⚠️ Sắp hết hạn</Text>
+                                {expiring.length === 0 && (
+                                    <View style={styles.emptyContainer}>
+                                        <Text style={styles.emptyText}>Tủ lạnh của bạn đang trống</Text>
+                                    </View>
+                                )}
+                                {expiring.map((item) => (
+                                    <View key={item.id} style={[styles.fridgeItem, Shadows.small]}>
+                                        <View style={styles.fridgeEmoji}>
+                                            <Text style={{ fontSize: 28 }}>{item.emoji}</Text>
+                                        </View>
+                                        <View style={styles.fridgeInfo}>
+                                            <Text style={styles.fridgeName}>{item.name}</Text>
+                                            <Text style={styles.fridgeDetail}>{item.amount} • {item.location}</Text>
+                                        </View>
+                                        <View style={[styles.expiryBadge, { backgroundColor: Colors.redLight }]}>
+                                            <Text style={[styles.expiryText, { color: Colors.red }]}>
+                                                {item.daysLeft} ngày nữa
+                                            </Text>
+                                        </View>
+                                    </View>
+                                ))}
 
-                        {/* Fresh */}
-                        <Text style={styles.sectionTitle}>✅ Fresh</Text>
-                        {fresh.map((item) => (
-                            <View key={item.id} style={[styles.fridgeItem, Shadows.small]}>
-                                <View style={styles.fridgeEmoji}>
-                                    <Text style={{ fontSize: 28 }}>{item.emoji}</Text>
-                                </View>
-                                <View style={styles.fridgeInfo}>
-                                    <Text style={styles.fridgeName}>{item.name}</Text>
-                                    <Text style={styles.fridgeDetail}>{item.amount} • {item.location}</Text>
-                                </View>
-                                <View style={[styles.expiryBadge, { backgroundColor: Colors.accentLight }]}>
-                                    <Text style={[styles.expiryText, { color: Colors.accent }]}>
-                                        {item.daysLeft}d left
-                                    </Text>
-                                </View>
-                            </View>
-                        ))}
+                                {/* Fresh */}
+                                <Text style={styles.sectionTitle}>✅ Còn tươi</Text>
+                                {fresh.map((item) => (
+                                    <View key={item.id} style={[styles.fridgeItem, Shadows.small]}>
+                                        <View style={styles.fridgeEmoji}>
+                                            <Text style={{ fontSize: 28 }}>{item.emoji}</Text>
+                                        </View>
+                                        <View style={styles.fridgeInfo}>
+                                            <Text style={styles.fridgeName}>{item.name}</Text>
+                                            <Text style={styles.fridgeDetail}>{item.amount} • {item.location}</Text>
+                                        </View>
+                                        <View style={[styles.expiryBadge, { backgroundColor: Colors.accentLight }]}>
+                                            <Text style={[styles.expiryText, { color: Colors.accent }]}>
+                                                {item.daysLeft} ngày nữa
+                                            </Text>
+                                        </View>
+                                    </View>
+                                ))}
+                            </>
+                        )}
                     </View>
                 ) : (
                     <View style={styles.content}>
@@ -209,4 +230,6 @@ const styles = StyleSheet.create({
     recipeEmoji: { fontSize: 48, marginBottom: 12 },
     recipeName: { fontSize: 15, fontWeight: '600', color: Colors.text, textAlign: 'center', marginBottom: 6 },
     recipeMeta: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center' },
+    emptyContainer: { padding: 32, alignItems: 'center' },
+    emptyText: { fontSize: 15, color: Colors.textLight },
 });

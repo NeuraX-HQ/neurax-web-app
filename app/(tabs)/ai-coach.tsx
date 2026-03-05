@@ -1,14 +1,126 @@
-﻿import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Image } from 'react-native';
+﻿import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadows } from '../../src/constants/colors';
-import { mockChatMessages } from '../../src/data/mockData';
+import { useMealStore } from '../../src/store/mealStore';
+import { useFridgeStore } from '../../src/store/fridgeStore';
+import { getUserData, UserData } from '../../src/store/userStore';
+import { generateCoachResponse } from '../../src/services/geminiService';
+
+interface Message {
+    id: string;
+    sender: 'user' | 'ai';
+    text: string;
+    time: string;
+    foodCard?: {
+        name: string;
+        description: string;
+        calories: number;
+        emoji: string;
+    };
+}
 
 export default function AiCoachScreen() {
-    const [message, setMessage] = useState('');
+    const [input, setInput] = useState('');
+    const [messages, setMessages] = useState<Message[]>([
+        {
+            id: 'welcome',
+            sender: 'ai',
+            text: 'Chào Admin! Tôi là Bảo, huấn luyện viên dinh dưỡng của bạn. Hôm nay tôi có thể giúp gì cho bạn? Bạn có thể hỏi về thực đơn, cách cải thiện chế độ ăn hoặc gợi ý món ăn từ tủ lạnh nhé! 🥗',
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }
+    ]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [userData, setUserData] = useState<UserData | null>(null);
+    const scrollViewRef = useRef<ScrollView>(null);
+
+    const { getTodayStats, getTodayMeals } = useMealStore();
+    const { items: fridgeItems } = useFridgeStore();
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const data = await getUserData();
+            setUserData(data);
+        };
+        fetchUser();
+    }, []);
+
+    const constructContext = () => {
+        const stats = getTodayStats();
+        const meals = getTodayMeals();
+        const fridge = fridgeItems.map(i => `${i.name} (${i.amount})`).join(', ');
+
+        return `User Profile:
+- Name: ${userData?.name || 'User'}
+- Weight: ${userData?.weight}kg
+- Goal Weight: ${userData?.goalWeight}kg
+- Daily Calorie Goal: ${userData?.dailyCalories}kcal
+
+Today's Progress:
+- Calories: ${stats.totalCalories} / ${userData?.dailyCalories}
+- Protein: ${stats.totalProtein}g
+- Carbs: ${stats.totalCarbs}g
+- Fat: ${stats.totalFat}g
+
+Today's Logged Meals:
+${meals.map(m => `- ${m.name} (${m.calories} kcal)`).join('\n')}
+
+Fridge Ingredients:
+${fridge || 'Empty'}`;
+    };
+
+    const handleSend = async () => {
+        if (!input.trim() || isLoading) return;
+
+        const userMsg: Message = {
+            id: Date.now().toString(),
+            sender: 'user',
+            text: input,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        };
+
+        setMessages(prev => [...prev, userMsg]);
+        setInput('');
+        setIsLoading(true);
+
+        // Gemini requires the first message in history to be from the user.
+        // We filter out the hardcoded welcome message.
+        const chatHistory = messages
+            .filter(msg => msg.id !== 'welcome')
+            .map(msg => ({
+                role: msg.sender === 'user' ? 'user' as const : 'model' as const,
+                parts: [{ text: msg.text }]
+            }));
+
+        const context = constructContext();
+        const result = await generateCoachResponse(input, chatHistory, context);
+
+        if (result.success) {
+            const aiMsg: Message = {
+                id: (Date.now() + 1).toString(),
+                sender: 'ai',
+                text: result.text || '',
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                foodCard: result.foodSuggestion,
+            };
+            setMessages(prev => [...prev, aiMsg]);
+        } else {
+            // Error case
+            const errMsg: Message = {
+                id: (Date.now() + 1).toString(),
+                sender: 'ai',
+                text: 'Xin lỗi, tôi gặp chút trục trặc khi kết nối. Bạn thử lại nhé!',
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            };
+            setMessages(prev => [...prev, errMsg]);
+        }
+
+        setIsLoading(false);
+        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+    };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
             {/* Header */}
             <View style={styles.header}>
                 <View style={styles.aiAvatar}>
@@ -26,68 +138,84 @@ export default function AiCoachScreen() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.chatArea} showsVerticalScrollIndicator={false}>
-                {mockChatMessages.map((msg) => (
-                    <View key={msg.id}>
-                        {msg.sender === 'ai' ? (
-                            <View style={styles.aiRow}>
-                                <View style={styles.aiBubbleAvatar}>
-                                    <Image source={require('../../assets/images/coachAI.jpeg')} style={styles.aiBubbleAvatarImage} />
-                                </View>
-                                <View style={styles.aiBubble}>
-                                    <Text style={styles.aiText}>{msg.text}</Text>
-                                    <Text style={styles.msgTime}>{msg.time}</Text>
-                                </View>
-                            </View>
-                        ) : (
-                            <View style={styles.userRow}>
-                                <View style={styles.userBubble}>
-                                    <Text style={styles.userText}>{msg.text}</Text>
-                                    <Text style={styles.msgTimeUser}>{msg.time}</Text>
-                                </View>
-                            </View>
-                        )}
-
-                        {/* Food suggestion card */}
-                        {msg.foodCard && (
-                            <View style={[styles.foodCard, Shadows.small]}>
-                                <Text style={styles.foodEmoji}>{msg.foodCard.emoji}</Text>
-                                <View style={styles.foodInfo}>
-                                    <Text style={styles.foodName}>{msg.foodCard.name}</Text>
-                                    <Text style={styles.foodDesc} numberOfLines={2}>{msg.foodCard.description}</Text>
-                                    <View style={styles.foodMeta}>
-                                        <Text style={styles.foodCalories}>🔥 {msg.foodCard.calories} kcal</Text>
-                                        <TouchableOpacity style={styles.addLogBtn}>
-                                            <Text style={styles.addLogText}>+ Add to Log</Text>
-                                        </TouchableOpacity>
+            <KeyboardAvoidingView
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            >
+                <ScrollView
+                    ref={scrollViewRef}
+                    style={styles.chatArea}
+                    showsVerticalScrollIndicator={false}
+                    onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+                >
+                    {messages.map((msg) => (
+                        <View key={msg.id}>
+                            {msg.sender === 'ai' ? (
+                                <View style={styles.aiRow}>
+                                    <View style={styles.aiBubbleAvatar}>
+                                        <Image source={require('../../assets/images/coachAI.jpeg')} style={styles.aiBubbleAvatarImage} />
+                                    </View>
+                                    <View style={styles.aiBubble}>
+                                        <Text style={styles.aiText}>{msg.text}</Text>
+                                        <Text style={styles.msgTime}>{msg.time}</Text>
                                     </View>
                                 </View>
-                            </View>
-                        )}
-                    </View>
-                ))}
-                <View style={{ height: 20 }} />
-            </ScrollView>
+                            ) : (
+                                <View style={styles.userRow}>
+                                    <View style={styles.userBubble}>
+                                        <Text style={styles.userText}>{msg.text}</Text>
+                                        <Text style={styles.msgTimeUser}>{msg.time}</Text>
+                                    </View>
+                                </View>
+                            )}
 
-            {/* Input */}
-            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                            {/* Food suggestion card */}
+                            {msg.foodCard && (
+                                <View style={[styles.foodCard, Shadows.small]}>
+                                    <Text style={styles.foodEmoji}>{msg.foodCard.emoji}</Text>
+                                    <View style={styles.foodInfo}>
+                                        <Text style={styles.foodName}>{msg.foodCard.name}</Text>
+                                        <Text style={styles.foodDesc} numberOfLines={2}>{msg.foodCard.description}</Text>
+                                        <View style={styles.foodMeta}>
+                                            <Text style={styles.foodCalories}>🔥 {msg.foodCard.calories} kcal</Text>
+                                            <TouchableOpacity style={styles.addLogBtn}>
+                                                <Text style={styles.addLogText}>+ Thêm vào</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                </View>
+                            )}
+                        </View>
+                    ))}
+                    <View style={{ height: 20 }} />
+                </ScrollView>
+
+                {/* Input */}
                 <View style={styles.inputArea}>
-                    <TouchableOpacity style={styles.attachBtn}>
-                        <Text style={styles.attachIcon}>📎</Text>
-                    </TouchableOpacity>
                     <TextInput
-                        style={styles.input}
+                        style={[styles.input, isLoading && { opacity: 0.7 }]}
                         placeholder="Hỏi AI Bảo..."
                         placeholderTextColor={Colors.textLight}
-                        value={message}
-                        onChangeText={setMessage}
+                        value={input}
+                        onChangeText={setInput}
+                        editable={!isLoading}
+                        onSubmitEditing={handleSend}
                     />
-                    <TouchableOpacity style={styles.micBtn}>
-                        <Text>🎤</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.sendBtn}>
-                        <Text style={styles.sendIcon}>➤</Text>
-                    </TouchableOpacity>
+                    {isLoading ? (
+                        <ActivityIndicator color={Colors.primary} style={{ marginHorizontal: 10, alignSelf: 'center' }} />
+                    ) : (
+                        <TouchableOpacity
+                            style={[
+                                styles.sendBtn,
+                                (!input.trim() || isLoading) && { backgroundColor: Colors.border }
+                            ]}
+                            onPress={handleSend}
+                            disabled={!input.trim() || isLoading}
+                        >
+                            <Text style={[styles.sendIcon, (!input.trim() || isLoading) && { color: Colors.textSecondary }]}>➤</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -179,29 +307,27 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingVertical: 12,
-        gap: 10,
+        gap: 12,
         borderTopWidth: 1,
         borderTopColor: Colors.border,
     },
-    attachBtn: { padding: 4 },
-    attachIcon: { fontSize: 22 },
     input: {
         flex: 1,
         backgroundColor: '#F5F6F8',
         borderRadius: 24,
-        paddingHorizontal: 18,
+        paddingHorizontal: 20,
         paddingVertical: 12,
         fontSize: 16,
         color: Colors.text,
     },
-    micBtn: { padding: 4 },
     sendBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         backgroundColor: Colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
+        alignSelf: 'flex-end',
     },
-    sendIcon: { fontSize: 18, color: '#FFFFFF', transform: [{ rotate: '0deg' }] },
+    sendIcon: { fontSize: 20, color: '#FFFFFF', transform: [{ rotate: '0deg' }] },
 });

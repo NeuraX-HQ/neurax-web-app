@@ -16,6 +16,7 @@ export default function RootLayout() {
     useEffect(() => {
         if (Platform.OS === 'android') {
             NavigationBar.setVisibilityAsync('hidden');
+            NavigationBar.setBehaviorAsync('overlay-swipe');
         }
     }, []);
 
@@ -36,7 +37,7 @@ export default function RootLayout() {
     const initializeAuth = async () => {
         await checkBiometricAvailability();
         const hasSession = await checkSession();
-        
+
         if (hasSession) {
             // Check if biometric is required
             const { biometricEnabled } = useAuthStore.getState();
@@ -44,7 +45,7 @@ export default function RootLayout() {
                 setShowBiometric(true);
             }
         }
-        
+
         setIsReady(true);
     };
 
@@ -83,7 +84,7 @@ export default function RootLayout() {
                 <Stack.Screen name="profile" />
                 <Stack.Screen name="settings" />
             </Stack>
-            
+
             <BiometricPrompt
                 visible={showBiometric}
                 onSuccess={handleBiometricSuccess}

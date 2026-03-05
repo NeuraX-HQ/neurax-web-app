@@ -1,17 +1,39 @@
 ﻿import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, Modal, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors, Shadows } from '../src/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { NutritionInfo } from '../src/services/geminiService';
+import { useFridgeStore } from '../src/store/fridgeStore';
 
 export default function AddToFridgeScreen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
+    const addItem = useFridgeStore(state => state.addItem);
+
     const [selectedDuration, setSelectedDuration] = useState('7');
     const [reminder, setReminder] = useState(true);
     const [isCustomModalVisible, setCustomModalVisible] = useState(false);
     const [isSuccessModalVisible, setSuccessModalVisible] = useState(false);
     const [customDays, setCustomDays] = useState(1);
+
+    const foodData: NutritionInfo | null = params.foodData
+        ? JSON.parse(params.foodData as string)
+        : null;
+
+    const getEmojiForFood = (name: string): string => {
+        const lowerName = name.toLowerCase();
+        if (lowerName.includes('phở')) return '🍜';
+        if (lowerName.includes('cơm')) return '🍚';
+        if (lowerName.includes('bánh mì')) return '🥖';
+        if (lowerName.includes('bún')) return '🍲';
+        if (lowerName.includes('gà') || lowerName.includes('chicken')) return '🍗';
+        if (lowerName.includes('salad')) return '🥗';
+        if (lowerName.includes('burger')) return '🍔';
+        if (lowerName.includes('pizza')) return '🍕';
+        return '🍽️';
+    };
 
     // Lấy thông tin ngày hiện tại
     const now = new Date();
@@ -36,14 +58,36 @@ export default function AddToFridgeScreen() {
         }
     };
 
+    const handleConfirmAdd = async () => {
+        if (!foodData) return;
+
+        const days = selectedDuration === 'custom' ? customDays : parseInt(selectedDuration);
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + days);
+
+        try {
+            await addItem({
+                name: foodData.name,
+                amount: foodData.servingSize || '1 phần',
+                location: 'Ngăn mát', // Default location
+                daysLeft: days,
+                expiryDate: expiryDate.toISOString(),
+                emoji: getEmojiForFood(foodData.name),
+            });
+            setSuccessModalVisible(true);
+        } catch (error) {
+            Alert.alert('Lỗi', 'Không thể thêm vào tủ lạnh');
+        }
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => router.back()}>
-                    <Text style={styles.backArrow}>←</Text>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                    <Ionicons name="arrow-back" size={24} color="#111827" />
                 </TouchableOpacity>
-                <Text style={styles.title}>Add to Fridge</Text>
-                <View style={{ width: 24 }} />
+                <Text style={styles.title}>Thêm vào tủ lạnh</Text>
+                <View style={{ width: 40 }} />
             </View>
 
             <ScrollView
@@ -52,19 +96,23 @@ export default function AddToFridgeScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Food Card */}
-                <View style={[styles.foodCard, Shadows.small]}>
-                    <Text style={styles.foodEmoji}>🍜</Text>
-                    <View style={styles.foodInfo}>
-                        <Text style={styles.foodName}>Phở Bò</Text>
-                        <Text style={styles.foodCalories}>450 kcal • 1 bowl</Text>
+                <View style={styles.foodCard}>
+                    <View style={styles.foodImageContainer}>
+                        <Text style={styles.foodEmoji}>{foodData ? getEmojiForFood(foodData.name) : '🍜'}</Text>
                     </View>
-                    <TouchableOpacity>
-                        <Text style={styles.editText}>✏️</Text>
-                    </TouchableOpacity>
+                    <View style={styles.foodInfo}>
+                        <Text style={styles.foodName}>{foodData ? foodData.name : 'Phở Bò'}</Text>
+                        <Text style={styles.foodCalories}>
+                            {foodData ? `${Math.round(foodData.calories)} kcal • 1 phần` : '450 kcal • 1 tô'}
+                        </Text>
+                    </View>
                 </View>
 
-                {/* Expiry Duration */}
-                <Text style={styles.sectionTitle}>Expiry Date</Text>
+                {/* Expiry Duration Header */}
+                <View style={styles.expiryHeader}>
+                    <Text style={styles.sectionTitle}>HẠN SỬ DỤNG</Text>
+                    <Text style={styles.expiryMonthText}>{monthNames[currentMonth]}, {currentYear}</Text>
+                </View>
                 <View style={styles.durationRow}>
                     {durations.map((d) => (
                         <TouchableOpacity
@@ -80,18 +128,7 @@ export default function AddToFridgeScreen() {
                 </View>
 
                 {/* Calendar Placeholder */}
-                <View style={[styles.calendarCard, Shadows.small]}>
-                    <View style={styles.calendarHeader}>
-                        <Text style={styles.calendarMonth}>{monthNames[currentMonth]} {currentYear}</Text>
-                        <View style={styles.calendarNav}>
-                            <TouchableOpacity>
-                                <Text style={styles.navArrow}>‹</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity>
-                                <Text style={styles.navArrow}>›</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
+                <View style={styles.calendarCard}>
                     <View style={styles.calendarDays}>
                         {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((d) => (
                             <Text key={d} style={styles.dayHeader}>{d}</Text>
@@ -101,7 +138,7 @@ export default function AddToFridgeScreen() {
                         {Array.from({ length: daysInMonth }, (_, i) => {
                             const day = i + 1;
                             const duration = selectedDuration === 'custom' ? customDays : parseInt(selectedDuration);
-                            const today = currentDay;
+                            const today = now.getDate();
                             const isInRange = day >= today && day < today + duration;
                             const isStart = day === today;
                             const isEnd = day === today + duration - 1;
@@ -131,9 +168,14 @@ export default function AddToFridgeScreen() {
 
                 {/* Reminder Toggle */}
                 <View style={styles.reminderRow}>
-                    <View>
-                        <Text style={styles.reminderTitle}>🔔 Remind me before expiry</Text>
-                        <Text style={styles.reminderDesc}>Get notified 1 day before</Text>
+                    <View style={styles.reminderInfo}>
+                        <View style={styles.reminderIconCircle}>
+                            <Ionicons name="notifications-outline" size={20} color="#6B7280" />
+                        </View>
+                        <View>
+                            <Text style={styles.reminderTitle}>Thông báo nhắc nhở</Text>
+                            <Text style={styles.reminderDesc}>Nhắc trước khi hết hạn 1 ngày</Text>
+                        </View>
                     </View>
                     <Switch
                         value={reminder}
@@ -147,9 +189,10 @@ export default function AddToFridgeScreen() {
                 <View style={styles.footer}>
                     <TouchableOpacity
                         style={styles.addBtn}
-                        onPress={() => setSuccessModalVisible(true)}
+                        onPress={handleConfirmAdd}
                     >
-                        <Text style={styles.addBtnText}>Thêm</Text>
+                        <Ionicons name="cube-outline" size={20} color="#FFFFFF" />
+                        <Text style={styles.addBtnText}>Xác nhận thêm</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -234,61 +277,67 @@ const styles = StyleSheet.create({
         paddingTop: 16,
         paddingBottom: 12,
     },
-    backArrow: { fontSize: 24, color: Colors.primary },
-    title: { fontSize: 20, fontWeight: '700', color: Colors.primary },
+    backBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginLeft: -8, },
+    title: { fontSize: 18, fontWeight: '700', color: '#111827' },
     foodCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#F9FAFB',
         borderRadius: 16,
         padding: 16,
         marginHorizontal: 20,
-        marginBottom: 20,
-        gap: 14,
+        marginBottom: 24,
+        gap: 16,
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: '#F3F4F6',
     },
-    foodEmoji: { fontSize: 40 },
+    foodImageContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: 12,
+        backgroundColor: '#E5E7EB',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    foodEmoji: { fontSize: 32 },
     foodInfo: { flex: 1 },
-    foodName: { fontSize: 18, fontWeight: '700', color: Colors.primary },
-    foodCalories: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
-    editText: { fontSize: 20 },
-    sectionTitle: { fontSize: 18, fontWeight: '700', color: Colors.text, paddingHorizontal: 20, marginBottom: 12 },
+    foodName: { fontSize: 18, fontWeight: '700', color: '#111827' },
+    foodCalories: { fontSize: 14, color: '#6B7280', marginTop: 4, fontWeight: '500' },
+    expiryHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginBottom: 16,
+    },
+    sectionTitle: { fontSize: 13, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.5 },
+    expiryMonthText: { fontSize: 14, fontWeight: '600', color: '#2563EB' },
     durationRow: {
         flexDirection: 'row',
         paddingHorizontal: 20,
         gap: 10,
-        marginBottom: 20,
+        marginBottom: 24,
     },
     durationChip: {
-        paddingHorizontal: 18,
+        paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 24,
-        backgroundColor: '#F5F6F8',
+        backgroundColor: '#F3F4F6',
     },
-    durationChipSelected: { backgroundColor: Colors.primary },
-    durationText: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
-    durationTextSelected: { color: '#FFFFFF' },
+    durationChipSelected: { backgroundColor: '#000000', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 4 },
+    durationText: { fontSize: 14, color: '#4B5563', fontWeight: '500' },
+    durationTextSelected: { color: '#FFFFFF', fontWeight: '600' },
     calendarCard: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 16,
+        borderRadius: 24,
         padding: 16,
         marginHorizontal: 20,
-        marginBottom: 20,
+        marginBottom: 24,
         borderWidth: 1,
-        borderColor: Colors.border,
+        borderColor: '#F3F4F6',
     },
-    calendarHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    calendarMonth: { fontSize: 17, fontWeight: '700', color: Colors.primary },
-    calendarNav: { flexDirection: 'row', gap: 16 },
-    navArrow: { fontSize: 24, color: Colors.textSecondary },
     calendarDays: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, paddingHorizontal: 4 },
-    dayHeader: { fontSize: 13, color: '#9DAABF', fontWeight: '600', width: 44, textAlign: 'center' },
+    dayHeader: { fontSize: 12, color: '#9CA3AF', fontWeight: '500', width: 44, textAlign: 'center' },
     calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-start' },
     calDay: {
         width: '14.28%',
@@ -298,7 +347,7 @@ const styles = StyleSheet.create({
     },
     calDayInner: {
         width: '100%',
-        height: 25, // Điều chỉnh lên 25px theo yêu cầu
+        height: 32,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -306,14 +355,14 @@ const styles = StyleSheet.create({
         backgroundColor: '#000000',
     },
     calDayRangeStart: {
-        borderTopLeftRadius: 12.5,
-        borderBottomLeftRadius: 12.5,
+        borderTopLeftRadius: 16,
+        borderBottomLeftRadius: 16,
     },
     calDayRangeEnd: {
-        borderTopRightRadius: 12.5,
-        borderBottomRightRadius: 12.5,
+        borderTopRightRadius: 16,
+        borderBottomRightRadius: 16,
     },
-    calDayText: { fontSize: 15, color: '#3A4B6A', fontWeight: '600' },
+    calDayText: { fontSize: 14, color: '#374151', fontWeight: '500' },
     calDayTextSelected: { color: '#FFFFFF', fontWeight: '700' },
     todayDot: {
         width: 4,
@@ -394,17 +443,16 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        borderTopWidth: 1,
-        borderTopColor: Colors.border,
-        marginHorizontal: 20,
+        marginTop: 12,
+        marginBottom: 24,
     },
-    reminderTitle: { fontSize: 16, fontWeight: '600', color: Colors.text },
-    reminderDesc: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
-    footer: { paddingHorizontal: 20, paddingBottom: 32, marginTop: 10 },
-    addBtn: { backgroundColor: Colors.primary, borderRadius: 16, paddingVertical: 18, alignItems: 'center' },
-    addBtnText: { color: '#FFFFFF', fontSize: 18, fontWeight: '600' },
+    reminderInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    reminderIconCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F9FAFB', justifyContent: 'center', alignItems: 'center' },
+    reminderTitle: { fontSize: 15, fontWeight: '600', color: '#111827' },
+    reminderDesc: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 32, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#F3F4F6', shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.05, shadowRadius: 40, elevation: 10 },
+    addBtn: { backgroundColor: '#000000', borderRadius: 16, height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: '#E5E7EB', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 1, shadowRadius: 15, elevation: 10 },
+    addBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
     scrollContainer: { flex: 1 },
-    scrollContent: { paddingBottom: 20 },
+    scrollContent: { paddingBottom: 100, paddingHorizontal: 20 },
 });
