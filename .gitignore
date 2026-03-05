@@ -42,3 +42,5 @@ yarn-error.*
 /android
 
 .aws-sam/
+*.yaml
+*.toml
