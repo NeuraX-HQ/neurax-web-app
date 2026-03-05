@@ -95,6 +95,7 @@ export default function TabsLayout() {
                     headerShown: false,
                     tabBarStyle: styles.tabBar,
                     tabBarShowLabel: false,
+                    tabBarHideOnKeyboard: true,
                 }}
             >
                 <Tabs.Screen
