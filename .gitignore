@@ -47,3 +47,6 @@ yarn-error.*
 .aws-sam/
 *.yaml
 *.toml
+
+# Terraform
+infrastructure/*
