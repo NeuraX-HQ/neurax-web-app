@@ -49,4 +49,8 @@ yarn-error.*
 *.toml
 
 # Terraform
-infrastructure/*
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+infrastructure/
