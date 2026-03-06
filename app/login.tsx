@@ -22,7 +22,7 @@ export default function LoginOptionsScreen() {
         const mockUserId = `user_${Date.now()}`;
         const mockEmail = `user@${provider.toLowerCase()}.com`;
         const mockToken = `token_${Math.random().toString(36).substr(2, 9)}`;
-        
+
         await login(mockEmail, mockUserId, mockToken);
         router.replace('/(tabs)/home');
     };
@@ -32,7 +32,7 @@ export default function LoginOptionsScreen() {
         const mockEmail = 'user@nutritrack.com';
         const mockUserId = `user_${Date.now()}`;
         const mockToken = `token_${Math.random().toString(36).substr(2, 9)}`;
-        
+
         await login(mockEmail, mockUserId, mockToken);
         router.replace('/(tabs)/home');
     };

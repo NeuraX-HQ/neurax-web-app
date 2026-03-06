@@ -1,40 +1,76 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, TextInput,
     ScrollView, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../src/constants/colors';
+import { useMealStore } from '../src/store/mealStore';
 
 export default function EditIngredientsScreen() {
     const router = useRouter();
-    const params = useLocalSearchParams();
+    const currentFoodItem = useMealStore(state => state.currentFoodItem);
+    const setCurrentFoodItem = useMealStore(state => state.setCurrentFoodItem);
 
-    // Parse ingredients from params
-    const initialIngredients = params.ingredients
-        ? JSON.parse(params.ingredients as string)
-        : [];
+    const [editingText, setEditingText] = useState('');
 
-    const [ingredients, setIngredients] = useState<string[]>(initialIngredients);
-    const [editingText, setEditingText] = useState(initialIngredients.join('\n'));
+    useEffect(() => {
+        if (currentFoodItem && currentFoodItem.ingredients) {
+            const rawIngredients = currentFoodItem.ingredients;
+            const textLines = rawIngredients.map((ing: any, idx: number) => {
+                if (typeof ing === 'string') {
+                    // Fallback for old data format
+                    const amountMap = ['150 g', '50 g', '300 ml', '30 g'];
+                    return `${ing} ${amountMap[idx] || 'Vừa đủ'}`;
+                }
+                if (ing.name && ing.amount && ing.amount !== 'Vừa đủ') {
+                    return `${ing.name} ${ing.amount}`;
+                } else if (ing.name) {
+                    return ing.name;
+                }
+                return '';
+            }).filter((line: string) => line.length > 0);
+
+            setEditingText(textLines.join('\n'));
+        }
+    }, [currentFoodItem]);
 
     const handleSave = () => {
-        // Parse text into array
-        const newIngredients = editingText
-            .split('\n')
-            .map((line: string) => line.trim())
-            .filter((line: string) => line.length > 0);
+        const lines = editingText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-        if (newIngredients.length === 0) {
+        if (lines.length === 0) {
             Alert.alert('Lỗi', 'Vui lòng nhập ít nhất một nguyên liệu');
             return;
         }
 
-        // Navigate back with updated ingredients
+        const validIngredients = lines.map(line => {
+            // Regex to find amount at the end of string: Space + (Number[.,]Number) + (optional text)
+            // Example: "Trứng gà 150g" -> [1]: "Trứng gà", [2]: "150g"
+            // Example: "Cá thu 2 lạng" -> [1]: "Cá thu", [2]: "2 lạng"
+            const match = line.match(/^(.*?)\s+((?:\d+[\.,]?\d*)\s*[a-zA-ZÀ-ỹ]*.*)$/i);
+            if (match) {
+                return { name: match[1].trim(), amount: match[2].trim() };
+            }
+
+            // Fallback generic pattern (just any digit towards the end)
+            const matchGeneric = line.match(/^(.*?)\s+(\d.*)$/);
+            if (matchGeneric) {
+                return { name: matchGeneric[1].trim(), amount: matchGeneric[2].trim() };
+            }
+
+            // Defaults if no number is found
+            return { name: line, amount: "Vừa đủ" };
+        });
+
+        if (currentFoodItem) {
+            setCurrentFoodItem({
+                ...currentFoodItem,
+                ingredients: validIngredients
+            });
+        }
+
         router.back();
-        // In real app, you would pass this data back or update store
     };
 
     return (
@@ -60,7 +96,7 @@ export default function EditIngredientsScreen() {
                     value={editingText}
                     onChangeText={setEditingText}
                     multiline
-                    placeholder="Nhập nguyên liệu, mỗi dòng một nguyên liệu..."
+                    placeholder="Trứng gà 150g&#10;Cá 200g&#10;Rau 50g"
                     placeholderTextColor="#999"
                     autoFocus
                 />

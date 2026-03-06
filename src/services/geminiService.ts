@@ -5,6 +5,11 @@ const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
 console.log('Gemini API Key loaded:', GEMINI_API_KEY ? `${GEMINI_API_KEY.substring(0, 10)}...` : 'EMPTY - CHECK .env FILE');
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
+export interface IngredientItem {
+    name: string;
+    amount: string;
+}
+
 export interface NutritionInfo {
     name: string;
     calories: number;
@@ -12,7 +17,7 @@ export interface NutritionInfo {
     carbs: number;
     fat: number;
     servingSize: string;
-    ingredients?: string[];
+    ingredients?: IngredientItem[];
 }
 
 export interface FoodAnalysisResult {
@@ -97,7 +102,10 @@ Chỉ trả về DUY NHẤT một đối tượng JSON hợp lệ với cấu tr
     "carbs": số gram carbohydrates (số),
     "fat": số gram chất béo (số),
     "servingSize": "mô tả kích thước phần ăn (ví dụ: 1 bát, 1 đĩa)",
-    "ingredients": ["chỉ liệt kê các thành phần chính của món ăn"]
+    "ingredients": [
+        { "name": "tên nguyên liệu 1", "amount": "khối lượng ước tính, ví dụ: 150g" },
+        { "name": "tên nguyên liệu 2", "amount": "ví dụ: 50g" }
+    ]
 }
 
 Hãy ước tính chính xác nhất có thể dựa trên kích thước phần ăn có thể nhìn thấy.`;
@@ -185,7 +193,9 @@ Chỉ trả về DUY NHẤT một đối tượng JSON hợp lệ với cấu tr
     "carbs": số gram carbohydrates (số),
     "fat": số gram chất béo (số),
     "servingSize": "kích thước phần ăn ước tính",
-    "ingredients": ["chỉ liệt kê các thành phần chính"]
+    "ingredients": [
+        { "name": "tên nguyên liệu 1", "amount": "khối lượng ước tính, ví dụ: 150g" }
+    ]
 }
 
 Nếu có nhiều món ăn được nhắc đến, hãy kết hợp chúng thành một mục bữa ăn duy nhất.
@@ -230,7 +240,9 @@ Chỉ trả về DUY NHẤT một đối tượng JSON hợp lệ với cấu tr
     "carbs": số gram carbohydrates (số),
     "fat": số gram chất béo (số),
     "servingSize": "kích thước phần ăn điển hình",
-    "ingredients": ["chỉ liệt kê các thành phần chính"]
+    "ingredients": [
+        { "name": "tên nguyên liệu 1", "amount": "khối lượng ước tính, ví dụ: 150g" }
+    ]
 }
 
 Sử dụng kích thước phần ăn tiêu chuẩn của Việt Nam.`;

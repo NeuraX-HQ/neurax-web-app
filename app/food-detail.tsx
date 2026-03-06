@@ -10,6 +10,7 @@ import { Image } from 'expo-image';
 import { Colors, Shadows } from '../src/constants/colors';
 import { useMealStore, MealType } from '../src/store/mealStore';
 import { NutritionInfo } from '../src/services/geminiService';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const MEAL_TYPES: { value: MealType; label: string; emoji: string; color: string }[] = [
     { value: 'BREAKFAST', label: 'Bữa sáng', emoji: '🌅', color: '#FFB84D' },
@@ -29,13 +30,22 @@ export default function FoodDetailScreen() {
     const [portionCount, setPortionCount] = useState(1);
     const [portionUnit, setPortionUnit] = useState('tô');
 
-    // Parse food data from params
-    const foodData: NutritionInfo = params.foodData
-        ? JSON.parse(params.foodData as string)
-        : null;
+    const setCurrentFoodItem = useMealStore(state => state.setCurrentFoodItem);
+    const currentFoodItem = useMealStore(state => state.currentFoodItem);
 
     const source = params.source as string;
     const imageUri = params.image as string;
+
+    // Initialize from params, and update global state if navigating to a new food item
+    React.useEffect(() => {
+        const paramData = params.foodData ? JSON.parse(params.foodData as string) : null;
+        if (paramData && (!currentFoodItem || currentFoodItem.name !== paramData.name)) {
+            setCurrentFoodItem(paramData);
+        }
+    }, [params.foodData]);
+
+    // Use global state as source of truth if available, otherwise fallback to params
+    const foodData: NutritionInfo | null = currentFoodItem || (params.foodData ? JSON.parse(params.foodData as string) : null);
 
     if (!foodData) {
         return (
@@ -57,6 +67,22 @@ export default function FoodDetailScreen() {
         setIsAdding(true);
 
         try {
+            let savedImageUri = imageUri;
+
+            if (imageUri && imageUri.startsWith('file://')) {
+                const filename = imageUri.split('/').pop() || `food_${Date.now()}.jpg`;
+                const newPath = FileSystem.documentDirectory + filename;
+                try {
+                    await FileSystem.copyAsync({
+                        from: imageUri,
+                        to: newPath
+                    });
+                    savedImageUri = newPath;
+                } catch (err) {
+                    console.error('Lỗi khi copy file ảnh:', err);
+                }
+            }
+
             await addMeal({
                 name: foodData.name,
                 type: selectedMealType,
@@ -66,7 +92,7 @@ export default function FoodDetailScreen() {
                 fat: Math.round(foodData.fat * portionCount),
                 servingSize: `${portionCount} ${portionUnit}`,
                 ingredients: foodData.ingredients,
-                image: getEmojiForFood(foodData.name),
+                image: savedImageUri || getEmojiForFood(foodData.name),
             });
 
             // Navigate back to home
@@ -92,9 +118,7 @@ export default function FoodDetailScreen() {
     const handleEditIngredients = () => {
         router.push({
             pathname: '/edit-ingredients',
-            params: {
-                ingredients: JSON.stringify(foodData.ingredients || []),
-            }
+            // No need to pass params, we'll read and update global state
         });
     };
 
@@ -243,10 +267,14 @@ export default function FoodDetailScreen() {
                                 <View key={index} style={styles.ingredientRow}>
                                     <View style={styles.ingredientLeft}>
                                         <View style={styles.ingredientCheckbox} />
-                                        <Text style={styles.ingredientName}>{ingredient}</Text>
+                                        <Text style={styles.ingredientName}>
+                                            {typeof ingredient === 'string' ? ingredient : ingredient.name}
+                                        </Text>
                                     </View>
                                     <Text style={styles.ingredientAmount}>
-                                        {index === 0 ? '150 g' : index === 1 ? '50 g' : index === 2 ? '300 ml' : '30 g'}
+                                        {typeof ingredient === 'string'
+                                            ? (index === 0 ? '150 g' : index === 1 ? '50 g' : index === 2 ? '300 ml' : '30 g')
+                                            : ingredient.amount}
                                     </Text>
                                 </View>
                             ))}

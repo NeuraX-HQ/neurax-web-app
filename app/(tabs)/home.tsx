@@ -1,9 +1,8 @@
 ﻿import React, { useState, useEffect } from 'react';
-import {
-    View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import { Colors, Shadows } from '../../src/constants/colors';
 import { ProfileIcon, SettingsIcon, NotificationIcon } from '../../src/components/TabIcons';
 import { drinkTypes } from '../../src/data/mockData';
@@ -16,12 +15,12 @@ const dates = [27, 28, 29, 30, 31, 1, 2];
 export default function HomeScreen() {
     const router = useRouter();
     const [selectedDay, setSelectedDay] = useState(6);
-    
+
     // Meal store
     const { meals, loadMeals, getTodayMeals, getTodayStats } = useMealStore();
     const todayMeals = getTodayMeals();
     const stats = getTodayStats();
-    
+
     const maxCalories = 2500;
     const protein = { current: Math.round(stats.totalProtein), max: 140 };
     const carbs = { current: Math.round(stats.totalCarbs), max: 280 };
@@ -159,7 +158,7 @@ export default function HomeScreen() {
                 </View>
 
                 {/* Exercise */}
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={[styles.card, Shadows.small, styles.exerciseCard]}
                     onPress={() => router.push('/exercise-library')}
                 >
@@ -261,7 +260,11 @@ export default function HomeScreen() {
                         })}
                     >
                         <View style={styles.mealImage}>
-                            <Text style={styles.mealEmoji}>{meal.image}</Text>
+                            {meal.image && meal.image.startsWith('file://') ? (
+                                <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
+                            ) : (
+                                <Text style={styles.mealEmoji}>{meal.image || '🍽️'}</Text>
+                            )}
                         </View>
                         <View style={styles.mealInfo}>
                             <Text style={styles.mealName}>{meal.name}</Text>
@@ -310,7 +313,11 @@ export default function HomeScreen() {
                         })}
                     >
                         <View style={styles.mealImage}>
-                            <Text style={styles.mealEmoji}>{meal.image}</Text>
+                            {meal.image && meal.image.startsWith('file://') ? (
+                                <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
+                            ) : (
+                                <Text style={styles.mealEmoji}>{meal.image || '🍽️'}</Text>
+                            )}
                         </View>
                         <View style={styles.mealInfo}>
                             <Text style={styles.mealName}>{meal.name}</Text>
@@ -359,7 +366,11 @@ export default function HomeScreen() {
                         })}
                     >
                         <View style={styles.mealImage}>
-                            <Text style={styles.mealEmoji}>{meal.image}</Text>
+                            {meal.image && meal.image.startsWith('file://') ? (
+                                <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
+                            ) : (
+                                <Text style={styles.mealEmoji}>{meal.image || '🍽️'}</Text>
+                            )}
                         </View>
                         <View style={styles.mealInfo}>
                             <Text style={styles.mealName}>{meal.name}</Text>
@@ -753,6 +764,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     mealEmoji: { fontSize: 26 },
+    mealCardImg: { width: '100%', height: '100%', borderRadius: 12 },
     mealInfo: { flex: 1, justifyContent: 'center' },
     mealName: { fontSize: 14, fontWeight: '600', color: Colors.text, marginBottom: 4 },
     mealTime: { fontSize: 12, color: Colors.textSecondary },

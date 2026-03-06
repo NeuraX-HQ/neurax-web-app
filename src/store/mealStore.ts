@@ -12,7 +12,7 @@ export interface Meal {
     carbs: number;
     fat: number;
     servingSize: string;
-    ingredients?: string[];
+    ingredients?: any[]; // Keep any[] or IngredientItem[] depending on usage, let's use any for Meal
     time: string;
     date: string; // YYYY-MM-DD format
     image?: string; // emoji or base64
@@ -23,7 +23,11 @@ interface MealState {
     isLoading: boolean;
     error: string | null;
 
+    // Shared state for food detail & edit ingredients
+    currentFoodItem: any | null;
+
     // Actions
+    setCurrentFoodItem: (item: any | null) => void;
     addMeal: (meal: Omit<Meal, 'id' | 'time' | 'date'>) => Promise<void>;
     removeMeal: (id: string) => Promise<void>;
     updateMeal: (id: string, updates: Partial<Meal>) => Promise<void>;
@@ -69,6 +73,9 @@ export const useMealStore = create<MealState>((set, get) => ({
     meals: [],
     isLoading: false,
     error: null,
+    currentFoodItem: null,
+
+    setCurrentFoodItem: (item) => set({ currentFoodItem: item }),
 
     addMeal: async (mealData) => {
         try {

@@ -14,19 +14,22 @@ export default function RootLayout() {
     const [isReady, setIsReady] = useState(false);
 
     useEffect(() => {
-        const hideNavigationBar = async () => {
+        const setupNavigationBar = async () => {
             if (Platform.OS === 'android') {
+                // Set to transparent/absolute for more robust full-screen on Android
+                await NavigationBar.setBackgroundColorAsync('transparent');
+                await NavigationBar.setPositionAsync('absolute');
                 await NavigationBar.setVisibilityAsync('hidden');
                 await NavigationBar.setBehaviorAsync('overlay-swipe');
             }
         };
 
-        hideNavigationBar();
+        setupNavigationBar();
 
-        // Re-hide the navigation bar when the app returns from the background (e.g., after using Camera)
+        // Re-setup the navigation bar when the app returns from the background
         const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
             if (nextAppState === 'active') {
-                hideNavigationBar();
+                setupNavigationBar();
             }
         });
 
