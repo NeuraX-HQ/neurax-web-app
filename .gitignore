@@ -54,3 +54,8 @@ yarn-error.*
 *.tfstate.*
 .terraform.lock.hcl
 infrastructure/
+
+# amplify
+.amplify
+amplify_outputs*
+amplifyconfiguration*
