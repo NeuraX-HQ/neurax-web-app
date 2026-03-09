@@ -3,13 +3,10 @@ import { View, StyleSheet, Platform, AppState, AppStateStatus } from 'react-nati
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
-import { Amplify } from "aws-amplify";
-import outputs from "../amplify_outputs.json";
 import { useAuthStore } from '../src/store/authStore';
 import BiometricPrompt from '../src/components/BiometricPrompt';
 import 'react-native-get-random-values';
-
-Amplify.configure(outputs);
+import "../src/lib/amplify";
 
 export default function RootLayout() {
     const router = useRouter();
