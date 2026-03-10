@@ -29,7 +29,7 @@
       ],
       "redirect_sign_in_uri": [
         "nutritrack://",
-        "https://nutri-track.link/"
+        "https://nutri-track.link/home"
       ],
       "redirect_sign_out_uri": [
         "nutritrack://",

@@ -12,7 +12,7 @@ export const auth = defineAuth({
       },
       callbackUrls: [
         'nutritrack://',
-        'https://nutri-track.link/'
+        'https://nutri-track.link/home'
       ],
       logoutUrls: [
         'nutritrack://',
