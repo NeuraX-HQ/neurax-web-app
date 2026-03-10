@@ -1,9 +1,9 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { signIn, fetchAuthSession } from "aws-amplify/auth";
+import { signIn, fetchAuthSession, signInWithRedirect } from "aws-amplify/auth";
 import { useAuthStore } from '../src/store/authStore';
 
 export default function LoginScreen() {
@@ -48,6 +48,16 @@ export default function LoginScreen() {
         }
     };
 
+    const handleGoogleLogin = async () => {
+        try {
+            setLoading(true);
+            await signInWithRedirect({ provider: 'Google' });
+        } catch (error) {
+            console.log("Google login error:", error);
+            setLoading(false);
+        }
+    };
+
     return (
         <View style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
@@ -78,6 +88,21 @@ export default function LoginScreen() {
                     <Text style={styles.buttonText}>
                         {loading ? "Signing in..." : "Sign In"}
                     </Text>
+                </TouchableOpacity>
+
+                <View style={styles.dividerContainer}>
+                    <View style={styles.divider} />
+                    <Text style={styles.dividerText}>OR</Text>
+                    <View style={styles.divider} />
+                </View>
+
+                <TouchableOpacity
+                    style={styles.googleButton}
+                    onPress={handleGoogleLogin}
+                    disabled={loading}
+                >
+                    <Ionicons name="logo-google" size={24} color="#000" style={styles.googleIcon} />
+                    <Text style={styles.googleButtonText}>Sign in with Google</Text>
                 </TouchableOpacity>
 
             </SafeAreaView>
@@ -121,6 +146,40 @@ const styles = StyleSheet.create({
     buttonText: {
         color: "white",
         fontWeight: "700",
+        fontSize: 16
+    },
+
+    dividerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginVertical: 24
+    },
+    divider: {
+        flex: 1,
+        height: 1,
+        backgroundColor: '#ddd'
+    },
+    dividerText: {
+        marginHorizontal: 16,
+        color: '#666',
+        fontWeight: '600'
+    },
+    googleButton: {
+        flexDirection: 'row',
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#ddd'
+    },
+    googleIcon: {
+        marginRight: 12
+    },
+    googleButtonText: {
+        color: '#000',
+        fontWeight: '700',
         fontSize: 16
     }
 });

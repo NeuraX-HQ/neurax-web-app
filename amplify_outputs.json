@@ -23,6 +23,28 @@
       "require_symbols": true,
       "require_uppercase": true
     },
+    "oauth": {
+      "identity_providers": [
+        "GOOGLE"
+      ],
+      "redirect_sign_in_uri": [
+        "nutritrack://",
+        "https://nutri-track.link/"
+      ],
+      "redirect_sign_out_uri": [
+        "nutritrack://",
+        "https://nutri-track.link/welcome"
+      ],
+      "response_type": "code",
+      "scopes": [
+        "phone",
+        "email",
+        "openid",
+        "profile",
+        "aws.cognito.signin.user.admin"
+      ],
+      "domain": "b0cc913a22616008a12d.auth.ap-southeast-1.amazoncognito.com"
+    },
     "unauthenticated_identities_enabled": true
   },
   "data": {

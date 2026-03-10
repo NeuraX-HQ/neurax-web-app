@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
 import { View, StyleSheet, Platform, AppState, AppStateStatus } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -54,9 +55,38 @@ export default function RootLayout() {
         }
     }, [isAuthenticated, segments, isReady]);
 
+    const checkAndSetAuth = async () => {
+        try {
+            const currentUser = await getCurrentUser();
+            const session = await fetchAuthSession();
+
+            const userId = session.tokens?.idToken?.payload?.sub;
+            const token = session.tokens?.accessToken?.toString();
+
+            if (userId && token) {
+                const { login } = useAuthStore.getState();
+                await login(
+                    currentUser.signInDetails?.loginId || currentUser.userId || 'User',
+                    userId,
+                    token
+                );
+                return true;
+            }
+        } catch (e) {
+            // User not authenticated
+            return false;
+        }
+        return false;
+    };
+
     const initializeAuth = async () => {
         await checkBiometricAvailability();
-        const hasSession = await checkSession();
+        
+        // Handle Google OAuth and standard sessions
+        let hasSession = await checkSession();
+        if (!hasSession) {
+             hasSession = await checkAndSetAuth();
+        }
 
         if (hasSession) {
             // Check if biometric is required

@@ -1,9 +1,24 @@
-import { defineAuth } from "@aws-amplify/backend";
+import { defineAuth, secret } from "@aws-amplify/backend";
 
 export const auth = defineAuth({
 
   loginWith: {
-    email: true
+    email: true,
+    externalProviders: {
+      google: {
+        clientId: secret('GOOGLE_CLIENT_ID'),
+        clientSecret: secret('GOOGLE_CLIENT_SECRET'),
+        scopes: ['email', 'profile', 'openid']
+      },
+      callbackUrls: [
+        'nutritrack://',
+        'https://nutri-track.link/'
+      ],
+      logoutUrls: [
+        'nutritrack://',
+        'https://nutri-track.link/welcome'
+      ]
+    }
   },
 
   userAttributes: {
@@ -14,5 +29,4 @@ export const auth = defineAuth({
       required: false
     }
   },
-  
 });
