@@ -40,35 +40,68 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
         setFoodData(null);
 
         try {
-            // Close the custom camera modal first
-            onClose();
+            let base64Data: string | null = null;
+            let imageUri: string | undefined;
 
-            console.log('Launching native camera via ImagePicker...');
+            if (Platform.OS === 'web') {
+                // === WEB: Capture directly from CameraView ===
+                if (!cameraRef.current) {
+                    throw new Error('Camera chưa sẵn sàng');
+                }
 
-            // Use ImagePicker to launch native camera (more reliable than CameraView.takePictureAsync)
-            const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ['images'],
-                quality: 0.6,
-                base64: true,
-                allowsEditing: false,
-            });
-
-            if (result.canceled || !result.assets || result.assets.length === 0) {
-                console.log('Camera cancelled by user');
-                return;
-            }
-
-            const asset = result.assets[0];
-            console.log('Photo captured:', { hasUri: !!asset.uri, hasBase64: !!asset.base64 });
-
-            let base64Data = asset.base64;
-
-            // If base64 not available from ImagePicker, read file
-            if (!base64Data && asset.uri) {
-                console.log('Reading photo as base64 from file...');
-                base64Data = await FileSystem.readAsStringAsync(asset.uri, {
-                    encoding: 'base64' as any,
+                console.log('Web: Taking picture from CameraView...');
+                const photo = await cameraRef.current.takePictureAsync({
+                    quality: 0.6,
+                    base64: true,
                 });
+
+                if (photo?.base64) {
+                    base64Data = photo.base64;
+                    imageUri = photo.uri;
+                } else if (photo?.uri) {
+                    // Fallback: if base64 not returned, convert blob URI
+                    imageUri = photo.uri;
+                    console.log('Web: Converting blob URI to base64...');
+                    const response = await fetch(photo.uri);
+                    const blob = await response.blob();
+                    base64Data = await new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const dataUrl = reader.result as string;
+                            resolve(dataUrl.split(',')[1] || '');
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                }
+            } else {
+                // === NATIVE: Use ImagePicker for reliable camera ===
+                onClose(); // Close modal before launching native camera
+
+                console.log('Native: Launching camera via ImagePicker...');
+                const result = await ImagePicker.launchCameraAsync({
+                    mediaTypes: ['images'],
+                    quality: 0.6,
+                    base64: true,
+                    allowsEditing: false,
+                });
+
+                if (result.canceled || !result.assets || result.assets.length === 0) {
+                    console.log('Camera cancelled by user');
+                    return;
+                }
+
+                const asset = result.assets[0];
+                base64Data = asset.base64 || null;
+                imageUri = asset.uri;
+
+                // If base64 not available, read from file system
+                if (!base64Data && asset.uri) {
+                    console.log('Reading photo as base64 from file...');
+                    base64Data = await FileSystem.readAsStringAsync(asset.uri, {
+                        encoding: 'base64' as any,
+                    });
+                }
             }
 
             if (!base64Data) {
@@ -85,12 +118,13 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
 
             if (analysisResult.success && analysisResult.data) {
                 setFoodData(analysisResult.data);
+                onClose(); // Close camera on web after success
                 router.push({
                     pathname: '/food-detail',
                     params: {
                         foodData: JSON.stringify(analysisResult.data),
                         source: 'camera',
-                        image: asset.uri,
+                        image: imageUri || '',
                     }
                 });
             } else {
