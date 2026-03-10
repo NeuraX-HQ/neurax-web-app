@@ -50,9 +50,9 @@
   "data": {
     "url": "https://nsjtl54yorfndntjbogeydsryy.appsync-api.ap-southeast-1.amazonaws.com/graphql",
     "aws_region": "ap-southeast-1",
-    "default_authorization_type": "AWS_IAM",
+    "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
-      "AMAZON_COGNITO_USER_POOLS"
+      "AWS_IAM"
     ],
     "model_introspection": {
       "version": 1,
