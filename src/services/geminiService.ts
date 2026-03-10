@@ -1,7 +1,14 @@
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
 
-const client = generateClient<Schema>();
+let client: ReturnType<typeof generateClient<Schema>>;
+
+function getClient() {
+    if (!client) {
+        client = generateClient<Schema>();
+    }
+    return client;
+}
 
 export interface IngredientItem {
     name: string;
@@ -41,7 +48,7 @@ export interface CoachResponse {
  */
 export async function analyzeFoodImage(imageBase64: string): Promise<FoodAnalysisResult> {
     try {
-        const result = await client.queries.askGemini({
+        const result = await getClient().queries.askGemini({
             action: 'analyzeFoodImage',
             payload: JSON.stringify({ imageBase64 })
         });
@@ -78,7 +85,7 @@ export async function analyzeFoodImage(imageBase64: string): Promise<FoodAnalysi
  */
 export async function transcribeAudio(audioBase64: string): Promise<{ success: boolean; text?: string; error?: string }> {
     try {
-        const result = await client.queries.askGemini({
+        const result = await getClient().queries.askGemini({
             action: 'transcribeAudio',
             payload: JSON.stringify({ audioBase64 })
         });
@@ -111,7 +118,7 @@ export async function transcribeAudio(audioBase64: string): Promise<{ success: b
  */
 export async function parseVoiceToFood(transcript: string): Promise<FoodAnalysisResult> {
     try {
-        const result = await client.queries.askGemini({
+        const result = await getClient().queries.askGemini({
             action: 'parseVoiceToFood',
             payload: JSON.stringify({ transcript })
         });
@@ -147,7 +154,7 @@ export async function parseVoiceToFood(transcript: string): Promise<FoodAnalysis
  */
 export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysisResult> {
     try {
-        const result = await client.queries.askGemini({
+        const result = await getClient().queries.askGemini({
             action: 'searchFoodNutrition',
             payload: JSON.stringify({ foodName })
         });
@@ -187,7 +194,7 @@ export async function generateCoachResponse(
     contextString: string
 ): Promise<CoachResponse> {
     try {
-        const result = await client.queries.askGemini({
+        const result = await getClient().queries.askGemini({
             action: 'generateCoachResponse',
             payload: JSON.stringify({ userMessage, chatHistory, contextString })
         });
