@@ -49,9 +49,14 @@ export default function RootLayout() {
         if (!isReady) return;
 
         const inAuthGroup = segments[0] === '(tabs)';
+        const inPublicGroup = !segments[0] || segments[0] === 'welcome' || segments[0] === 'login';
 
         if (!isAuthenticated && inAuthGroup) {
-            router.replace('/login');
+            // Not logged in but trying to access a secure screen
+            router.replace('/welcome');
+        } else if (isAuthenticated && inPublicGroup) {
+            // Logged in but viewing welcome or login page
+            router.replace('/(tabs)/home');
         }
     }, [isAuthenticated, segments, isReady]);
 
