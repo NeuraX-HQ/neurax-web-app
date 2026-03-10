@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     Animated, Dimensions, Platform, Modal, Alert, ActivityIndicator
@@ -26,11 +26,76 @@ interface CameraScannerProps {
 export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerProps) {
     const router = useRouter();
     const cameraRef = useRef<any>(null);
+    const webVideoRef = useRef<HTMLVideoElement | null>(null);
+    const webStreamRef = useRef<MediaStream | null>(null);
     const [mode, setMode] = useState<CameraMode>('AI Scan');
     const [analyzing, setAnalyzing] = useState(false);
     const [foodData, setFoodData] = useState<NutritionInfo | null>(null);
     const [permission, requestPermission] = useCameraPermissions();
     const [isCameraReady, setIsCameraReady] = useState(false);
+    const [webCameraReady, setWebCameraReady] = useState(false);
+
+    // === WEB: Manage webcam stream via getUserMedia ===
+    useEffect(() => {
+        if (Platform.OS !== 'web' || !visible) return;
+
+        let stream: MediaStream | null = null;
+
+        const startWebCamera = async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+                    audio: false,
+                });
+                webStreamRef.current = stream;
+
+                // Wait for the video element to be mounted
+                const checkVideo = setInterval(() => {
+                    if (webVideoRef.current) {
+                        clearInterval(checkVideo);
+                        webVideoRef.current.srcObject = stream;
+                        webVideoRef.current.play().then(() => {
+                            setWebCameraReady(true);
+                            console.log('Web camera stream active!');
+                        });
+                    }
+                }, 100);
+
+                // Timeout after 3s
+                setTimeout(() => clearInterval(checkVideo), 3000);
+            } catch (err) {
+                console.error('Web getUserMedia error:', err);
+                Alert.alert('Lỗi Camera', 'Không thể truy cập webcam. Kiểm tra quyền truy cập camera.');
+            }
+        };
+
+        startWebCamera();
+
+        return () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            webStreamRef.current = null;
+            setWebCameraReady(false);
+        };
+    }, [visible]);
+
+    // Web: capture frame from video via canvas
+    const captureWebFrame = useCallback((): string | null => {
+        const video = webVideoRef.current;
+        if (!video || video.videoWidth === 0) return null;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+
+        ctx.drawImage(video, 0, 0);
+        // Get base64 JPEG, strip the data URL prefix
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        return dataUrl.split(',')[1] || null;
+    }, []);
 
     const handleCapture = async () => {
         if (analyzing) return;
@@ -44,35 +109,11 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
             let imageUri: string | undefined;
 
             if (Platform.OS === 'web') {
-                // === WEB: Capture directly from CameraView ===
-                if (!cameraRef.current) {
-                    throw new Error('Camera chưa sẵn sàng');
-                }
-
-                console.log('Web: Taking picture from CameraView...');
-                const photo = await cameraRef.current.takePictureAsync({
-                    quality: 0.6,
-                    base64: true,
-                });
-
-                if (photo?.base64) {
-                    base64Data = photo.base64;
-                    imageUri = photo.uri;
-                } else if (photo?.uri) {
-                    // Fallback: if base64 not returned, convert blob URI
-                    imageUri = photo.uri;
-                    console.log('Web: Converting blob URI to base64...');
-                    const response = await fetch(photo.uri);
-                    const blob = await response.blob();
-                    base64Data = await new Promise<string>((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            const dataUrl = reader.result as string;
-                            resolve(dataUrl.split(',')[1] || '');
-                        };
-                        reader.onerror = reject;
-                        reader.readAsDataURL(blob);
-                    });
+                // === WEB: Capture frame from live video via canvas ===
+                console.log('Web: Capturing frame from webcam...');
+                base64Data = captureWebFrame();
+                if (!base64Data) {
+                    throw new Error('Không thể chụp ảnh từ webcam. Hãy đảm bảo camera đang hoạt động.');
                 }
             } else {
                 // === NATIVE: Use ImagePicker for reliable camera ===
@@ -170,20 +211,38 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
     return (
         <Modal visible={visible} animationType="slide" transparent={false}>
             <View style={camStyles.container}>
-                {/* Camera View - NO CHILDREN */}
-                <CameraView
-                    ref={cameraRef}
-                    style={camStyles.cameraArea}
-                    facing="back"
-                    onCameraReady={() => {
-                        console.log('Camera is ready!');
-                        setIsCameraReady(true);
-                    }}
-                    onMountError={(error) => {
-                        console.error('Camera mount error:', error);
-                        Alert.alert('Lỗi Camera', 'Không thể khởi tạo camera. Vui lòng thử lại.');
-                    }}
-                />
+                {/* Camera: HTML5 video on Web, CameraView on Native */}
+                {Platform.OS === 'web' ? (
+                    <video
+                        ref={(el: any) => { webVideoRef.current = el; }}
+                        autoPlay
+                        playsInline
+                        muted
+                        style={{
+                            position: 'absolute' as any,
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover' as any,
+                            zIndex: 0,
+                        }}
+                    />
+                ) : (
+                    <CameraView
+                        ref={cameraRef}
+                        style={camStyles.cameraArea}
+                        facing="back"
+                        onCameraReady={() => {
+                            console.log('Camera is ready!');
+                            setIsCameraReady(true);
+                        }}
+                        onMountError={(error) => {
+                            console.error('Camera mount error:', error);
+                            Alert.alert('Lỗi Camera', 'Không thể khởi tạo camera. Vui lòng thử lại.');
+                        }}
+                    />
+                )}
 
                 {/* Overlays - Positioned absolutely */}
                 <View style={camStyles.scanFrame}>
@@ -271,20 +330,11 @@ const camStyles = StyleSheet.create({
     dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2ECC71' },
     aiText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
     cameraArea: {
-        ...Platform.select({
-            web: {
-                flex: 1,
-                width: '100%',
-                height: '100%',
-            },
-            default: {
-                position: 'absolute' as const,
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-            },
-        }),
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
     },
     scanFrame: {
         position: 'absolute',
