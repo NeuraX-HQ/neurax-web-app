@@ -271,11 +271,20 @@ const camStyles = StyleSheet.create({
     dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2ECC71' },
     aiText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
     cameraArea: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        ...Platform.select({
+            web: {
+                flex: 1,
+                width: '100%',
+                height: '100%',
+            },
+            default: {
+                position: 'absolute' as const,
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+            },
+        }),
     },
     scanFrame: {
         position: 'absolute',
