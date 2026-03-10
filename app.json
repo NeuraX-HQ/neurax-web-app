@@ -51,7 +51,8 @@
           "microphonePermission": "Allow NutriTrack to access your microphone for voice food logging."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ],
     "extra": {
       "router": {},
