@@ -123,15 +123,33 @@ export async function stopRecording(): Promise<AudioRecordingResult> {
         // Read file as base64
         let base64 = '';
         try {
-            base64 = await FileSystem.readAsStringAsync(uri, {
-                encoding: 'base64' as any,
-            });
+            if (typeof window !== 'undefined' && uri.startsWith('blob:')) {
+                // Web platform: fetch the blob and convert to base64
+                const response = await fetch(uri);
+                const blob = await response.blob();
+                base64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const dataUrl = reader.result as string;
+                        // Strip the "data:audio/webm;base64," prefix
+                        const b64 = dataUrl.split(',')[1] || '';
+                        resolve(b64);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            } else {
+                // Native platform: use expo-file-system
+                base64 = await FileSystem.readAsStringAsync(uri, {
+                    encoding: 'base64' as any,
+                });
+            }
         } catch (fsError) {
             console.error('FileSystem error:', fsError);
             recording = null;
             return {
                 success: false,
-                error: 'Failed to read audio file. Make sure expo-file-system is installed.',
+                error: 'Failed to read audio file.',
             };
         }
 
