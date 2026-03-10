@@ -105,6 +105,13 @@ export default function LoginScreen() {
                     <Text style={styles.googleButtonText}>Sign in with Google</Text>
                 </TouchableOpacity>
 
+                <View style={styles.footerContainer}>
+                    <Text style={styles.footerText}>Chưa có tài khoản? </Text>
+                    <TouchableOpacity onPress={() => router.push('/signup')}>
+                        <Text style={styles.footerLink}>Đăng ký ngay</Text>
+                    </TouchableOpacity>
+                </View>
+
             </SafeAreaView>
         </View>
     );
@@ -181,5 +188,19 @@ const styles = StyleSheet.create({
         color: '#000',
         fontWeight: '700',
         fontSize: 16
+    },
+    footerContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: 32
+    },
+    footerText: {
+        color: '#666',
+        fontSize: 15
+    },
+    footerLink: {
+        color: '#1E2B22',
+        fontWeight: '700',
+        fontSize: 15
     }
 });

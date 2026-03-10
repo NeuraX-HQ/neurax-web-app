@@ -49,7 +49,7 @@ export default function RootLayout() {
         if (!isReady) return;
 
         const inAuthGroup = segments[0] === '(tabs)';
-        const inPublicGroup = !segments[0] || segments[0] === 'welcome' || segments[0] === 'login';
+        const inPublicGroup = !segments[0] || segments[0] === 'welcome' || segments[0] === 'login' || segments[0] === 'signup' || segments[0] === 'verify-otp';
 
         if (!isAuthenticated && inAuthGroup) {
             // Not logged in but trying to access a secure screen
@@ -128,6 +128,8 @@ export default function RootLayout() {
                 <Stack.Screen name="index" />
                 <Stack.Screen name="welcome" options={{ contentStyle: { backgroundColor: '#000000' } }} />
                 <Stack.Screen name="login" />
+                <Stack.Screen name="signup" />
+                <Stack.Screen name="verify-otp" />
                 <Stack.Screen name="onboarding" />
                 <Stack.Screen name="(tabs)" options={{ animation: 'fade', contentStyle: { backgroundColor: '#FFFFFF' } }} />
                 <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />

@@ -8,6 +8,59 @@ specifies that any unauthenticated user can "create", "read", "update",
 and "delete" any "Todo" records.
 =========================================================================*/
 const schema = a.schema({
+  Portions: a.customType({
+    small: a.float(),
+    medium: a.float(),
+    large: a.float(),
+  }),
+
+  Serving: a.customType({
+    default_g: a.float(),
+    unit: a.string(),
+    portions: a.ref('Portions'),
+  }),
+
+  Micronutrients: a.customType({
+    calcium_mg: a.float(),
+    iron_mg: a.float(),
+    vitamin_a_ug: a.float(),
+    vitamin_c_mg: a.float(),
+  }),
+
+  Macros: a.customType({
+    calories: a.float(),
+    protein_g: a.float(),
+    carbs_g: a.float(),
+    fat_g: a.float(),
+    saturated_fat_g: a.float(),
+    polyunsaturated_fat_g: a.float(),
+    monounsaturated_fat_g: a.float(),
+    fiber_g: a.float(),
+    sugar_g: a.float(),
+    sodium_mg: a.float(),
+    cholesterol_mg: a.float(),
+    potassium_mg: a.float(),
+  }),
+
+  Food: a
+    .model({
+      food_id: a.string().required(),
+      name_vi: a.string().required(),
+      name_en: a.string(),
+      aliases_vi: a.string().array(),
+      aliases_en: a.string().array(),
+      macros: a.ref('Macros'),
+      micronutrients: a.ref('Micronutrients'),
+      serving: a.ref('Serving'),
+      verified: a.boolean(),
+      source: a.string(),
+    })
+    .identifier(['food_id'])
+    .authorization((allow) => [
+      allow.guest().to(['read']),
+      allow.authenticated().to(['read'])
+    ]),
+
   Todo: a
     .model({
       content: a.string(),
@@ -33,32 +86,3 @@ export const data = defineData({
     defaultAuthorizationMode: 'identityPool',
   },
 });
-
-/*== STEP 2 ===============================================================
-Go to your frontend source code. From your client-side code, generate a
-Data client to make CRUDL requests to your table. (THIS SNIPPET WILL ONLY
-WORK IN THE FRONTEND CODE FILE.)
-
-Using JavaScript or Next.js React Server Components, Middleware, Server 
-Actions or Pages Router? Review how to generate Data clients for those use
-cases: https://docs.amplify.aws/gen2/build-a-backend/data/connect-to-API/
-=========================================================================*/
-
-/*
-"use client"
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
-
-const client = generateClient<Schema>() // use this Data client for CRUDL requests
-*/
-
-/*== STEP 3 ===============================================================
-Fetch records from the database and use them in your frontend component.
-(THIS SNIPPET WILL ONLY WORK IN THE FRONTEND CODE FILE.)
-=========================================================================*/
-
-/* For example, in a React component, you can use this snippet in your
-  function's RETURN statement */
-// const { data: todos } = await client.models.Todo.list()
-
-// return <ul>{todos.map(todo => <li key={todo.id}>{todo.content}</li>)}</ul>
