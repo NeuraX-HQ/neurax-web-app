@@ -31,15 +31,38 @@ export interface FoodAnalysisResult {
     error?: string;
 }
 
+export interface FoodSuggestion {
+    name: string;
+    description: string;
+    calories: number;
+    emoji: string;
+}
+
+export interface ExerciseSuggestion {
+    name: string;
+    description: string;
+    duration_minutes: number;
+    calories_burned: number;
+    emoji: string;
+}
+
+export interface StatsCard {
+    calories_consumed: number;
+    calories_target: number;
+    protein_g: number;
+    carbs_g: number;
+    fat_g: number;
+    summary: string;
+}
+
 export interface CoachResponse {
     success: boolean;
     text?: string;
-    foodSuggestion?: {
-        name: string;
-        description: string;
-        calories: number;
-        emoji: string;
-    };
+    foodSuggestions?: FoodSuggestion[];
+    exerciseSuggestions?: ExerciseSuggestion[];
+    statsCard?: StatsCard;
+    /** @deprecated Use foodSuggestions array instead */
+    foodSuggestion?: FoodSuggestion;
     error?: string;
 }
 
@@ -211,24 +234,53 @@ export async function generateCoachResponse(
 
         const text = responseObj.text;
 
-        // Extract food card if present
-        let foodSuggestion;
-        const cardMatch = text.match(/\[FOOD_CARD: (\{.*?\})\]/);
-        if (cardMatch) {
+        // Extract all FOOD_CARDs
+        const foodSuggestions: FoodSuggestion[] = [];
+        const foodMatches = text.matchAll(/\[FOOD_CARD: (\{.*?\})\]/g);
+        for (const match of foodMatches) {
             try {
-                foodSuggestion = JSON.parse(cardMatch[1]);
+                foodSuggestions.push(JSON.parse(match[1]));
             } catch (e) {
                 console.error('Failed to parse food card JSON', e);
             }
         }
 
-        // Clean text (remove the food card tag)
-        const cleanedText = text.replace(/\[FOOD_CARD: \{.*?\}\]/g, '').trim();
+        // Extract all EXERCISE_CARDs
+        const exerciseSuggestions: ExerciseSuggestion[] = [];
+        const exerciseMatches = text.matchAll(/\[EXERCISE_CARD: (\{.*?\})\]/g);
+        for (const match of exerciseMatches) {
+            try {
+                exerciseSuggestions.push(JSON.parse(match[1]));
+            } catch (e) {
+                console.error('Failed to parse exercise card JSON', e);
+            }
+        }
+
+        // Extract STATS_CARD (only one per response)
+        let statsCard: StatsCard | undefined;
+        const statsMatch = text.match(/\[STATS_CARD: (\{.*?\})\]/);
+        if (statsMatch) {
+            try {
+                statsCard = JSON.parse(statsMatch[1]);
+            } catch (e) {
+                console.error('Failed to parse stats card JSON', e);
+            }
+        }
+
+        // Clean text (remove all card tags)
+        const cleanedText = text
+            .replace(/\[FOOD_CARD: \{.*?\}\]/g, '')
+            .replace(/\[EXERCISE_CARD: \{.*?\}\]/g, '')
+            .replace(/\[STATS_CARD: \{.*?\}\]/g, '')
+            .trim();
 
         return {
             success: true,
             text: cleanedText,
-            foodSuggestion,
+            foodSuggestions: foodSuggestions.length > 0 ? foodSuggestions : undefined,
+            exerciseSuggestions: exerciseSuggestions.length > 0 ? exerciseSuggestions : undefined,
+            statsCard,
+            foodSuggestion: foodSuggestions[0], // backward compat
         };
     } catch (error) {
         console.error('Gemini coach error:', error);
