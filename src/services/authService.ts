@@ -1,6 +1,7 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const BIOMETRIC_ENABLED_KEY = 'biometric_enabled';
@@ -65,7 +66,11 @@ export const authenticateWithBiometric = async (
 // Save auth token securely
 export const saveAuthToken = async (token: string): Promise<void> => {
     try {
-        await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
+        if (Platform.OS === 'web') {
+            await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
+        } else {
+            await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
+        }
     } catch (error) {
         console.error('Error saving auth token:', error);
     }
@@ -74,6 +79,9 @@ export const saveAuthToken = async (token: string): Promise<void> => {
 // Get auth token
 export const getAuthToken = async (): Promise<string | null> => {
     try {
+        if (Platform.OS === 'web') {
+            return await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+        }
         return await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
     } catch (error) {
         console.error('Error getting auth token:', error);
@@ -84,7 +92,11 @@ export const getAuthToken = async (): Promise<string | null> => {
 // Delete auth token
 export const deleteAuthToken = async (): Promise<void> => {
     try {
-        await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+        if (Platform.OS === 'web') {
+            await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+        } else {
+            await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+        }
     } catch (error) {
         console.error('Error deleting auth token:', error);
     }

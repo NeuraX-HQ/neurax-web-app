@@ -1,7 +1,9 @@
-﻿import React from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { signOut } from 'aws-amplify/auth';
+import { useAuthStore } from '../src/store/authStore';
 import { Colors, Shadows } from '../src/constants/colors';
 import { ProfileIcon } from '../src/components/TabIcons';
 import Svg, { Path, Circle, Line, Polyline, Rect } from 'react-native-svg';
@@ -80,6 +82,17 @@ function ChevronRight({ size = 18, color = Colors.textLight }: { size?: number; 
 
 export default function ProfileScreen() {
     const router = useRouter();
+    const { logout } = useAuthStore();
+
+    const handleSignOut = async () => {
+        try {
+            await signOut();
+            await logout();
+            router.replace('/welcome');
+        } catch (error) {
+            console.log('Error signing out: ', error);
+        }
+    };
 
     const stats = [
         { label: 'Weight', value: '75', unit: 'kg' },
@@ -187,6 +200,18 @@ export default function ProfileScreen() {
                         </View>
                         <Text style={styles.menuLabel}>Notifications</Text>
                         <ChevronRight />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
+                        <View style={[styles.menuIconBox, { backgroundColor: '#FFEEF0' }]}>
+                            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="#FF4D4D" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                                <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                <Polyline points="16 17 21 12 16 7" />
+                                <Line x1="21" y1="12" x2="9" y2="12" />
+                            </Svg>
+                        </View>
+                        <Text style={[styles.menuLabel, { color: '#FF4D4D' }]}>Sign Out</Text>
+                        <ChevronRight color="#FF4D4D" />
                     </TouchableOpacity>
                 </View>
 
