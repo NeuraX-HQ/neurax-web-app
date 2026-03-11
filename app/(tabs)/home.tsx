@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Dimensions, Alert, TouchableWithoutFeedback, Modal } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Swipeable, TouchableOpacity as GHTouchableOpacity } from 'react-native-gesture-handler';
 import { Colors, Shadows } from '../../src/constants/colors';
-import { ProfileIcon, SettingsIcon, NotificationIcon } from '../../src/components/TabIcons';
+import { NotificationIcon, SettingsIcon, ProfileIcon } from '../../src/components/TabIcons';
 import { drinkTypes } from '../../src/data/mockData';
 import { CalorieGauge } from '../../src/components/CalorieGauge';
-import { useMealStore, MealType } from '../../src/store/mealStore';
+import { useMealStore, Meal } from '../../src/store/mealStore';
+import { getOnboardingData } from '../../src/store/userStore';
 
 export default function HomeScreen() {
     const router = useRouter();
@@ -45,11 +46,13 @@ export default function HomeScreen() {
         return { weekDaysLabels: d_labels, dates: d_dates, fullDates: d_fullDates, monthName: currentMonthName, todayIndex: tIndex };
     }, []);
 
+    const [refreshing, setRefreshing] = useState(false);
     const [selectedDay, setSelectedDay] = useState(todayIndex);
+    const [gender, setGender] = useState<string>('');
     const selectedDateStr = fullDates[selectedDay];
 
     // Meal store
-    const { loadMeals, getMealsByDate, removeMeal } = useMealStore();
+    const { meals, getTodayStats, loadMeals, getMealsByDate, removeMeal } = useMealStore();
     const displayedMeals = getMealsByDate(selectedDateStr);
 
     const swipeableRefs = useRef(new Map<string, any>());
@@ -90,6 +93,13 @@ export default function HomeScreen() {
     // Load meals on mount
     useEffect(() => {
         loadMeals();
+        const fetchUserData = async () => {
+            const data = await getOnboardingData();
+            if (data?.gender) {
+                setGender(data.gender.toLowerCase());
+            }
+        };
+        fetchUserData();
     }, []);
 
     // Hydration modal state
@@ -106,7 +116,7 @@ export default function HomeScreen() {
     };
 
     // Group meals by type
-    const getMealsByType = (type: MealType) => {
+    const getMealsByType = (type: Meal['type']) => {
         return displayedMeals.filter(meal => meal.type === type);
     };
 
@@ -124,7 +134,7 @@ export default function HomeScreen() {
     const renderRightActions = (mealId: string, mealName: string) => {
         return (
             <GHTouchableOpacity
-                style={styles.deleteAction}
+                style={[styles.deleteAction, { height: '100%' }]}
                 onPress={() => confirmDelete(mealId, mealName)}
             >
                 <Ionicons name="trash-outline" size={24} color="#FFF" />
@@ -132,7 +142,7 @@ export default function HomeScreen() {
         );
     };
 
-    const renderMealCard = (meal: any) => (
+    const renderMealCard = (meal: Meal) => (
         <Swipeable 
             key={meal.id}
             ref={(ref) => {
@@ -198,7 +208,13 @@ export default function HomeScreen() {
                 <View style={styles.header}>
                     <View style={styles.headerLeft}>
                         <TouchableOpacity style={styles.avatar} onPress={withAutoClose(() => router.push('/profile'))}>
-                            <ProfileIcon size={20} color="#000" />
+                            {gender === 'male' ? (
+                                <Image source={require('../../assets/images/male.png')} style={styles.avatarIcon} />
+                            ) : gender === 'female' ? (
+                                <Image source={require('../../assets/images/female.png')} style={styles.avatarIcon} />
+                            ) : (
+                                <ProfileIcon size={20} color="#000" />
+                            )}
                             <View style={styles.statusDot} />
                         </TouchableOpacity>
                         <Text style={styles.greeting}>Hi Admin!</Text>
@@ -609,6 +625,11 @@ const hStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
+    avatarIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+    },
     container: { flex: 1, backgroundColor: Colors.background },
     header: {
         flexDirection: 'row',
@@ -767,7 +788,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderRadius: 14,
         marginHorizontal: 16,
-        marginBottom: 8,
+        marginBottom: 0, 
         padding: 12,
         flexDirection: 'row',
         alignItems: 'center',

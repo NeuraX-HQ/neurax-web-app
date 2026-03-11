@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { signOut } from 'aws-amplify/auth';
 import { useAuthStore } from '../src/store/authStore';
+import { getOnboardingData } from '../src/store/userStore';
 import { Colors, Shadows } from '../src/constants/colors';
 import { ProfileIcon } from '../src/components/TabIcons';
 import Svg, { Path, Circle, Line, Polyline, Rect } from 'react-native-svg';
@@ -83,6 +84,17 @@ function ChevronRight({ size = 18, color = Colors.textLight }: { size?: number; 
 export default function ProfileScreen() {
     const router = useRouter();
     const { logout } = useAuthStore();
+    const [gender, setGender] = React.useState<string>('');
+
+    React.useEffect(() => {
+        const fetchUserData = async () => {
+            const data = await getOnboardingData();
+            if (data?.gender) {
+                setGender(data.gender.toLowerCase());
+            }
+        };
+        fetchUserData();
+    }, []);
 
     const handleSignOut = async () => {
         try {
@@ -124,7 +136,13 @@ export default function ProfileScreen() {
                 <View style={styles.avatarSection}>
                     <View style={styles.avatarContainer}>
                         <View style={styles.avatar}>
-                            <Image source={require('../assets/images/avatar.png')} style={styles.avatarImage} />
+                            {gender === 'male' ? (
+                                <Image source={require('../assets/images/male.png')} style={styles.avatarImage} />
+                            ) : gender === 'female' ? (
+                                <Image source={require('../assets/images/female.png')} style={styles.avatarImage} />
+                            ) : (
+                                <Image source={require('../assets/images/avatar.png')} style={styles.avatarImage} />
+                            )}
                         </View>
                         <TouchableOpacity style={styles.editBadge}>
                             <EditPenIcon size={14} />
