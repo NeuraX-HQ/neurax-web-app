@@ -197,20 +197,91 @@
             "sortKeyFieldNames": []
           }
         },
-        "Todo": {
-          "name": "Todo",
+        "user": {
+          "name": "user",
           "fields": {
-            "id": {
-              "name": "id",
+            "user_id": {
+              "name": "user_id",
               "isArray": false,
-              "type": "ID",
+              "type": "String",
               "isRequired": true,
               "attributes": []
             },
-            "content": {
-              "name": "content",
+            "email": {
+              "name": "email",
               "isArray": false,
               "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "display_name": {
+              "name": "display_name",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "avatar_url": {
+              "name": "avatar_url",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "created_at": {
+              "name": "created_at",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "updated_at": {
+              "name": "updated_at",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "onboarding_status": {
+              "name": "onboarding_status",
+              "isArray": false,
+              "type": "Boolean",
+              "isRequired": false,
+              "attributes": []
+            },
+            "biometric": {
+              "name": "biometric",
+              "isArray": false,
+              "type": {
+                "nonModel": "biometric"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "goal": {
+              "name": "goal",
+              "isArray": false,
+              "type": {
+                "nonModel": "goal"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "dietary_profile": {
+              "name": "dietary_profile",
+              "isArray": false,
+              "type": {
+                "nonModel": "dietary_profile"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "gamification": {
+              "name": "gamification",
+              "isArray": false,
+              "type": {
+                "nonModel": "gamification"
+              },
               "isRequired": false,
               "attributes": []
             },
@@ -232,19 +303,29 @@
             }
           },
           "syncable": true,
-          "pluralName": "Todos",
+          "pluralName": "users",
           "attributes": [
             {
               "type": "model",
               "properties": {}
             },
             {
+              "type": "key",
+              "properties": {
+                "fields": [
+                  "user_id"
+                ]
+              }
+            },
+            {
               "type": "auth",
               "properties": {
                 "rules": [
                   {
-                    "allow": "public",
-                    "provider": "iam",
+                    "provider": "userPools",
+                    "ownerField": "owner",
+                    "allow": "owner",
+                    "identityClaim": "cognito:username",
                     "operations": [
                       "create",
                       "update",
@@ -257,8 +338,8 @@
             }
           ],
           "primaryKeyInfo": {
-            "isCustomPrimaryKey": false,
-            "primaryKeyFieldName": "id",
+            "isCustomPrimaryKey": true,
+            "primaryKeyFieldName": "user_id",
             "sortKeyFieldNames": []
           }
         }
@@ -440,6 +521,147 @@
               "attributes": []
             }
           }
+        },
+        "biometric": {
+          "name": "biometric",
+          "fields": {
+            "age": {
+              "name": "age",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "gender": {
+              "name": "gender",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "height_cm": {
+              "name": "height_cm",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "weight_kg": {
+              "name": "weight_kg",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "active_level": {
+              "name": "active_level",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        },
+        "goal": {
+          "name": "goal",
+          "fields": {
+            "daily_calories": {
+              "name": "daily_calories",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "daily_carbs_g": {
+              "name": "daily_carbs_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "daily_protein_g": {
+              "name": "daily_protein_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "daily_fat_g": {
+              "name": "daily_fat_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "target_weight_kg": {
+              "name": "target_weight_kg",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        },
+        "dietary_profile": {
+          "name": "dietary_profile",
+          "fields": {
+            "allergies": {
+              "name": "allergies",
+              "isArray": true,
+              "type": "String",
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true
+            },
+            "preferences": {
+              "name": "preferences",
+              "isArray": true,
+              "type": "String",
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true
+            }
+          }
+        },
+        "gamification": {
+          "name": "gamification",
+          "fields": {
+            "current_streak": {
+              "name": "current_streak",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "longest_streak": {
+              "name": "longest_streak",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "last_log_date": {
+              "name": "last_log_date",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "total_points": {
+              "name": "total_points",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "coach_tone": {
+              "name": "coach_tone",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
         }
       },
       "queries": {
@@ -460,6 +682,20 @@
               "isArray": false,
               "type": "String",
               "isRequired": false
+            }
+          }
+        },
+        "processNutrition": {
+          "name": "processNutrition",
+          "isArray": false,
+          "type": "String",
+          "isRequired": false,
+          "arguments": {
+            "payload": {
+              "name": "payload",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
             }
           }
         }

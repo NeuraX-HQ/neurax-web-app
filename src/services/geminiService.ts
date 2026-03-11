@@ -12,7 +12,15 @@ function getClient() {
 
 export interface IngredientItem {
     name: string;
-    amount: string;
+    amount?: string;
+    estimated_g?: number;
+    calories?: number;
+    protein_g?: number;
+    carbs_g?: number;
+    fat_g?: number;
+    food_id?: string | null;
+    matched?: boolean;
+    source?: 'database' | 'ai_estimated';
 }
 
 export interface NutritionInfo {
@@ -21,8 +29,11 @@ export interface NutritionInfo {
     protein: number;
     carbs: number;
     fat: number;
-    servingSize: string;
+    servingSize?: string;
+    portion_size?: string;
     ingredients?: IngredientItem[];
+    db_match_count?: number;
+    ai_fallback_count?: number;
 }
 
 export interface FoodAnalysisResult {
@@ -173,39 +184,108 @@ export async function parseVoiceToFood(transcript: string): Promise<FoodAnalysis
 }
 
 /**
- * Search for food in database and get nutrition info through AWS Lambda
+ * Search for food and get enriched nutrition info through AI + DB verification
  */
 export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysisResult> {
     try {
-        const result = await getClient().queries.askGemini({
+        // Step 1: Ask Gemini for ingredient breakdown + estimated nutrition
+        const aiResult = await getClient().queries.askGemini({
             action: 'searchFoodNutrition',
             payload: JSON.stringify({ foodName })
         });
 
-        if (result.errors || !result.data) {
-            console.error('Amplify GraphQL Errors:', result.errors);
+        if (aiResult.errors || !aiResult.data) {
+            console.error('Amplify GraphQL Errors:', aiResult.errors);
             return { success: false, error: 'GraphQL error occurred' };
         }
 
-        const responseObj = JSON.parse(result.data);
-        if (!responseObj.success) {
-            return { success: false, error: responseObj.error };
+        const aiResponse = JSON.parse(aiResult.data);
+        if (!aiResponse.success) {
+            return { success: false, error: aiResponse.error };
         }
 
-        const cleanedText = responseObj.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        const nutritionData = JSON.parse(cleanedText);
+        const cleanedText = aiResponse.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const aiData = JSON.parse(cleanedText);
 
+        // Step 2: Send AI data to processNutrition Lambda for DB verification
+        const processResult = await getClient().queries.processNutrition({
+            payload: JSON.stringify(aiData)
+        });
+
+        if (processResult.errors || !processResult.data) {
+            console.log('processNutrition failed, falling back to AI data');
+            return {
+                success: true,
+                data: convertAiToNutritionInfo(aiData),
+            };
+        }
+
+        const processedResponse = JSON.parse(processResult.data);
+        if (!processedResponse.success || !processedResponse.items?.length) {
+            return {
+                success: true,
+                data: convertAiToNutritionInfo(aiData),
+            };
+        }
+
+        // Convert processed data to NutritionInfo format
+        const item = processedResponse.items[0];
         return {
             success: true,
-            data: nutritionData,
+            data: {
+                name: item.meal_name,
+                calories: item.total_calories,
+                protein: item.total_protein_g,
+                carbs: item.total_carbs_g,
+                fat: item.total_fat_g,
+                portion_size: item.portion_size,
+                ingredients: item.ingredients.map((ing: any) => ({
+                    name: ing.name,
+                    amount: `${ing.estimated_g}g`,
+                    estimated_g: ing.estimated_g,
+                    calories: ing.calories,
+                    protein_g: ing.protein_g,
+                    carbs_g: ing.carbs_g,
+                    fat_g: ing.fat_g,
+                    food_id: ing.food_id,
+                    matched: ing.matched,
+                    source: ing.source,
+                })),
+                db_match_count: item.db_match_count,
+                ai_fallback_count: item.ai_fallback_count,
+            },
         };
     } catch (error) {
-        console.error('Gemini food search error:', error);
+        console.error('Search food nutrition error:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to search food',
         };
     }
+}
+
+/**
+ * Helper: convert raw AI response to NutritionInfo format (fallback)
+ */
+function convertAiToNutritionInfo(aiData: any): NutritionInfo {
+    return {
+        name: aiData.meal_name || aiData.name || 'Unknown',
+        calories: aiData.total_calories || aiData.calories || 0,
+        protein: aiData.total_protein_g || aiData.protein || 0,
+        carbs: aiData.total_carbs_g || aiData.carbs || 0,
+        fat: aiData.total_fat_g || aiData.fat || 0,
+        portion_size: aiData.portion_size,
+        ingredients: (aiData.ingredients || []).map((ing: any) => ({
+            name: ing.name,
+            amount: ing.estimated_g ? `${ing.estimated_g}g` : ing.amount,
+            estimated_g: ing.estimated_g,
+            calories: ing.calories,
+            protein_g: ing.protein_g,
+            carbs_g: ing.carbs_g,
+            fat_g: ing.fat_g,
+            source: 'ai_estimated' as const,
+        })),
+    };
 }
 
 /**

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
     Modal, Alert
@@ -252,6 +252,26 @@ export default function FoodDetailScreen() {
                     </View>
                 </View>
 
+                {/* Data Source Badge */}
+                {(foodData.db_match_count !== undefined || foodData.ai_fallback_count !== undefined) && (
+                    <View style={styles.sourceSection}>
+                        <View style={styles.sourceBadge}>
+                            <Ionicons name="server-outline" size={14} color="#10B981" />
+                            <Text style={styles.sourceBadgeText}>
+                                {foodData.db_match_count || 0} từ DB
+                            </Text>
+                        </View>
+                        {(foodData.ai_fallback_count || 0) > 0 && (
+                            <View style={[styles.sourceBadge, styles.sourceBadgeAI]}>
+                                <Ionicons name="sparkles" size={14} color="#F59E0B" />
+                                <Text style={[styles.sourceBadgeText, { color: '#92400E' }]}>
+                                    {foodData.ai_fallback_count} AI ước tính
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                )}
+
                 {/* Ingredients */}
                 {foodData.ingredients && foodData.ingredients.length > 0 && (
                     <View style={styles.ingredientsSection}>
@@ -266,15 +286,29 @@ export default function FoodDetailScreen() {
                             {foodData.ingredients.map((ingredient, index) => (
                                 <View key={index} style={styles.ingredientRow}>
                                     <View style={styles.ingredientLeft}>
-                                        <View style={styles.ingredientCheckbox} />
-                                        <Text style={styles.ingredientName}>
-                                            {typeof ingredient === 'string' ? ingredient : ingredient.name}
-                                        </Text>
+                                        <View style={[
+                                            styles.ingredientCheckbox,
+                                            ingredient.source === 'database' && styles.ingredientCheckboxDB,
+                                            ingredient.source === 'ai_estimated' && styles.ingredientCheckboxAI,
+                                        ]} />
+                                        <View>
+                                            <Text style={styles.ingredientName}>
+                                                {typeof ingredient === 'string' ? ingredient : ingredient.name}
+                                            </Text>
+                                            {ingredient.calories !== undefined && (
+                                                <Text style={styles.ingredientCalories}>
+                                                    {Math.round(ingredient.calories)} kcal
+                                                    {ingredient.source === 'database' ? ' ✓' : ' ~'}
+                                                </Text>
+                                            )}
+                                        </View>
                                     </View>
                                     <Text style={styles.ingredientAmount}>
                                         {typeof ingredient === 'string'
-                                            ? (index === 0 ? '150 g' : index === 1 ? '50 g' : index === 2 ? '300 ml' : '30 g')
-                                            : ingredient.amount}
+                                            ? ''
+                                            : ingredient.estimated_g
+                                                ? `${ingredient.estimated_g} g`
+                                                : ingredient.amount || ''}
                                     </Text>
                                 </View>
                             ))}
@@ -600,6 +634,42 @@ const styles = StyleSheet.create({
     ingredientAmount: {
         fontSize: 14,
         color: '#999',
+    },
+    ingredientCalories: {
+        fontSize: 12,
+        color: '#7F8C9B',
+        marginTop: 2,
+    },
+    ingredientCheckboxDB: {
+        borderColor: '#10B981',
+        backgroundColor: '#D1FAE5',
+    },
+    ingredientCheckboxAI: {
+        borderColor: '#F59E0B',
+        backgroundColor: '#FEF3C7',
+    },
+    sourceSection: {
+        flexDirection: 'row',
+        gap: 8,
+        marginHorizontal: 16,
+        marginTop: 12,
+    },
+    sourceBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+    },
+    sourceBadgeAI: {
+        backgroundColor: '#FFF7ED',
+    },
+    sourceBadgeText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#065F46',
     },
     bottomButtons: {
         position: 'absolute',

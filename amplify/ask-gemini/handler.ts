@@ -2,7 +2,7 @@
 import { env } from '$amplify/env/ask-gemini';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 // @ts-ignore
-import type { Schema } from '../../data/resource';
+import type { Schema } from '../data/resource';
 
 const AI_COACH_SYSTEM_PROMPT = `You are an AI Nutrition Coach integrated inside a nutrition and health application named NutriTrack.
 Your role is to act as a professional nutrition advisor that helps users improve their eating habits and health.
@@ -145,23 +145,26 @@ export const handler: Schema['askGemini']['functionHandler'] = async (event: any
                 cleanBase64 = imageBase64.split('base64,')[1];
             }
 
-            const prompt = `Phân tích hình ảnh món ăn này và cung cấp thông tin dinh dưỡng chi tiết dưới định dạng JSON.
-            
-Chỉ trả về DUY NHẤT một đối tượng JSON hợp lệ với cấu trúc chính xác sau (không có markdown, không có văn bản thừa):
+            const prompt = `Phân tích hình ảnh món ăn này. Xác định TÊN MÓN, TỪNG NGUYÊN LIỆU THÀNH PHẦN kèm KHỐI LƯỢNG ƯỚC TÍNH (gram) và GIÁ TRỊ DINH DƯỠNG ước tính.
+
+Chỉ trả về DUY NHẤT một đối tượng JSON hợp lệ (không có markdown, không có văn bản thừa):
 {
-    "name": "Tên món ăn bằng tiếng Việt",
-    "calories": tổng lượng calo ước tính (số),
-    "protein": số gram protein (số),
-    "carbs": số gram carbohydrates (số),
-    "fat": số gram chất béo (số),
-    "servingSize": "mô tả kích thước phần ăn (ví dụ: 1 bát, 1 đĩa)",
+    "meal_name": "Tên món ăn bằng tiếng Việt",
+    "portion_size": "small | medium | large",
+    "total_calories": 520,
+    "total_protein_g": 32,
+    "total_carbs_g": 68,
+    "total_fat_g": 12,
     "ingredients": [
-        { "name": "tên nguyên liệu 1", "amount": "khối lượng ước tính, ví dụ: 150g" },
-        { "name": "tên nguyên liệu 2", "amount": "ví dụ: 50g" }
+        { "name": "tên nguyên liệu (tiếng Việt)", "estimated_g": 150, "calories": 200, "protein_g": 15, "carbs_g": 0, "fat_g": 10 }
     ]
 }
 
-Hãy ước tính chính xác nhất có thể dựa trên kích thước phần ăn có thể nhìn thấy.`;
+Quy tắc:
+- Ước tính gram dựa trên kích thước phần ăn nhìn thấy trong ảnh
+- Sử dụng tên nguyên liệu phổ biến bằng tiếng Việt ("thịt bò", "bánh phở", "hành tây")
+- Ước tính dinh dưỡng chính xác nhất có thể cho từng nguyên liệu
+- total_calories/protein/carbs/fat = tổng của tất cả ingredients`;
 
             const result = await model.generateContent([
                 prompt,
@@ -186,23 +189,32 @@ Hãy ước tính chính xác nhất có thể dựa trên kích thước phần
             const { transcript } = data;
             const prompt = `Người dùng nói: "${transcript}"
 
-Trích xuất thông tin món ăn và cung cấp dữ liệu dinh dưỡng dưới định dạng JSON.
+Trích xuất TÊN MÓN ĂN, TỪNG NGUYÊN LIỆU THÀNH PHẦN kèm KHỐI LƯỢNG ƯỚC TÍNH (gram) và GIÁ TRỊ DINH DƯỠNG ước tính.
 
-Chỉ trả về DUY NHẤT một đối tượng JSON hợp lệ với cấu trúc chính xác sau (không có markdown, không có văn bản thừa):
+Nếu người dùng nhắc đến nhiều món, trả về mảng items. Mỗi item là 1 món riêng biệt.
+
+Chỉ trả về DUY NHẤT một đối tượng JSON hợp lệ (không có markdown, không có văn bản thừa):
 {
-    "name": "Tên tiếng Việt của món ăn/thực phẩm được nhắc đến",
-    "calories": lượng calo ước tính (số),
-    "protein": số gram protein (số),
-    "carbs": số gram carbohydrates (số),
-    "fat": số gram chất béo (số),
-    "servingSize": "kích thước phần ăn ước tính",
-    "ingredients": [
-        { "name": "tên nguyên liệu 1", "amount": "khối lượng ước tính, ví dụ: 150g" }
+    "items": [
+        {
+            "meal_name": "Tên món ăn bằng tiếng Việt",
+            "portion_size": "small | medium | large",
+            "total_calories": 520,
+            "total_protein_g": 32,
+            "total_carbs_g": 68,
+            "total_fat_g": 12,
+            "ingredients": [
+                { "name": "tên nguyên liệu (tiếng Việt)", "estimated_g": 150, "calories": 200, "protein_g": 15, "carbs_g": 0, "fat_g": 10 }
+            ]
+        }
     ]
 }
 
-Nếu có nhiều món ăn được nhắc đến, hãy kết hợp chúng thành một mục bữa ăn duy nhất.
-Sử dụng kích thước phần ăn điển hình của người Việt để ước tính.`;
+Quy tắc:
+- Sử dụng kích thước phần ăn điển hình của người Việt
+- Sử dụng tên nguyên liệu phổ biến bằng tiếng Việt
+- Ước tính dinh dưỡng chính xác nhất có thể cho từng nguyên liệu
+- total_calories/protein/carbs/fat = tổng của tất cả ingredients`;
 
             const result = await model.generateContent(prompt);
             return JSON.stringify({ success: true, text: result.response.text() });
@@ -210,22 +222,26 @@ Sử dụng kích thước phần ăn điển hình của người Việt để 
 
         if (action === 'searchFoodNutrition') {
             const { foodName } = data;
-            const prompt = `Cung cấp thông tin dinh dưỡng cho: "${foodName}"
+            const prompt = `Cung cấp danh sách NGUYÊN LIỆU THÀNH PHẦN, KHỐI LƯỢNG ƯỚC TÍNH (gram) và GIÁ TRỊ DINH DƯỠNG ước tính cho món: "${foodName}"
 
-Chỉ trả về DUY NHẤT một đối tượng JSON hợp lệ với cấu trúc chính xác sau (không có markdown, không có văn bản thừa):
+Chỉ trả về DUY NHẤT một đối tượng JSON hợp lệ (không có markdown, không có văn bản thừa):
 {
-    "name": "Tên món ăn bằng tiếng Việt",
-    "calories": lượng calo điển hình cho mỗi phần ăn (số),
-    "protein": số gram protein (số),
-    "carbs": số gram carbohydrates (số),
-    "fat": số gram chất béo (số),
-    "servingSize": "kích thước phần ăn điển hình",
+    "meal_name": "Tên món ăn bằng tiếng Việt",
+    "portion_size": "small | medium | large",
+    "total_calories": 520,
+    "total_protein_g": 32,
+    "total_carbs_g": 68,
+    "total_fat_g": 12,
     "ingredients": [
-        { "name": "tên nguyên liệu 1", "amount": "khối lượng ước tính, ví dụ: 150g" }
+        { "name": "tên nguyên liệu (tiếng Việt)", "estimated_g": 150, "calories": 200, "protein_g": 15, "carbs_g": 0, "fat_g": 10 }
     ]
 }
 
-Sử dụng kích thước phần ăn tiêu chuẩn của Việt Nam.`;
+Quy tắc:
+- Sử dụng kích thước phần ăn tiêu chuẩn Việt Nam
+- Sử dụng tên nguyên liệu phổ biến bằng tiếng Việt
+- Ước tính dinh dưỡng chính xác nhất có thể cho từng nguyên liệu
+- total_calories/protein/carbs/fat = tổng của tất cả ingredients`;
 
             const result = await model.generateContent(prompt);
             return JSON.stringify({ success: true, text: result.response.text() });
