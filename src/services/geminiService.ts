@@ -185,10 +185,31 @@ export async function parseVoiceToFood(transcript: string): Promise<FoodAnalysis
 
 /**
  * Search for food and get enriched nutrition info through AI + DB verification
+ * Tối ưu Fast Path: Thử query trực tiếp trong Food DB trước khi gọi suy luận AI (Gemini).
  */
 export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysisResult> {
     try {
-        // Step 1: Ask Gemini for ingredient breakdown + estimated nutrition
+        // Step 1: FAST PATH - Search DB directly (Tránh delay 3-5s của AI)
+        try {
+            const fastResult = await getClient().queries.processNutrition({
+                payload: JSON.stringify({ action: 'directSearch', query: foodName })
+            });
+
+            if (!fastResult.errors && fastResult.data) {
+                const fastResponse = JSON.parse(fastResult.data);
+                // Nếu tìm thấy mờ / chính xác trong DB, convert và return luôn
+                if (fastResponse.success && fastResponse.items?.length > 0) {
+                    console.log(`⚡ Fast path: Found "${foodName}" in DB directly.`);
+                    return formatProcessedResult(fastResponse.items[0]);
+                }
+            }
+        } catch (fastErr) {
+            console.warn('Fast DB search failed, falling back to AI.', fastErr);
+        }
+
+        console.log(`🐢 Slow path: "${foodName}" not found exactly in DB, asking AI...`);
+
+        // Step 2: NORMAL PATH - Ask Gemini for ingredient breakdown + estimated nutrition
         const aiResult = await getClient().queries.askGemini({
             action: 'searchFoodNutrition',
             payload: JSON.stringify({ foodName })
@@ -229,32 +250,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
         }
 
         // Convert processed data to NutritionInfo format
-        const item = processedResponse.items[0];
-        return {
-            success: true,
-            data: {
-                name: item.meal_name,
-                calories: item.total_calories,
-                protein: item.total_protein_g,
-                carbs: item.total_carbs_g,
-                fat: item.total_fat_g,
-                portion_size: item.portion_size,
-                ingredients: item.ingredients.map((ing: any) => ({
-                    name: ing.name,
-                    amount: `${ing.estimated_g}g`,
-                    estimated_g: ing.estimated_g,
-                    calories: ing.calories,
-                    protein_g: ing.protein_g,
-                    carbs_g: ing.carbs_g,
-                    fat_g: ing.fat_g,
-                    food_id: ing.food_id,
-                    matched: ing.matched,
-                    source: ing.source,
-                })),
-                db_match_count: item.db_match_count,
-                ai_fallback_count: item.ai_fallback_count,
-            },
-        };
+        return formatProcessedResult(processedResponse.items[0]);
     } catch (error) {
         console.error('Search food nutrition error:', error);
         return {
@@ -262,6 +258,37 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
             error: error instanceof Error ? error.message : 'Failed to search food',
         };
     }
+}
+
+/**
+ * Helper: format processed DB item to NutritionInfo format
+ */
+function formatProcessedResult(item: any): FoodAnalysisResult {
+    return {
+        success: true,
+        data: {
+            name: item.meal_name,
+            calories: item.total_calories,
+            protein: item.total_protein_g,
+            carbs: item.total_carbs_g,
+            fat: item.total_fat_g,
+            portion_size: item.portion_size,
+            ingredients: item.ingredients.map((ing: any) => ({
+                name: ing.name,
+                amount: `${ing.estimated_g}g`,
+                estimated_g: ing.estimated_g,
+                calories: ing.calories,
+                protein_g: ing.protein_g,
+                carbs_g: ing.carbs_g,
+                fat_g: ing.fat_g,
+                food_id: ing.food_id,
+                matched: ing.matched,
+                source: ing.source,
+            })),
+            db_match_count: item.db_match_count,
+            ai_fallback_count: item.ai_fallback_count,
+        },
+    };
 }
 
 /**

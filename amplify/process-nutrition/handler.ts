@@ -146,10 +146,61 @@ export const handler: Schema['processNutrition']['functionHandler'] = async (eve
 
   try {
     const data = JSON.parse(payload);
-    const aiItems = data.items || [data]; // Hỗ trợ cả single item và array
-
+    
     // Load toàn bộ Food DB
     const allFoods = await loadAllFoods();
+
+    // ==========================================
+    // FAST PATH: Direct Search (Bỏ qua cấu hình AI)
+    // Dùng cho tìm kiếm text đơn giản từ app
+    // ==========================================
+    if (data.action === 'directSearch' && data.query) {
+      const match = findBestMatch(data.query, allFoods);
+      
+      if (match) {
+        // Trả về item giả lập y hệt response sau khi map với ingredients
+        const isMeal = match.type === 'meal';
+        const serving = match.serving || {};
+        const macros = match.macros || {};
+        const defaultG = serving.default_g || 100;
+        
+        const pseudoIngredient = {
+          name: match.name_vi,
+          food_id: match.food_id,
+          name_vi_db: match.name_vi,
+          matched: true,
+          source: 'database',
+          estimated_g: defaultG,
+          calories: macros.calories || 0,
+          protein_g: macros.protein_g || 0,
+          carbs_g: macros.carbs_g || 0,
+          fat_g: macros.fat_g || 0,
+        };
+
+        return JSON.stringify({
+          success: true,
+          items: [{
+            meal_name: match.name_vi,
+            portion_size: `${defaultG} ${serving.unit || 'g'}`,
+            total_calories: macros.calories || 0,
+            total_protein_g: macros.protein_g || 0,
+            total_carbs_g: macros.carbs_g || 0,
+            total_fat_g: macros.fat_g || 0,
+            ingredients: [pseudoIngredient],
+            db_match_count: 1,
+            ai_fallback_count: 0
+          }]
+        });
+      }
+
+      // Nếu không match, trả về false để Client gọi lại qua GEMINI
+      return JSON.stringify({ success: false, error: 'Not found in DB direct search' });
+    }
+
+    // ==========================================
+    // NORMAL PATH: Xử lý dữ liệu phức tạp từ AI
+    // ==========================================
+    const aiItems = data.items || [data]; // Hỗ trợ cả single item và array
 
     const processedItems = [];
 
