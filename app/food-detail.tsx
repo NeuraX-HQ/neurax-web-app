@@ -3,7 +3,7 @@ import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
     Modal, Alert
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -22,6 +22,7 @@ const MEAL_TYPES: { value: MealType; label: string; emoji: string; color: string
 export default function FoodDetailScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
+    const insets = useSafeAreaInsets();
     const addMeal = useMealStore(state => state.addMeal);
 
     const [showMealTypeModal, setShowMealTypeModal] = useState(false);
@@ -49,7 +50,7 @@ export default function FoodDetailScreen() {
 
     if (!foodData) {
         return (
-            <SafeAreaView style={styles.container}>
+            <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
                 <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>Không có dữ liệu món ăn</Text>
                     <TouchableOpacity
@@ -59,7 +60,7 @@ export default function FoodDetailScreen() {
                         <Text style={styles.backButtonText}>Quay lại</Text>
                     </TouchableOpacity>
                 </View>
-            </SafeAreaView>
+            </View>
         );
     }
 
@@ -138,7 +139,7 @@ export default function FoodDetailScreen() {
     const selectedMealTypeData = MEAL_TYPES.find(t => t.value === selectedMealType);
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Food Image with overlay */}
                 <View style={styles.imageSection}>
@@ -316,11 +317,12 @@ export default function FoodDetailScreen() {
                     </View>
                 )}
 
-                <View style={{ height: 120 }} />
+                {/* Extra space at bottom so content isn't hidden by the absolute bottom bar */}
+                <View style={{ height: 140 }} />
             </ScrollView>
 
             {/* Bottom Buttons */}
-            <View style={styles.bottomButtons}>
+            <View style={[styles.bottomButtons, { paddingBottom: Math.max(insets.bottom, 24) }]}>
                 <TouchableOpacity style={styles.fridgeButton} onPress={handleAddToFridge}>
                     <Ionicons name="cube-outline" size={20} color="#111827" />
                     <Text style={styles.fridgeButtonText}>Add to Fridge</Text>
@@ -381,7 +383,7 @@ export default function FoodDetailScreen() {
                     </View>
                 </View>
             </Modal>
-        </SafeAreaView>
+        </View>
     );
 }
 
@@ -724,15 +726,16 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 12,
         padding: 24,
-        paddingBottom: 32,
         backgroundColor: '#FFF',
         borderTopWidth: 1,
         borderTopColor: '#F3F4F6',
+        // Update shadow for better float effect
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -10 },
-        shadowOpacity: 0.05,
-        shadowRadius: 40,
-        elevation: 10,
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 20,
+        zIndex: 100, // Ensure it stays above everything
     },
     fridgeButton: {
         flex: 1,
