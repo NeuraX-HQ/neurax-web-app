@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
         marginRight: 12
     },
     googleButtonText: {
-        color: '#000',
+        color: '#EA4335',
         fontWeight: '700',
         fontSize: 16
     },
