@@ -1,8 +1,8 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadows } from '../../src/constants/colors';
-import { mockFridgeItems, mockRecipes } from '../../src/data/mockData';
+import { mockRecipes } from '../../src/data/mockData';
 import { useFridgeStore } from '../../src/store/fridgeStore';
 
 export default function KitchenScreen() {
@@ -13,8 +13,7 @@ export default function KitchenScreen() {
         loadItems();
     }, []);
 
-    // Combine store items with mock data if store is empty
-    const displayItems = items.length > 0 ? items : mockFridgeItems;
+    const displayItems = items;
 
     const expiring = displayItems.filter(i => i.daysLeft <= 3);
     const fresh = displayItems.filter(i => i.daysLeft > 3);

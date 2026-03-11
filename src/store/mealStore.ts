@@ -40,7 +40,6 @@ interface MealState {
         totalFat: number;
     };
     loadMeals: () => Promise<void>;
-    loadMockData: () => Promise<void>;
     clearAllMeals: () => Promise<void>;
 }
 
@@ -177,8 +176,7 @@ export const useMealStore = create<MealState>((set, get) => ({
                 const meals = JSON.parse(storedMeals);
                 set({ meals });
             } else {
-                // If no stored meals, load mock data
-                await get().loadMockData();
+                set({ meals: [] });
             }
 
             set({ isLoading: false });
@@ -191,47 +189,6 @@ export const useMealStore = create<MealState>((set, get) => ({
         }
     },
 
-    loadMockData: async () => {
-        try {
-            const today = getTodayDate();
-
-            const mockMeals: Meal[] = [
-                {
-                    id: 'mock_1',
-                    name: 'Phở Bò',
-                    type: 'BREAKFAST',
-                    calories: 450,
-                    protein: 25,
-                    carbs: 60,
-                    fat: 12,
-                    servingSize: '1 tô lớn',
-                    ingredients: ['Bánh phở', 'Thịt bò', 'Hành lá', 'Ngò gai', 'Giá đỗ'],
-                    time: '07:30 AM',
-                    date: today,
-                    image: '🍜',
-                },
-                {
-                    id: 'mock_2',
-                    name: 'Bánh Mì Thịt',
-                    type: 'BREAKFAST',
-                    calories: 420,
-                    protein: 18,
-                    carbs: 45,
-                    fat: 16,
-                    servingSize: '1 ổ',
-                    ingredients: ['Bánh mì', 'Thịt nguội', 'Pate', 'Rau thơm', 'Dưa leo'],
-                    time: '07:45 AM',
-                    date: today,
-                    image: '🥖',
-                },
-            ];
-
-            set({ meals: mockMeals });
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(mockMeals));
-        } catch (error) {
-            console.error('Error loading mock data:', error);
-        }
-    },
 
     clearAllMeals: async () => {
         try {

@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { Swipeable } from 'react-native-gesture-handler';
+import { Swipeable, TouchableOpacity as GHTouchableOpacity } from 'react-native-gesture-handler';
 import { Colors, Shadows } from '../../src/constants/colors';
 import { ProfileIcon, SettingsIcon, NotificationIcon } from '../../src/components/TabIcons';
 import { drinkTypes } from '../../src/data/mockData';
@@ -51,6 +51,24 @@ export default function HomeScreen() {
     // Meal store
     const { loadMeals, getMealsByDate, removeMeal } = useMealStore();
     const displayedMeals = getMealsByDate(selectedDateStr);
+
+    const swipeableRefs = useRef(new Map<string, any>());
+    const openMealIdRef = useRef<string | null>(null);
+
+    const closeOpenRow = () => {
+        if (openMealIdRef.current) {
+            const ref = swipeableRefs.current.get(openMealIdRef.current);
+            if (ref) ref.close();
+            openMealIdRef.current = null;
+            return true;
+        }
+        return false;
+    };
+
+    const withAutoClose = (action: () => void) => () => {
+        if (closeOpenRow()) return;
+        action();
+    };
 
     const stats = displayedMeals.reduce(
         (acc, meal) => ({
@@ -105,24 +123,40 @@ export default function HomeScreen() {
 
     const renderRightActions = (mealId: string, mealName: string) => {
         return (
-            <TouchableOpacity
+            <GHTouchableOpacity
                 style={styles.deleteAction}
                 onPress={() => confirmDelete(mealId, mealName)}
             >
                 <Ionicons name="trash-outline" size={24} color="#FFF" />
-            </TouchableOpacity>
+            </GHTouchableOpacity>
         );
     };
 
     const renderMealCard = (meal: any) => (
         <Swipeable 
             key={meal.id}
+            ref={(ref) => {
+                if (ref) swipeableRefs.current.set(meal.id, ref);
+                else swipeableRefs.current.delete(meal.id);
+            }}
+            onSwipeableWillOpen={() => {
+                if (openMealIdRef.current && openMealIdRef.current !== meal.id) {
+                    const prevRef = swipeableRefs.current.get(openMealIdRef.current);
+                    if (prevRef) prevRef.close();
+                }
+                openMealIdRef.current = meal.id;
+            }}
+            onSwipeableWillClose={() => {
+                if (openMealIdRef.current === meal.id) {
+                    openMealIdRef.current = null;
+                }
+            }}
             renderRightActions={() => renderRightActions(meal.id, meal.name)}
             containerStyle={{ marginHorizontal: 16, marginBottom: 8 }}
         >
             <TouchableOpacity
                 style={[styles.mealCard, Shadows.small, { marginHorizontal: 0, marginBottom: 0 }]}
-                onPress={() => router.push({
+                onPress={withAutoClose(() => router.push({
                     pathname: '/food-detail',
                     params: {
                         foodData: JSON.stringify({
@@ -137,7 +171,7 @@ export default function HomeScreen() {
                         source: 'meal',
                         mealId: meal.id,
                     }
-                })}
+                }))}
             >
                 <View style={styles.mealImage}>
                     {meal.image && meal.image.startsWith('file://') ? (
@@ -157,21 +191,23 @@ export default function HomeScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} onScrollBeginDrag={closeOpenRow}>
+                <TouchableWithoutFeedback onPress={closeOpenRow}>
+                    <View style={{ flex: 1 }}>
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.headerLeft}>
-                        <TouchableOpacity style={styles.avatar} onPress={() => router.push('/profile')}>
+                        <TouchableOpacity style={styles.avatar} onPress={withAutoClose(() => router.push('/profile'))}>
                             <ProfileIcon size={20} color="#000" />
                             <View style={styles.statusDot} />
                         </TouchableOpacity>
                         <Text style={styles.greeting}>Hi Admin!</Text>
                     </View>
                     <View style={styles.headerRight}>
-                        <TouchableOpacity onPress={() => router.push('/notifications')}>
+                        <TouchableOpacity onPress={withAutoClose(() => router.push('/notifications'))}>
                             <NotificationIcon size={20} color="#000" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => router.push('/settings')}>
+                        <TouchableOpacity onPress={withAutoClose(() => router.push('/settings'))}>
                             <SettingsIcon size={20} color="#000" />
                         </TouchableOpacity>
                     </View>
@@ -191,7 +227,7 @@ export default function HomeScreen() {
                         <TouchableOpacity
                             key={i}
                             style={[styles.dayItem, selectedDay === i && styles.dayItemSelected]}
-                            onPress={() => setSelectedDay(i)}
+                            onPress={withAutoClose(() => setSelectedDay(i))}
                         >
                             <Text style={[styles.dayLabel, selectedDay === i && styles.dayLabelSelected]}>{day}</Text>
                             <Text style={[styles.dayDate, selectedDay === i && styles.dayDateSelected]}>{dates[i]}</Text>
@@ -255,7 +291,7 @@ export default function HomeScreen() {
                             </View>
                         </View>
                         <Text style={styles.waterValue}>{waterCurrent}/{waterMax}ml</Text>
-                        <TouchableOpacity style={styles.waterAdd} onPress={() => setShowHydration(true)}>
+                        <TouchableOpacity style={styles.waterAdd} onPress={withAutoClose(() => setShowHydration(true))}>
                             <Text style={styles.waterAddText}>+</Text>
                         </TouchableOpacity>
                     </View>
@@ -264,7 +300,7 @@ export default function HomeScreen() {
                 {/* Exercise */}
                 <TouchableOpacity
                     style={[styles.card, Shadows.small, styles.exerciseCard]}
-                    onPress={() => router.push('/exercise-library')}
+                    onPress={withAutoClose(() => router.push('/exercise-library'))}
                 >
                     <View style={styles.exerciseRow}>
                         <Text style={styles.exerciseIcon}>🏃</Text>
@@ -297,7 +333,7 @@ export default function HomeScreen() {
                 {getMealsByType('BREAKFAST').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={() => router.push('/(tabs)/add')}
+                        onPress={withAutoClose(() => router.push('/(tabs)/add'))}
                     >
                         <Text style={styles.logMealText}>+ Log breakfast</Text>
                     </TouchableOpacity>
@@ -316,7 +352,7 @@ export default function HomeScreen() {
                 {getMealsByType('LUNCH').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={() => router.push('/(tabs)/add')}
+                        onPress={withAutoClose(() => router.push('/(tabs)/add'))}
                     >
                         <Text style={styles.logMealText}>+ Log lunch</Text>
                     </TouchableOpacity>
@@ -335,7 +371,7 @@ export default function HomeScreen() {
                 {getMealsByType('DINNER').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={() => router.push('/(tabs)/add')}
+                        onPress={withAutoClose(() => router.push('/(tabs)/add'))}
                     >
                         <Text style={styles.logMealText}>+ Log dinner</Text>
                     </TouchableOpacity>
@@ -354,13 +390,15 @@ export default function HomeScreen() {
                 {getMealsByType('SNACK').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={() => router.push('/(tabs)/add')}
+                        onPress={withAutoClose(() => router.push('/(tabs)/add'))}
                     >
                         <Text style={styles.logMealText}>+ Log snack</Text>
                     </TouchableOpacity>
                 )}
 
                 <View style={{ height: 90 }} />
+                    </View>
+                </TouchableWithoutFeedback>
             </ScrollView>
 
             {/* Hydration Modal */}
@@ -718,7 +756,7 @@ const styles = StyleSheet.create({
     mealSectionLabel: { fontSize: 11, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 0.5 },
     mealSectionCalories: { fontSize: 11, color: Colors.textSecondary },
     deleteAction: {
-        backgroundColor: '#FFE5E5',
+        backgroundColor: '#FF3B30',
         justifyContent: 'center',
         alignItems: 'center',
         width: 70,
