@@ -101,7 +101,7 @@ export default function LoginScreen() {
                     onPress={handleGoogleLogin}
                     disabled={loading}
                 >
-                    <Ionicons name="logo-google" size={24} color="#000" style={styles.googleIcon} />
+                    <Ionicons name="logo-google" size={24} color="#EA4335" style={styles.googleIcon} />
                     <Text style={styles.googleButtonText}>Sign in with Google</Text>
                 </TouchableOpacity>
 
