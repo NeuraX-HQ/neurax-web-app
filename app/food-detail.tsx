@@ -326,16 +326,61 @@ export default function FoodDetailScreen() {
                     <Text style={styles.fridgeButtonText}>Add to Fridge</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={[styles.logButton, isAdding && styles.logButtonDisabled]}
-                    onPress={handleAddMeal}
-                    disabled={isAdding}
+                    style={styles.logButton}
+                    onPress={() => setShowMealTypeModal(true)}
                 >
                     <Ionicons name="checkmark" size={20} color="#FFF" />
-                    <Text style={styles.logButtonText}>
-                        {isAdding ? 'Adding...' : 'Log Meal'}
-                    </Text>
+                    <Text style={styles.logButtonText}>Log Meal</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Meal Type Selection Modal */}
+            <Modal
+                visible={showMealTypeModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowMealTypeModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Chọn bữa ăn</Text>
+                            <TouchableOpacity onPress={() => setShowMealTypeModal(false)}>
+                                <Ionicons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+                        
+                        <View style={styles.mealTypeGrid}>
+                            {MEAL_TYPES.map((type) => (
+                                <TouchableOpacity
+                                    key={type.value}
+                                    style={[
+                                        styles.mealTypeOption,
+                                        selectedMealType === type.value && { backgroundColor: type.color + '20', borderColor: type.color }
+                                    ]}
+                                    onPress={() => setSelectedMealType(type.value)}
+                                >
+                                    <Text style={styles.mealTypeEmoji}>{type.emoji}</Text>
+                                    <Text style={[
+                                        styles.mealTypeLabel,
+                                        selectedMealType === type.value && { color: type.color, fontWeight: '700' }
+                                    ]}>{type.label}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        
+                        <TouchableOpacity
+                            style={[styles.confirmButton, isAdding && styles.confirmButtonDisabled]}
+                            onPress={handleAddMeal}
+                            disabled={isAdding}
+                        >
+                            <Text style={styles.confirmButtonText}>
+                                {isAdding ? 'Đang thêm...' : 'Xác nhận Log Meal'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -750,5 +795,66 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 14,
         fontWeight: '600',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#FFF',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        padding: 24,
+        paddingBottom: 40,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#000',
+    },
+    mealTypeGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+        marginBottom: 24,
+    },
+    mealTypeOption: {
+        width: '48%',
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 2,
+        borderColor: '#E5E7EB',
+        alignItems: 'center',
+        gap: 8,
+    },
+    mealTypeEmoji: {
+        fontSize: 32,
+    },
+    mealTypeLabel: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#666',
+    },
+    confirmButton: {
+        backgroundColor: '#000',
+        height: 56,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    confirmButtonDisabled: {
+        opacity: 0.6,
+    },
+    confirmButtonText: {
+        color: '#FFF',
+        fontSize: 18,
+        fontWeight: '700',
     },
 });

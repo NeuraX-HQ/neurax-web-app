@@ -8,6 +8,7 @@ import { useAuthStore } from '../src/store/authStore';
 import BiometricPrompt from '../src/components/BiometricPrompt';
 import 'react-native-get-random-values';
 import "../src/lib/amplify";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function RootLayout() {
     const router = useRouter();
@@ -116,8 +117,9 @@ export default function RootLayout() {
     };
 
     return (
-        <View style={styles.root}>
-            <StatusBar hidden />
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <View style={styles.root}>
+                <StatusBar hidden />
             <Stack
                 screenOptions={{
                     headerShown: false,
@@ -148,7 +150,8 @@ export default function RootLayout() {
                 onCancel={handleBiometricCancel}
                 message="Authenticate to access NutriTrack"
             />
-        </View>
+            </View>
+        </GestureHandlerRootView>
     );
 }
 

@@ -1,25 +1,66 @@
-﻿import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import { Swipeable } from 'react-native-gesture-handler';
 import { Colors, Shadows } from '../../src/constants/colors';
 import { ProfileIcon, SettingsIcon, NotificationIcon } from '../../src/components/TabIcons';
 import { drinkTypes } from '../../src/data/mockData';
 import { CalorieGauge } from '../../src/components/CalorieGauge';
 import { useMealStore, MealType } from '../../src/store/mealStore';
 
-const weekDays = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const dates = [27, 28, 29, 30, 31, 1, 2];
-
 export default function HomeScreen() {
     const router = useRouter();
-    const [selectedDay, setSelectedDay] = useState(6);
+
+    // Generate dynamic calendar dates
+    const { weekDaysLabels, dates, fullDates, monthName, todayIndex } = useMemo(() => {
+        const today = new Date();
+        const currentMonthName = today.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        
+        const dayOfWeek = today.getDay();
+        const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const monday = new Date(today);
+        monday.setDate(diffToMonday);
+        
+        const d_labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        const d_dates = [];
+        const d_fullDates = [];
+        let tIndex = 0;
+        
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(monday);
+            d.setDate(monday.getDate() + i);
+            d_dates.push(d.getDate());
+            
+            const isoDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            d_fullDates.push(isoDate);
+            
+            if (d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()) {
+                tIndex = i;
+            }
+        }
+        
+        return { weekDaysLabels: d_labels, dates: d_dates, fullDates: d_fullDates, monthName: currentMonthName, todayIndex: tIndex };
+    }, []);
+
+    const [selectedDay, setSelectedDay] = useState(todayIndex);
+    const selectedDateStr = fullDates[selectedDay];
 
     // Meal store
-    const { meals, loadMeals, getTodayMeals, getTodayStats } = useMealStore();
-    const todayMeals = getTodayMeals();
-    const stats = getTodayStats();
+    const { loadMeals, getMealsByDate, removeMeal } = useMealStore();
+    const displayedMeals = getMealsByDate(selectedDateStr);
+
+    const stats = displayedMeals.reduce(
+        (acc, meal) => ({
+            totalCalories: acc.totalCalories + meal.calories,
+            totalProtein: acc.totalProtein + meal.protein,
+            totalCarbs: acc.totalCarbs + meal.carbs,
+            totalFat: acc.totalFat + meal.fat,
+        }),
+        { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 }
+    );
 
     const maxCalories = 2500;
     const protein = { current: Math.round(stats.totalProtein), max: 140 };
@@ -48,8 +89,71 @@ export default function HomeScreen() {
 
     // Group meals by type
     const getMealsByType = (type: MealType) => {
-        return todayMeals.filter(meal => meal.type === type);
+        return displayedMeals.filter(meal => meal.type === type);
     };
+
+    const confirmDelete = (mealId: string, mealName: string) => {
+        Alert.alert(
+            'Xóa món ăn',
+            `Bạn có chắc chắn muốn xóa "${mealName}" khỏi nhật ký không?`,
+            [
+                { text: 'Hủy', style: 'cancel' },
+                { text: 'Xóa', style: 'destructive', onPress: () => removeMeal(mealId) },
+            ]
+        );
+    };
+
+    const renderRightActions = (mealId: string, mealName: string) => {
+        return (
+            <TouchableOpacity
+                style={styles.deleteAction}
+                onPress={() => confirmDelete(mealId, mealName)}
+            >
+                <Ionicons name="trash-outline" size={24} color="#FFF" />
+            </TouchableOpacity>
+        );
+    };
+
+    const renderMealCard = (meal: any) => (
+        <Swipeable 
+            key={meal.id}
+            renderRightActions={() => renderRightActions(meal.id, meal.name)}
+            containerStyle={{ marginHorizontal: 16, marginBottom: 8 }}
+        >
+            <TouchableOpacity
+                style={[styles.mealCard, Shadows.small, { marginHorizontal: 0, marginBottom: 0 }]}
+                onPress={() => router.push({
+                    pathname: '/food-detail',
+                    params: {
+                        foodData: JSON.stringify({
+                            name: meal.name,
+                            calories: meal.calories,
+                            protein: meal.protein,
+                            carbs: meal.carbs,
+                            fat: meal.fat,
+                            servingSize: meal.servingSize,
+                            ingredients: meal.ingredients,
+                        }),
+                        source: 'meal',
+                        mealId: meal.id,
+                    }
+                })}
+            >
+                <View style={styles.mealImage}>
+                    {meal.image && meal.image.startsWith('file://') ? (
+                        <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
+                    ) : (
+                        <Text style={styles.mealEmoji}>{meal.image || '🍽️'}</Text>
+                    )}
+                </View>
+                <View style={styles.mealInfo}>
+                    <Text style={styles.mealName}>{meal.name}</Text>
+                    <Text style={styles.mealTime}>{meal.time}</Text>
+                </View>
+                <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
+            </TouchableOpacity>
+        </Swipeable>
+    );
 
     return (
         <SafeAreaView style={styles.container}>
@@ -75,7 +179,7 @@ export default function HomeScreen() {
 
                 {/* Month & Streak */}
                 <View style={styles.monthRow}>
-                    <Text style={styles.monthText}>February 2026 ▾</Text>
+                    <Text style={styles.monthText}>{monthName} ▾</Text>
                     <View style={styles.streakBadge}>
                         <Text style={styles.streakText}>14 days 🔥</Text>
                     </View>
@@ -83,7 +187,7 @@ export default function HomeScreen() {
 
                 {/* Week Days */}
                 <View style={styles.weekRow}>
-                    {weekDays.map((day, i) => (
+                    {weekDaysLabels.map((day, i) => (
                         <TouchableOpacity
                             key={i}
                             style={[styles.dayItem, selectedDay === i && styles.dayItemSelected]}
@@ -189,37 +293,7 @@ export default function HomeScreen() {
                         </Text>
                     )}
                 </View>
-                {getMealsByType('BREAKFAST').map((meal) => (
-                    <TouchableOpacity
-                        key={meal.id}
-                        style={[styles.mealCard, Shadows.small]}
-                        onPress={() => router.push({
-                            pathname: '/food-detail',
-                            params: {
-                                foodData: JSON.stringify({
-                                    name: meal.name,
-                                    calories: meal.calories,
-                                    protein: meal.protein,
-                                    carbs: meal.carbs,
-                                    fat: meal.fat,
-                                    servingSize: meal.servingSize,
-                                    ingredients: meal.ingredients,
-                                }),
-                                source: 'meal',
-                                mealId: meal.id,
-                            }
-                        })}
-                    >
-                        <View style={styles.mealImage}>
-                            <Text style={styles.mealEmoji}>{meal.image}</Text>
-                        </View>
-                        <View style={styles.mealInfo}>
-                            <Text style={styles.mealName}>{meal.name}</Text>
-                            <Text style={styles.mealTime}>{meal.time}</Text>
-                        </View>
-                        <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
-                    </TouchableOpacity>
-                ))}
+                {getMealsByType('BREAKFAST').map(renderMealCard)}
                 {getMealsByType('BREAKFAST').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
@@ -238,41 +312,7 @@ export default function HomeScreen() {
                         </Text>
                     )}
                 </View>
-                {getMealsByType('LUNCH').map((meal) => (
-                    <TouchableOpacity
-                        key={meal.id}
-                        style={[styles.mealCard, Shadows.small]}
-                        onPress={() => router.push({
-                            pathname: '/food-detail',
-                            params: {
-                                foodData: JSON.stringify({
-                                    name: meal.name,
-                                    calories: meal.calories,
-                                    protein: meal.protein,
-                                    carbs: meal.carbs,
-                                    fat: meal.fat,
-                                    servingSize: meal.servingSize,
-                                    ingredients: meal.ingredients,
-                                }),
-                                source: 'meal',
-                                mealId: meal.id,
-                            }
-                        })}
-                    >
-                        <View style={styles.mealImage}>
-                            {meal.image && meal.image.startsWith('file://') ? (
-                                <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
-                            ) : (
-                                <Text style={styles.mealEmoji}>{meal.image || '🍽️'}</Text>
-                            )}
-                        </View>
-                        <View style={styles.mealInfo}>
-                            <Text style={styles.mealName}>{meal.name}</Text>
-                            <Text style={styles.mealTime}>{meal.time}</Text>
-                        </View>
-                        <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
-                    </TouchableOpacity>
-                ))}
+                {getMealsByType('LUNCH').map(renderMealCard)}
                 {getMealsByType('LUNCH').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
@@ -291,41 +331,7 @@ export default function HomeScreen() {
                         </Text>
                     )}
                 </View>
-                {getMealsByType('DINNER').map((meal) => (
-                    <TouchableOpacity
-                        key={meal.id}
-                        style={[styles.mealCard, Shadows.small]}
-                        onPress={() => router.push({
-                            pathname: '/food-detail',
-                            params: {
-                                foodData: JSON.stringify({
-                                    name: meal.name,
-                                    calories: meal.calories,
-                                    protein: meal.protein,
-                                    carbs: meal.carbs,
-                                    fat: meal.fat,
-                                    servingSize: meal.servingSize,
-                                    ingredients: meal.ingredients,
-                                }),
-                                source: 'meal',
-                                mealId: meal.id,
-                            }
-                        })}
-                    >
-                        <View style={styles.mealImage}>
-                            {meal.image && meal.image.startsWith('file://') ? (
-                                <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
-                            ) : (
-                                <Text style={styles.mealEmoji}>{meal.image || '🍽️'}</Text>
-                            )}
-                        </View>
-                        <View style={styles.mealInfo}>
-                            <Text style={styles.mealName}>{meal.name}</Text>
-                            <Text style={styles.mealTime}>{meal.time}</Text>
-                        </View>
-                        <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
-                    </TouchableOpacity>
-                ))}
+                {getMealsByType('DINNER').map(renderMealCard)}
                 {getMealsByType('DINNER').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
@@ -344,41 +350,7 @@ export default function HomeScreen() {
                         </Text>
                     )}
                 </View>
-                {getMealsByType('SNACK').map((meal) => (
-                    <TouchableOpacity
-                        key={meal.id}
-                        style={[styles.mealCard, Shadows.small]}
-                        onPress={() => router.push({
-                            pathname: '/food-detail',
-                            params: {
-                                foodData: JSON.stringify({
-                                    name: meal.name,
-                                    calories: meal.calories,
-                                    protein: meal.protein,
-                                    carbs: meal.carbs,
-                                    fat: meal.fat,
-                                    servingSize: meal.servingSize,
-                                    ingredients: meal.ingredients,
-                                }),
-                                source: 'meal',
-                                mealId: meal.id,
-                            }
-                        })}
-                    >
-                        <View style={styles.mealImage}>
-                            {meal.image && meal.image.startsWith('file://') ? (
-                                <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
-                            ) : (
-                                <Text style={styles.mealEmoji}>{meal.image || '🍽️'}</Text>
-                            )}
-                        </View>
-                        <View style={styles.mealInfo}>
-                            <Text style={styles.mealName}>{meal.name}</Text>
-                            <Text style={styles.mealTime}>{meal.time}</Text>
-                        </View>
-                        <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
-                    </TouchableOpacity>
-                ))}
+                {getMealsByType('SNACK').map(renderMealCard)}
                 {getMealsByType('SNACK').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
@@ -745,6 +717,14 @@ const styles = StyleSheet.create({
     },
     mealSectionLabel: { fontSize: 11, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 0.5 },
     mealSectionCalories: { fontSize: 11, color: Colors.textSecondary },
+    deleteAction: {
+        backgroundColor: '#FFE5E5',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 70,
+        borderRadius: 14,
+        marginLeft: 8,
+    },
     mealCard: {
         backgroundColor: '#FFFFFF',
         borderRadius: 14,
