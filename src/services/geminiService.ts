@@ -1,5 +1,29 @@
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
+import { Platform } from 'react-native';
+
+function extractAndParseJSON(text: string): any {
+    // Try to find code block first
+    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (jsonMatch) {
+       return JSON.parse(jsonMatch[1]);
+    }
+    // Try to find the first { and last } or first [ and last ]
+    const startObj = text.indexOf('{');
+    const endObj = text.lastIndexOf('}');
+    const startArr = text.indexOf('[');
+    const endArr = text.lastIndexOf(']');
+    
+    if (startObj !== -1 && endObj !== -1 && (startArr === -1 || startObj < startArr)) {
+        return JSON.parse(text.substring(startObj, endObj + 1));
+    }
+    if (startArr !== -1 && endArr !== -1) {
+        return JSON.parse(text.substring(startArr, endArr + 1));
+    }
+    // Fallback: remove backticks
+    const cleaned = text.replace(/```json\n?/gi, '').replace(/```\n?/g, '').trim();
+    return JSON.parse(cleaned);
+}
 
 let client: ReturnType<typeof generateClient<Schema>>;
 
@@ -97,13 +121,12 @@ export async function analyzeFoodImage(imageBase64: string): Promise<FoodAnalysi
             return { success: false, error: responseObj.error };
         }
 
-        // Clean response - remove markdown code blocks if present
-        const cleanedText = responseObj.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        const nutritionData = JSON.parse(cleanedText);
+        // Robust JSON extraction
+        const rawData = extractAndParseJSON(responseObj.text);
 
         return {
             success: true,
-            data: nutritionData,
+            data: convertAiToNutritionInfo(rawData),
         };
     } catch (error) {
         console.error('Gemini image analysis error:', error);
@@ -119,9 +142,10 @@ export async function analyzeFoodImage(imageBase64: string): Promise<FoodAnalysi
  */
 export async function transcribeAudio(audioBase64: string): Promise<{ success: boolean; text?: string; error?: string }> {
     try {
+        const mimeType = Platform.OS === 'web' ? 'audio/webm' : 'audio/m4a';
         const result = await getClient().queries.askGemini({
             action: 'transcribeAudio',
-            payload: JSON.stringify({ audioBase64 })
+            payload: JSON.stringify({ audioBase64, mimeType })
         });
 
         if (result.errors || !result.data) {
@@ -167,12 +191,16 @@ export async function parseVoiceToFood(transcript: string): Promise<FoodAnalysis
             return { success: false, error: responseObj.error };
         }
 
-        const cleanedText = responseObj.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        const nutritionData = JSON.parse(cleanedText);
+        const rawData = extractAndParseJSON(responseObj.text);
+        
+        let aiData = rawData;
+        if (rawData.items && Array.isArray(rawData.items) && rawData.items.length > 0) {
+            aiData = rawData.items[0];
+        }
 
         return {
             success: true,
-            data: nutritionData,
+            data: convertAiToNutritionInfo(aiData),
         };
     } catch (error) {
         console.error('Gemini voice parsing error:', error);
@@ -225,8 +253,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
             return { success: false, error: aiResponse.error };
         }
 
-        const cleanedText = aiResponse.text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-        const aiData = JSON.parse(cleanedText);
+        const aiData = extractAndParseJSON(aiResponse.text);
 
         // Step 2: Send AI data to processNutrition Lambda for DB verification
         const processResult = await getClient().queries.processNutrition({

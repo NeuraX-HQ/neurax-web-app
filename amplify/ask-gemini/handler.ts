@@ -175,11 +175,12 @@ Quy tắc:
         }
 
         if (action === 'transcribeAudio') {
-            const { audioBase64 } = data;
+            const { audioBase64, mimeType } = data;
+            const audioMimeType = mimeType || 'audio/m4a'; // fallback
             
             const result = await model.generateContent([
                 'Transcribe this audio to text. Return ONLY the transcribed text, nothing else.',
-                { inlineData: { data: audioBase64, mimeType: 'audio/m4a' } }
+                { inlineData: { data: audioBase64, mimeType: audioMimeType } }
             ]);
 
             return JSON.stringify({ success: true, text: result.response.text() });
