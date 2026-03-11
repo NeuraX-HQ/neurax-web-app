@@ -141,7 +141,7 @@ export default function ProfileScreen() {
                             ) : gender === 'female' ? (
                                 <Image source={require('../assets/images/female.png')} style={styles.avatarImage} />
                             ) : (
-                                <Image source={require('../assets/images/avatar.png')} style={styles.avatarImage} />
+                                <ProfileIcon size={20} color="#000" />
                             )}
                         </View>
                         <TouchableOpacity style={styles.editBadge}>
