@@ -318,11 +318,11 @@ export default function FoodDetailScreen() {
                 )}
 
                 {/* Extra space at bottom so content isn't hidden by the absolute bottom bar */}
-                <View style={{ height: 140 }} />
+                <View style={{ height: 100 }} />
             </ScrollView>
 
             {/* Bottom Buttons */}
-            <View style={[styles.bottomButtons, { paddingBottom: Math.max(insets.bottom, 24) }]}>
+            <View style={[styles.bottomButtons, { paddingBottom: Math.max(insets.bottom, 16) }]}>
                 <TouchableOpacity style={styles.fridgeButton} onPress={handleAddToFridge}>
                     <Ionicons name="cube-outline" size={20} color="#111827" />
                     <Text style={styles.fridgeButtonText}>Add to Fridge</Text>
@@ -725,7 +725,7 @@ const styles = StyleSheet.create({
         right: 0,
         flexDirection: 'row',
         gap: 12,
-        padding: 24,
+        padding: 16,
         backgroundColor: '#FFF',
         borderTopWidth: 1,
         borderTopColor: '#F3F4F6',

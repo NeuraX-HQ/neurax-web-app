@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { saveOnboardingData, getOnboardingData, OnboardingData } from '../../src/store/userStore';
 import { useAuthStore } from '../../src/store/authStore';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function Step9() {
     const router = useRouter();
