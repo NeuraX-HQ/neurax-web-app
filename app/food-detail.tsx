@@ -140,7 +140,7 @@ export default function FoodDetailScreen() {
 
     return (
         <View style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
                 {/* Food Image with overlay */}
                 <View style={styles.imageSection}>
                     {imageUri ? (
@@ -317,8 +317,7 @@ export default function FoodDetailScreen() {
                     </View>
                 )}
 
-                {/* Extra space at bottom so content isn't hidden by the absolute bottom bar */}
-                <View style={{ height: 100 }} />
+                {/* No spacer needed with flex sticky footer */}
             </ScrollView>
 
             {/* Bottom Buttons */}
@@ -719,10 +718,6 @@ const styles = StyleSheet.create({
         color: '#065F46',
     },
     bottomButtons: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
         flexDirection: 'row',
         gap: 12,
         padding: 16,

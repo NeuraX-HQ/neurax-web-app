@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { HomeIcon, BattleIcon, ScanIcon, KitchenIcon, AICoachIcon } from '../../src/components/TabIcons';
+import { HomeIcon, WorkoutIcon, ScanIcon, KitchenIcon, AICoachIcon } from '../../src/components/TabIcons';
 import { VoiceModal } from '../../src/components/VoiceModal';
 import { CameraScannerWithLoading } from '../../src/components/CameraScannerWithLoading';
 import { SearchScanner } from '../../src/components/SearchScanner';
@@ -111,12 +111,12 @@ export default function TabsLayout() {
                     }}
                 />
                 <Tabs.Screen
-                    name="battle"
+                    name="workout"
                     options={{
                         tabBarIcon: ({ focused }) => (
                             <TabItem
-                                icon={<BattleIcon size={22} color={focused ? activeColor : inactiveColor} />}
-                                label="Battle"
+                                icon={<WorkoutIcon size={22} color={focused ? activeColor : inactiveColor} />}
+                                label="Workout"
                                 focused={focused}
                             />
                         ),
