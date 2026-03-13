@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import { signIn, fetchAuthSession, signInWithRedirect } from "aws-amplify/auth";
@@ -21,9 +21,10 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
 export default function LoginScreen() {
 
     const router = useRouter();
+    const params = useLocalSearchParams();
     const { login } = useAuthStore();
 
-    const [email, setEmail] = useState("");
+    const [email, setEmail] = useState(params.email as string || "");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -50,9 +51,18 @@ export default function LoginScreen() {
                 }
 
                 await login(email, userId, token);
-                router.replace("/(tabs)/home");
+                
+                // Kiểm tra trạng thái onboarding từ store (vừa sync xong trong login action)
+                // Hoặc fetch trực tiếp từ userService nếu cần chắc chắn
+                const { fetchUserProfile } = require('../src/services/userService');
+                const userProfile = await fetchUserProfile(userId);
+                
+                if (userProfile && userProfile.onboarding_status) {
+                    router.replace("/(tabs)/home");
+                } else {
+                    router.replace("/onboarding/step1");
+                }
             }
-
         } catch (error) {
             console.log("Login error:", error);
         } finally {

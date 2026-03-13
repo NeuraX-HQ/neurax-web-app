@@ -1,0 +1,63 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Challenges",
+    "description": "NutriTrack Challenges DynamoDB Single-Table Design schema (Adjacency List Pattern)",
+    "type": "object",
+    "required": ["pk", "sk", "type"],
+    "properties": {
+        "pk": {
+            "type": "string",
+            "description": "Partition Key. Định dạng: CHALLENGE#<challenge_id>"
+        },
+        "sk": {
+            "type": "string",
+            "description": "Sort Key. Định dạng: METADATA (cho thông tin chung) hoặc PARTICIPANT#<user_id> (cho người tham gia)"
+        },
+        "type": {
+            "type": "string",
+            "enum": ["ChallengeMetadata", "Participant"]
+        },
+        "creator_id": {
+            "type": "string",
+            "description": "Chỉ dùng cho type = ChallengeMetadata"
+        },
+        "challenge_type": {
+            "type": "string",
+            "enum": ["calories", "protein", "steps", "streak", "custom"]
+        },
+        "title": {
+            "type": "string"
+        },
+        "description": {
+            "type": "string"
+        },
+        "target_value": {
+            "type": "number"
+        },
+        "status": {
+            "type": "string",
+            "enum": ["pending", "active", "completed", "expired"]
+        },
+        "start_date": {
+            "type": "string",
+            "format": "date"
+        },
+        "end_date": {
+            "type": "string",
+            "format": "date"
+        },
+        "user_id": {
+            "type": "string",
+            "description": "Chỉ dùng cho type = Participant"
+        },
+        "progress": {
+            "type": "number",
+            "description": "Chỉ dùng cho type = Participant"
+        },
+        "joined_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Chỉ dùng cho type = Participant"
+        }
+    }
+}

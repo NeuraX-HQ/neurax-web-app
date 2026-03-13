@@ -4,7 +4,12 @@ import { data } from './data/resource';
 import { askGemini } from './ask-gemini/resource';
 import { processNutrition } from './process-nutrition/resource';
 import * as iam from 'aws-cdk-lib/aws-iam';
-//import { resizeAndAntiMaliciousImg } from './resize_and_anti_malicious_img/resource';
+import * as cdk from 'aws-cdk-lib';
+import { storage } from './storage/resource';
+import { resizeAndAntiMaliciousImg } from './resize_and_anti_malicious_img/resource';
+import { LambdaDestination } from 'aws-cdk-lib/aws-s3-notifications';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+
 /**
  * @see https://docs.amplify.aws/react/build-a-backend/ to add storage, functions, and more
  */
@@ -13,8 +18,34 @@ const backend = defineBackend({
   data,
   askGemini,
   processNutrition,
-  //resizeAndAntiMaliciousImg,
+  storage,
+  resizeAndAntiMaliciousImg,
 });
+
+// Configure S3 Trigger for Image Resizing
+const s3Bucket = backend.storage.resources.bucket;
+const resizeLambda = backend.resizeAndAntiMaliciousImg.resources.lambda;
+
+s3Bucket.addEventNotification(
+  s3.EventType.OBJECT_CREATED,
+  new LambdaDestination(resizeLambda),
+  { prefix: 'incoming/' }
+);
+
+// Grant Lambda permissions to manage the S3 bucket
+s3Bucket.grantReadWrite(resizeLambda);
+s3Bucket.grantDelete(resizeLambda);
+
+// Add Lifecycle Rule to cleanup 'incoming/' after 1 day (Escape Hatch)
+const cfnBucket = s3Bucket.node.defaultChild as s3.CfnBucket;
+cfnBucket.lifecycleConfiguration = {
+  rules: [{
+    id: 'CleanupIncomingLandingZone',
+    status: 'Enabled',
+    prefix: 'incoming/',
+    expirationInDays: 1
+  }]
+};
 
 // Cấp quyền cho Lambda processNutrition đọc bảng Food trên DynamoDB
 // KHÔNG dùng backend.data.resources.tables để tránh circular dependency

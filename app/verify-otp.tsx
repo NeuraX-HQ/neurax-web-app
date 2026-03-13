@@ -28,8 +28,11 @@ export default function VerifyOtpScreen() {
             });
 
             if (isSignUpComplete) {
-                Alert.alert("Thành công", "Xác thực thành công! Vui lòng đăng nhập.");
-                router.replace('/login');
+                Alert.alert("Thành công", "Xác thực thành công! Hãy đăng nhập để tiếp tục.");
+                router.replace({
+                    pathname: '/login',
+                    params: { email: email }
+                });
             }
 
         } catch (error: any) {
