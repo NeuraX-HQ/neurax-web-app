@@ -16,12 +16,14 @@ export function HomeIcon({ size = 22, color = '#000', strokeWidth = 2 }: IconPro
     );
 }
 
-export function WorkoutIcon({ size = 22, color = '#000', strokeWidth = 2 }: IconProps) {
+export function BattleIcon({ size = 22, color = '#000', strokeWidth = 2 }: IconProps) {
     return (
         <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
-            <Path d="M6 7.5h12M6 16.5h12" />
-            <Rect x="2" y="5" width="4" height="14" rx="1" fill={color} />
-            <Rect x="18" y="5" width="4" height="14" rx="1" fill={color} />
+            <Path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+            <Path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+            <Path d="M4 22h16" />
+            <Path d="M10 14.66V17c0 .55.47.98.97 1.21C11.47 18.44 12 19 12 19s.53-.56 1.03-.79c.5-.23.97-.66.97-1.21v-2.34" />
+            <Path d="M18 4H6v7a6 6 0 0 0 12 0V4Z" fill={color} />
         </Svg>
     );
 }
