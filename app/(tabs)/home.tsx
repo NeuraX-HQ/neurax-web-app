@@ -10,12 +10,13 @@ import { NotificationIcon, SettingsIcon, ProfileIcon } from '../../src/component
 import { drinkTypes } from '../../src/data/mockData';
 import { CalorieGauge } from '../../src/components/CalorieGauge';
 import { useMealStore, Meal } from '../../src/store/mealStore';
-import { getOnboardingData } from '../../src/store/userStore';
+import { getOnboardingData, getUserData } from '../../src/store/userStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { VoiceModal } from '../../src/components/VoiceModal';
 import { CameraScannerWithLoading } from '../../src/components/CameraScannerWithLoading';
 import { SearchScanner } from '../../src/components/SearchScanner';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
+import { getCurrentStreak } from '../../src/utils/streak';
 
 const WEEKDAY_LABELS_BY_LANG: Record<'vi' | 'en', string[]> = {
     vi: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'],
@@ -39,6 +40,12 @@ const fromIsoDate = (iso: string) => {
     return new Date(year, month - 1, day);
 };
 
+const addDaysToIso = (iso: string, days: number) => {
+    const d = fromIsoDate(iso);
+    d.setDate(d.getDate() + days);
+    return toIsoDate(d);
+};
+
 const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
 
 export default function HomeScreen() {
@@ -46,18 +53,22 @@ export default function HomeScreen() {
     const { t, language } = useAppLanguage();
     const locale = language === 'vi' ? 'vi-VN' : 'en-US';
     const weekdayLabels = WEEKDAY_LABELS_BY_LANG[language];
-    const todayIso = useMemo(() => toIsoDate(new Date()), []);
+    const todayIso = toIsoDate(new Date());
 
     const [refreshing, setRefreshing] = useState(false);
     const [selectedDateStr, setSelectedDateStr] = useState(todayIso);
     const [gender, setGender] = useState<string>('');
+    const [dailyCalorieTarget, setDailyCalorieTarget] = useState(1800);
+    const [showCaloriesEaten, setShowCaloriesEaten] = useState(false);
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
     const userEmail = useAuthStore((state) => state.email);
 
     // Meal store
-    const { loadMeals, getMealsByDate, removeMeal } = useMealStore();
+    const { meals, loadMeals, getMealsByDate, removeMeal } = useMealStore();
     const displayedMeals = getMealsByDate(selectedDateStr);
+    const usedMealDates = useMemo(() => new Set(meals.map((meal) => meal.date)), [meals]);
+    const currentStreak = useMemo(() => getCurrentStreak(usedMealDates, todayIso), [usedMealDates, todayIso]);
 
     const dateStrip = useMemo(() => {
         const center = new Date();
@@ -138,7 +149,70 @@ export default function HomeScreen() {
         { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 }
     );
 
-    const maxCalories = 2500;
+    const caloriesByDate = useMemo(() => {
+        const map: Record<string, number> = {};
+        for (const meal of meals) {
+            map[meal.date] = (map[meal.date] ?? 0) + meal.calories;
+        }
+        return map;
+    }, [meals]);
+
+    const calorieWindow = useMemo(() => {
+        const dailyTarget = Math.max(0, Math.round(dailyCalorieTarget));
+        const mealDates = Object.keys(caloriesByDate);
+
+        if (!mealDates.length) {
+            return {
+                dailyTarget,
+                effectiveTarget: dailyTarget,
+                eaten: 0,
+                left: dailyTarget,
+                carryOverToNextDay: 0,
+            };
+        }
+
+        const startDate = mealDates.reduce((min, d) => (d < min ? d : min), selectedDateStr);
+
+        let carryOver = 0;
+        let cursor = startDate;
+        let effectiveTargetForSelected = dailyTarget;
+        let eatenForSelected = 0;
+        let leftForSelected = dailyTarget;
+
+        while (cursor <= selectedDateStr) {
+            const effectiveTarget = Math.max(dailyTarget - carryOver, 0);
+            const eaten = Math.round(caloriesByDate[cursor] ?? 0);
+            const left = Math.max(effectiveTarget - eaten, 0);
+            const nextCarryOver = Math.max(eaten - effectiveTarget, 0);
+
+            if (cursor === selectedDateStr) {
+                effectiveTargetForSelected = effectiveTarget;
+                eatenForSelected = eaten;
+                leftForSelected = left;
+            }
+
+            carryOver = nextCarryOver;
+            cursor = addDaysToIso(cursor, 1);
+        }
+
+        return {
+            dailyTarget,
+            effectiveTarget: effectiveTargetForSelected,
+            eaten: eatenForSelected,
+            left: leftForSelected,
+            carryOverToNextDay: carryOver,
+        };
+    }, [caloriesByDate, dailyCalorieTarget, selectedDateStr]);
+
+    const maxCalories = Math.max(1, calorieWindow.effectiveTarget);
+    const caloriesEaten = Math.round(calorieWindow.eaten);
+    const caloriesLeft = Math.round(calorieWindow.left);
+    const calorieGaugeValue = showCaloriesEaten
+        ? `${caloriesEaten}/${maxCalories}`
+        : `${caloriesLeft}`;
+    const calorieGaugeLabel = showCaloriesEaten
+        ? t('home.caloriesEaten')
+        : t('home.caloriesLeft');
     const protein = { current: Math.round(stats.totalProtein), max: 140 };
     const carbs = { current: Math.round(stats.totalCarbs), max: 280 };
     const fat = { current: Math.round(stats.totalFat), max: 75 };
@@ -163,9 +237,12 @@ export default function HomeScreen() {
     useEffect(() => {
         loadMeals();
         const fetchUserData = async () => {
-            const data = await getOnboardingData();
-            if (data?.gender) {
-                setGender(data.gender.toLowerCase());
+            const [onboarding, user] = await Promise.all([getOnboardingData(), getUserData()]);
+            if (onboarding?.gender) {
+                setGender(onboarding.gender.toLowerCase());
+            }
+            if (user?.dailyCalories && Number.isFinite(user.dailyCalories)) {
+                setDailyCalorieTarget(Math.max(1, Math.round(user.dailyCalories)));
             }
         };
         fetchUserData();
@@ -384,9 +461,9 @@ export default function HomeScreen() {
                     >
                         <Text style={styles.monthText}>{monthName} ▾</Text>
                     </TouchableOpacity>
-                    <View style={styles.streakBadge}>
-                        <Text style={styles.streakText}>{t('home.streakDays', { count: 14 })} 🔥</Text>
-                    </View>
+                    <TouchableOpacity style={styles.streakBadge} onPress={withAutoClose(() => router.push('/achievements'))}>
+                        <Text style={styles.streakText}>{t('home.streakDays', { count: currentStreak })} 🔥</Text>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Sliding Date Strip */}
@@ -402,24 +479,26 @@ export default function HomeScreen() {
                         const isSelected = item.iso === selectedDateStr;
                         const isPast = item.iso < todayIso;
                         const isToday = item.iso === todayIso;
+                        const showUsedPastRing = isPast && usedMealDates.has(item.iso);
 
                         return (
-                            <TouchableOpacity
-                                style={[
-                                    styles.dayItem,
-                                    isSelected && styles.dayItemSelected,
-                                    !isSelected && isPast && styles.dayItemPast,
-                                    !isSelected && isToday && styles.dayItemToday,
-                                ]}
-                                onPress={withAutoClose(() => setSelectedDateStr(item.iso))}
-                            >
-                                <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected, !isSelected && isPast && styles.dayTextPast]}>
-                                    {weekdayLabels[item.weekdayIndex]}
-                                </Text>
-                                <Text style={[styles.dayDate, isSelected && styles.dayDateSelected, !isSelected && isPast && styles.dayTextPast]}>
-                                    {item.day}
-                                </Text>
-                            </TouchableOpacity>
+                            <View style={[styles.dayRingWrapper, showUsedPastRing && styles.dayRingWrapperActive]}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.dayItem,
+                                        isSelected && styles.dayItemSelected,
+                                        !isSelected && isToday && styles.dayItemToday,
+                                    ]}
+                                    onPress={withAutoClose(() => setSelectedDateStr(item.iso))}
+                                >
+                                    <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
+                                        {weekdayLabels[item.weekdayIndex]}
+                                    </Text>
+                                    <Text style={[styles.dayDate, isSelected && styles.dayDateSelected]}>
+                                        {item.day}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
                         );
                     }}
                 />
@@ -427,7 +506,19 @@ export default function HomeScreen() {
                 {/* Calorie Card */}
                 <View style={[styles.card, Shadows.medium]}>
                     <View style={styles.calorieRow}>
-                        <CalorieGauge current={Math.round(stats.totalCalories)} max={maxCalories} size={120} strokeWidth={7} />
+                        <TouchableOpacity
+                            activeOpacity={0.85}
+                            onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
+                        >
+                            <CalorieGauge
+                                current={caloriesEaten}
+                                max={maxCalories}
+                                size={120}
+                                strokeWidth={7}
+                                displayValue={calorieGaugeValue}
+                                label={calorieGaugeLabel}
+                            />
+                        </TouchableOpacity>
                         <View style={styles.macros}>
                             <View style={styles.macroRow}>
                                 <Text style={styles.macroEmoji}>🥩</Text>
@@ -1024,16 +1115,22 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         width: 46,
         borderRadius: 12,
-        marginHorizontal: 5,
     },
-    dayItemPast: { opacity: 0.45 },
+    dayRingWrapper: {
+        marginHorizontal: 5,
+        borderRadius: 14,
+        padding: 2,
+    },
+    dayRingWrapperActive: {
+        borderWidth: 1.5,
+        borderColor: Colors.primary,
+    },
     dayItemToday: {
         borderWidth: 1,
         borderColor: '#D1D5DB',
     },
     dayItemSelected: { backgroundColor: Colors.primary },
     dayLabel: { fontSize: 11, color: Colors.textSecondary, fontWeight: '500', marginBottom: 3 },
-    dayTextPast: { color: '#9CA3AF' },
     dayLabelSelected: { color: '#FFFFFF' },
     dayDate: { fontSize: 14, fontWeight: '700', color: Colors.text },
     dayDateSelected: { color: '#FFFFFF' },

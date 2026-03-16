@@ -13,6 +13,66 @@ import { NutritionInfo } from '../src/services/geminiService';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
+type CanonicalUnit = 'g' | 'ml';
+
+type PortionUnitOption = {
+    value: string;
+    labelKey: string;
+    toBase: number;
+};
+
+const parseServingSizeToBase = (servingSize?: string): { amount: number; unit: CanonicalUnit } | null => {
+    if (!servingSize) return null;
+
+    const normalized = servingSize.toLowerCase().replace(',', '.');
+    const match = normalized.match(/(\d+(?:\.\d+)?)\s*(kg|g|gram|grams|lb|lbs|oz|l|ml)/i);
+    if (!match) return null;
+
+    const amount = Number(match[1]);
+    const unit = match[2].toLowerCase();
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+
+    if (unit === 'g' || unit === 'gram' || unit === 'grams') return { amount, unit: 'g' };
+    if (unit === 'kg') return { amount: amount * 1000, unit: 'g' };
+    if (unit === 'oz') return { amount: amount * 28.3495, unit: 'g' };
+    if (unit === 'lb' || unit === 'lbs') return { amount: amount * 453.592, unit: 'g' };
+    if (unit === 'ml') return { amount, unit: 'ml' };
+    if (unit === 'l') return { amount: amount * 1000, unit: 'ml' };
+
+    return null;
+};
+
+const getPortionUnitOptions = (servingSize?: string): PortionUnitOption[] => {
+    const parsed = parseServingSizeToBase(servingSize);
+
+    if (!parsed) {
+        return [
+            { value: 'serving', labelKey: 'foodDetail.unit.serving', toBase: 1 },
+            { value: 'half-serving', labelKey: 'foodDetail.unit.halfServing', toBase: 0.5 },
+            { value: 'double-serving', labelKey: 'foodDetail.unit.doubleServing', toBase: 2 },
+        ];
+    }
+
+    if (parsed.unit === 'g') {
+        return [
+            { value: 'g', labelKey: 'foodDetail.unit.g', toBase: 1 },
+            { value: 'kg', labelKey: 'foodDetail.unit.kg', toBase: 1000 },
+            { value: 'oz', labelKey: 'foodDetail.unit.oz', toBase: 28.3495 },
+            { value: 'lb', labelKey: 'foodDetail.unit.lb', toBase: 453.592 },
+            { value: 'serving', labelKey: 'foodDetail.unit.serving', toBase: parsed.amount },
+        ];
+    }
+
+    return [
+        { value: 'ml', labelKey: 'foodDetail.unit.ml', toBase: 1 },
+        { value: 'l', labelKey: 'foodDetail.unit.l', toBase: 1000 },
+        { value: 'cup', labelKey: 'foodDetail.unit.cup', toBase: 240 },
+        { value: 'tbsp', labelKey: 'foodDetail.unit.tbsp', toBase: 15 },
+        { value: 'tsp', labelKey: 'foodDetail.unit.tsp', toBase: 5 },
+        { value: 'serving', labelKey: 'foodDetail.unit.serving', toBase: parsed.amount },
+    ];
+};
+
 export default function FoodDetailScreen() {
     const router = useRouter();
     const { t } = useAppLanguage();
@@ -28,10 +88,11 @@ export default function FoodDetailScreen() {
     ];
 
     const [showMealTypeModal, setShowMealTypeModal] = useState(false);
+    const [showUnitModal, setShowUnitModal] = useState(false);
     const [selectedMealType, setSelectedMealType] = useState<MealType>('LUNCH');
     const [isAdding, setIsAdding] = useState(false);
     const [portionCount, setPortionCount] = useState(1);
-    const [portionUnit, setPortionUnit] = useState('tô');
+    const [portionUnit, setPortionUnit] = useState('serving');
 
     const setCurrentFoodItem = useMealStore(state => state.setCurrentFoodItem);
     const currentFoodItem = useMealStore(state => state.currentFoodItem);
@@ -66,6 +127,18 @@ export default function FoodDetailScreen() {
         );
     }
 
+    const baseServing = parseServingSizeToBase(foodData.servingSize);
+    const portionUnits = getPortionUnitOptions(foodData.servingSize);
+    const selectedPortionUnit = portionUnits.find((unit) => unit.value === portionUnit) || portionUnits[0];
+    const baseAmount = baseServing ? baseServing.amount : 1;
+    const nutritionMultiplier = (portionCount * selectedPortionUnit.toBase) / baseAmount;
+
+    React.useEffect(() => {
+        if (!portionUnits.some((unit) => unit.value === portionUnit)) {
+            setPortionUnit(portionUnits[0].value);
+        }
+    }, [foodData.servingSize]);
+
     const handleAddMeal = async () => {
         setIsAdding(true);
 
@@ -89,11 +162,11 @@ export default function FoodDetailScreen() {
             await addMeal({
                 name: foodData.name,
                 type: selectedMealType,
-                calories: Math.round(foodData.calories * portionCount),
-                protein: Math.round(foodData.protein * portionCount),
-                carbs: Math.round(foodData.carbs * portionCount),
-                fat: Math.round(foodData.fat * portionCount),
-                servingSize: `${portionCount} ${portionUnit}`,
+                calories: Math.round(foodData.calories * nutritionMultiplier),
+                protein: Math.round(foodData.protein * nutritionMultiplier),
+                carbs: Math.round(foodData.carbs * nutritionMultiplier),
+                fat: Math.round(foodData.fat * nutritionMultiplier),
+                servingSize: `${portionCount} ${t(selectedPortionUnit.labelKey)}`,
                 ingredients: foodData.ingredients,
                 image: savedImageUri || getEmojiForFood(foodData.name),
             });
@@ -181,7 +254,7 @@ export default function FoodDetailScreen() {
                         <View>
                             <Text style={styles.totalEnergyLabel}>{t('foodDetail.totalEnergy')}</Text>
                             <View style={styles.calorieRow}>
-                                <Text style={styles.calorieValueLarge}>{Math.round(foodData.calories * portionCount)}</Text>
+                                <Text style={styles.calorieValueLarge}>{Math.round(foodData.calories * nutritionMultiplier)}</Text>
                                 <Text style={styles.calorieUnit}>kcal</Text>
                             </View>
                         </View>
@@ -191,21 +264,21 @@ export default function FoodDetailScreen() {
                                 <View style={styles.macroBar}>
                                     <View style={[styles.macroBarFill, { width: '60%', backgroundColor: '#FF6B6B' }]} />
                                 </View>
-                                <Text style={styles.macroValue}>{Math.round(foodData.protein * portionCount)}g</Text>
+                                <Text style={styles.macroValue}>{Math.round(foodData.protein * nutritionMultiplier)}g</Text>
                             </View>
                             <View style={styles.macroRowCompact}>
                                 <Text style={styles.macroLabel}>{t('foodDetail.carbs')}</Text>
                                 <View style={styles.macroBar}>
                                     <View style={[styles.macroBarFill, { width: '80%', backgroundColor: '#FFA500' }]} />
                                 </View>
-                                <Text style={styles.macroValue}>{Math.round(foodData.carbs * portionCount)}g</Text>
+                                <Text style={styles.macroValue}>{Math.round(foodData.carbs * nutritionMultiplier)}g</Text>
                             </View>
                             <View style={styles.macroRowCompact}>
                                 <Text style={styles.macroLabel}>{t('foodDetail.fat')}</Text>
                                 <View style={styles.macroBar}>
                                     <View style={[styles.macroBarFill, { width: '40%', backgroundColor: '#FFD700' }]} />
                                 </View>
-                                <Text style={styles.macroValue}>{Math.round(foodData.fat * portionCount)}g</Text>
+                                <Text style={styles.macroValue}>{Math.round(foodData.fat * nutritionMultiplier)}g</Text>
                             </View>
                         </View>
                     </View>
@@ -215,9 +288,6 @@ export default function FoodDetailScreen() {
                 <View style={styles.portionSection}>
                     <View style={styles.portionHeader}>
                         <Text style={styles.portionTitle}>{t('foodDetail.portion')}</Text>
-                        <TouchableOpacity>
-                            <Text style={styles.editWeight}>{t('foodDetail.editWeight')}</Text>
-                        </TouchableOpacity>
                     </View>
                     <View style={styles.portionControls}>
                         <TouchableOpacity
@@ -228,8 +298,8 @@ export default function FoodDetailScreen() {
                         </TouchableOpacity>
                         <View style={styles.portionDisplay}>
                             <Text style={styles.portionCount}>{portionCount}</Text>
-                            <TouchableOpacity style={styles.portionUnitSelector}>
-                                <Text style={styles.portionUnit}>{portionUnit}</Text>
+                            <TouchableOpacity style={styles.portionUnitSelector} onPress={() => setShowUnitModal(true)}>
+                                <Text style={styles.portionUnit}>{t(selectedPortionUnit.labelKey)}</Text>
                                 <Ionicons name="chevron-down" size={16} color="#666" />
                             </TouchableOpacity>
                         </View>
@@ -385,6 +455,46 @@ export default function FoodDetailScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Portion Unit Selection Modal */}
+            <Modal
+                visible={showUnitModal}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setShowUnitModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>{t('foodDetail.selectUnit')}</Text>
+                            <TouchableOpacity onPress={() => setShowUnitModal(false)}>
+                                <Ionicons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.unitList}>
+                            {portionUnits.map((unit) => {
+                                const isSelected = unit.value === portionUnit;
+                                return (
+                                    <TouchableOpacity
+                                        key={unit.value}
+                                        style={[styles.unitOption, isSelected && styles.unitOptionSelected]}
+                                        onPress={() => {
+                                            setPortionUnit(unit.value);
+                                            setShowUnitModal(false);
+                                        }}
+                                    >
+                                        <Text style={[styles.unitOptionText, isSelected && styles.unitOptionTextSelected]}>
+                                            {t(unit.labelKey)}
+                                        </Text>
+                                        {isSelected && <Ionicons name="checkmark" size={18} color="#000" />}
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -529,10 +639,6 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#000',
     },
-    editWeight: {
-        fontSize: 14,
-        color: '#999',
-    },
     portionControls: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -574,6 +680,33 @@ const styles = StyleSheet.create({
     portionUnit: {
         fontSize: 16,
         color: '#666',
+    },
+    unitList: {
+        gap: 10,
+    },
+    unitOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 14,
+        paddingVertical: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        backgroundColor: '#FFF',
+    },
+    unitOptionSelected: {
+        borderColor: '#111827',
+        backgroundColor: '#F9FAFB',
+    },
+    unitOptionText: {
+        fontSize: 16,
+        color: '#374151',
+        fontWeight: '600',
+    },
+    unitOptionTextSelected: {
+        color: '#111827',
+        fontWeight: '700',
     },
     portionButtonAdd: {
         width: 56,

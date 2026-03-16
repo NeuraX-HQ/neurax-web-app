@@ -158,6 +158,7 @@ function RootLayoutShell() {
                 <Stack.Screen name="profile-health-goal" />
                 <Stack.Screen name="profile-activity-level" />
                 <Stack.Screen name="settings" />
+                <Stack.Screen name="achievements" />
                 <Stack.Screen name="privacy-policy" />
                 <Stack.Screen name="terms-of-service" />
             </Stack>
