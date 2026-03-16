@@ -177,7 +177,7 @@ export default function FoodDetailScreen() {
                 <View style={styles.nutritionSection}>
                     <View style={styles.nutritionHeader}>
                         <View>
-                            <Text style={styles.totalEnergyLabel}>Total Energy</Text>
+                            <Text style={styles.totalEnergyLabel}>Tổng năng lượng</Text>
                             <View style={styles.calorieRow}>
                                 <Text style={styles.calorieValueLarge}>{Math.round(foodData.calories * portionCount)}</Text>
                                 <Text style={styles.calorieUnit}>kcal</Text>
@@ -185,21 +185,21 @@ export default function FoodDetailScreen() {
                         </View>
                         <View style={styles.macrosColumn}>
                             <View style={styles.macroRowCompact}>
-                                <Text style={styles.macroLabel}>Protein</Text>
+                                <Text style={styles.macroLabel}>Đạm</Text>
                                 <View style={styles.macroBar}>
                                     <View style={[styles.macroBarFill, { width: '60%', backgroundColor: '#FF6B6B' }]} />
                                 </View>
                                 <Text style={styles.macroValue}>{Math.round(foodData.protein * portionCount)}g</Text>
                             </View>
                             <View style={styles.macroRowCompact}>
-                                <Text style={styles.macroLabel}>Carbs</Text>
+                                <Text style={styles.macroLabel}>Carb</Text>
                                 <View style={styles.macroBar}>
                                     <View style={[styles.macroBarFill, { width: '80%', backgroundColor: '#FFA500' }]} />
                                 </View>
                                 <Text style={styles.macroValue}>{Math.round(foodData.carbs * portionCount)}g</Text>
                             </View>
                             <View style={styles.macroRowCompact}>
-                                <Text style={styles.macroLabel}>Fat</Text>
+                                <Text style={styles.macroLabel}>Béo</Text>
                                 <View style={styles.macroBar}>
                                     <View style={[styles.macroBarFill, { width: '40%', backgroundColor: '#FFD700' }]} />
                                 </View>
@@ -212,9 +212,9 @@ export default function FoodDetailScreen() {
                 {/* Portion Size */}
                 <View style={styles.portionSection}>
                     <View style={styles.portionHeader}>
-                        <Text style={styles.portionTitle}>Portion Size</Text>
+                        <Text style={styles.portionTitle}>Khẩu phần</Text>
                         <TouchableOpacity>
-                            <Text style={styles.editWeight}>Edit weight</Text>
+                            <Text style={styles.editWeight}>Chỉnh khối lượng</Text>
                         </TouchableOpacity>
                     </View>
                     <View style={styles.portionControls}>
@@ -246,9 +246,9 @@ export default function FoodDetailScreen() {
                         <Text style={styles.aiEmoji}>🤖</Text>
                     </View>
                     <View style={styles.aiContent}>
-                        <Text style={styles.aiTitle}>AI Bảo suggests</Text>
+                        <Text style={styles.aiTitle}>AI Bảo gợi ý</Text>
                         <Text style={styles.aiText}>
-                            Great choice! <Text style={styles.aiBold}>{foodData.name}</Text> is high in protein which supports your muscle building goal.
+                            Lựa chọn rất tốt! <Text style={styles.aiBold}>{foodData.name}</Text> giàu đạm, hỗ trợ mục tiêu tăng cơ của bạn.
                         </Text>
                     </View>
                 </View>
@@ -277,10 +277,10 @@ export default function FoodDetailScreen() {
                 {foodData.ingredients && foodData.ingredients.length > 0 && (
                     <View style={styles.ingredientsSection}>
                         <View style={styles.ingredientsHeader}>
-                            <Text style={styles.ingredientsTitle}>Ingredients</Text>
+                            <Text style={styles.ingredientsTitle}>Thành phần</Text>
                             <TouchableOpacity style={styles.editButton} onPress={handleEditIngredients}>
                                 <Ionicons name="create-outline" size={18} color="#666" />
-                                <Text style={styles.editButtonText}>Edit</Text>
+                                <Text style={styles.editButtonText}>Sửa</Text>
                             </TouchableOpacity>
                         </View>
                         <View style={styles.ingredientsList}>
@@ -325,14 +325,14 @@ export default function FoodDetailScreen() {
             <View style={[styles.bottomButtons, { paddingBottom: Math.max(insets.bottom, 24) }]}>
                 <TouchableOpacity style={styles.fridgeButton} onPress={handleAddToFridge}>
                     <Ionicons name="cube-outline" size={20} color="#111827" />
-                    <Text style={styles.fridgeButtonText}>Add to Fridge</Text>
+                    <Text style={styles.fridgeButtonText}>Thêm vào tủ lạnh</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.logButton}
                     onPress={() => setShowMealTypeModal(true)}
                 >
                     <Ionicons name="checkmark" size={20} color="#FFF" />
-                    <Text style={styles.logButtonText}>Log Meal</Text>
+                    <Text style={styles.logButtonText}>Ghi bữa ăn</Text>
                 </TouchableOpacity>
             </View>
 
@@ -377,7 +377,7 @@ export default function FoodDetailScreen() {
                             disabled={isAdding}
                         >
                             <Text style={styles.confirmButtonText}>
-                                {isAdding ? 'Đang thêm...' : 'Xác nhận Log Meal'}
+                                {isAdding ? 'Đang thêm...' : 'Xác nhận ghi bữa'}
                             </Text>
                         </TouchableOpacity>
                     </View>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NutriTrack - Food Database</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#10b981", // Emerald-500
+                        "background-light": "#f8fafc", // Slate-50
+                        "background-dark": "#0f172a", // Slate-900
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Header Section -->
+<header class="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center p-4 justify-between">
+<button class="flex size-10 items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-slate-700 dark:text-slate-300">arrow_back</span>
+</button>
+<h1 class="text-xl font-bold leading-tight tracking-tight flex-1 text-center">Food Database</h1>
+<div class="size-10"></div> <!-- Spacer for balance -->
+</div>
+<!-- Search Bar -->
+<div class="px-4 pb-4">
+<label class="relative flex items-center w-full">
+<span class="material-symbols-outlined absolute left-4 text-slate-400">search</span>
+<input class="w-full h-12 pl-12 pr-4 rounded-xl border-none bg-slate-200/50 dark:bg-slate-800/50 focus:ring-2 focus:ring-primary text-base placeholder:text-slate-400" placeholder="Search for food (e.g. Pho bo)" type="text"/>
+</label>
+</div>
+<!-- Tabs -->
+<nav class="flex px-4 gap-8">
+<a class="flex flex-col items-center justify-center border-b-2 border-primary text-primary pb-3 pt-2 font-semibold text-sm" href="#">
+                Recent
+            </a>
+<a class="flex flex-col items-center justify-center border-b-2 border-transparent text-slate-500 dark:text-slate-400 pb-3 pt-2 font-medium text-sm hover:text-primary transition-colors" href="#">
+                Popular
+            </a>
+<a class="flex flex-col items-center justify-center border-b-2 border-transparent text-slate-500 dark:text-slate-400 pb-3 pt-2 font-medium text-sm hover:text-primary transition-colors" href="#">
+                My Foods
+            </a>
+</nav>
+</header>
+<!-- Main Content: Food List -->
+<main class="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+<!-- Food Item 1 -->
+<div class="flex items-center gap-4 bg-white dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-16 shrink-0" data-alt="A steaming bowl of Vietnamese Pho Bo soup" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAFNi84xA_6OgG5dUdx_VO6hsqaRYewRyS102ZgHLm9L_P7MAQ5xvteKiCJDhaBZDjzNMEHtOR-eAxQTMQt_6OgnTM8jFPVf7mIuCjGXa6uR3eIgUGNDJQCBb4uHUGwIOqn1O5NZTZV9C8-7BKJqRnyUbRNbYGguwVmlMZZIlkZ_R9CIDMt2dh7Tiwu9-soNKLSjEh4pEfKw3w3KqQmwUoO0apOwbF29tfO1yGN2ub--ruQkKQlWQbLxXd-CkU0KfLL11CVUeY7dQ");'>
+</div>
+<div class="flex flex-col flex-1">
+<p class="text-base font-bold text-slate-900 dark:text-slate-100">Phở bò</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm">350 kcal • 1 serving</p><p class="text-slate-400 dark:text-slate-500 text-xs mt-0.5 font-medium uppercase tracking-tight">P: 22g • C: 45g • F: 10g</p>
+</div>
+<button class="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<!-- Food Item 2 -->
+<div class="flex items-center gap-4 bg-white dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-16 shrink-0" data-alt="Grilled pork patties with rice noodles and herbs" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD75Z0dfkYsqXg4ZUHGukJevEe1SNUsSd4nMBTJo5wHtq3x9gnpr3Q9lW0Be0yPDBRaJxI4gmm9ictl9gYTSw86a3AGgQhNQ4CsID6FC9QhzJA0AH61BXDgAiuAKSBzLgldN8Okvo1ToJ6Rl2rbgr-xZolg-2yvfSSA3AKMPKxHiCQXDQNXikzz6S2UD5R26ywSe9pS54nYpRBD6yBW06hZfm1qfPPS41u79RT2YWWML4hPgr3PYMXBoUIEsowpMWD6Ne1xAEgmww");'>
+</div>
+<div class="flex flex-col flex-1">
+<p class="text-base font-bold text-slate-900 dark:text-slate-100">Bún chả</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm">450 kcal • 1 serving</p><p class="text-slate-400 dark:text-slate-500 text-xs mt-0.5 font-medium uppercase tracking-tight">P: 25g • C: 60g • F: 15g</p>
+</div>
+<button class="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<!-- Food Item 3 -->
+<div class="flex items-center gap-4 bg-white dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-16 shrink-0" data-alt="Broken rice with grilled pork and egg" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuC4wPZbJ3AglzOutxdUUFOlzu5SHSzeHoimzxpcEWMq5Ec7QgakgxYxDvCWi4MEzeY8BBJaJQS-YGbjJpN_6CM9_SSnVetTVtvmN39c_jhnnRwpIOU4797mGFj6ZR7h9WM-S2q5wiTGtmwqTu4IrDR-6qgkJ5MeGdnPkLgyX-MW2GY2tfooYKQ7Xj1091qeU7fa1cygvKlNM_soneQYdlKxAw5zpKhG_BP0eQs1WLojMREM3NRCu9AmsdvotDB_sPHwKXJ6MGoJCw");'>
+</div>
+<div class="flex flex-col flex-1">
+<p class="text-base font-bold text-slate-900 dark:text-slate-100">Cơm tấm</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm">520 kcal • 1 plate</p><p class="text-slate-400 dark:text-slate-500 text-xs mt-0.5 font-medium uppercase tracking-tight">P: 30g • C: 75g • F: 20g</p>
+</div>
+<button class="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<!-- Food Item 4 -->
+<div class="flex items-center gap-4 bg-white dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-16 shrink-0" data-alt="Fresh Vietnamese spring rolls with shrimp" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA02dnejfTdcAZCeO7iYiWjOOmthBAJWq-3GVzh-aAwrgyLiXx8a9dd300RAQZ40MWjjHz9KuByuMh_e5m0XM23KU7jljN6uAwwCXRF6TTUtGLrcHXc647wwg0A0ne75hzFoteruRqxtRzsMK3QCLl_rjBX1zvHCavN4ttfgGcj3g-3-6Bd5pmlytcCqGuMdXjnPp_9NE_lhJ-e1KF5ep636lJQAL9KsmYN2Gb5bPKovyXMXLnpvIUeWgKiDNLkI01A8ajej9_mcw");'>
+</div>
+<div class="flex flex-col flex-1">
+<p class="text-base font-bold text-slate-900 dark:text-slate-100">Gỏi cuốn</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm">180 kcal • 2 pieces</p><p class="text-slate-400 dark:text-slate-500 text-xs mt-0.5 font-medium uppercase tracking-tight">P: 10g • C: 28g • F: 4g</p>
+</div>
+<button class="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<!-- Food Item 5 -->
+<div class="flex items-center gap-4 bg-white dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-lg size-16 shrink-0" data-alt="Vietnamese banh mi sandwich with pate and meats" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuA0haXls6EyDLrck_ithkv651b_27cRY-mclR9czYmUdKVVnFR02A-7aElAlvp8qnxnUi25LuwvMZRjJmC2WgHak32Kw3kt3hZkaQwx_BHwfxic6cZ_wT1gpLbq1mjue-nXMjRmnas8MDqTF_-uXQaGf9jh59vWA9JnnwUX9gk9X4z9anwwCusY7V_18qZ_6SsA9WEWawnooeIYjKqqVo5bP1a7av4w3F20iaq8RCMlIbTIzYajtzo0L-4gWee3VaFB0BuO66y5aA");'>
+</div>
+<div class="flex flex-col flex-1">
+<p class="text-base font-bold text-slate-900 dark:text-slate-100">Bánh mì</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm">310 kcal • 1 baguette</p><p class="text-slate-400 dark:text-slate-500 text-xs mt-0.5 font-medium uppercase tracking-tight">P: 15g • C: 48g • F: 12g</p>
+</div>
+<button class="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-4 pb-6 pt-3">
+<div class="flex justify-between items-center max-w-md mx-auto">
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+</a>
+<!-- Center Add Button -->
+<a class="flex items-center justify-center -mt-10 bg-primary text-white size-14 rounded-full shadow-lg shadow-primary/40 border-4 border-background-light dark:border-background-dark" href="#">
+<span class="material-symbols-outlined text-3xl">add</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined font-fill">book_2</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">person</span>
+</a>
+</div>
+</nav>
+</body></html>

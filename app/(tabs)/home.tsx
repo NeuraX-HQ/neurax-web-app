@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, TouchableWithoutFeedback, Modal, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, TouchableWithoutFeedback, Modal, FlatList, Animated } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -12,8 +12,16 @@ import { CalorieGauge } from '../../src/components/CalorieGauge';
 import { useMealStore, Meal } from '../../src/store/mealStore';
 import { getOnboardingData } from '../../src/store/userStore';
 import { useAuthStore } from '../../src/store/authStore';
+import { VoiceModal } from '../../src/components/VoiceModal';
+import { CameraScannerWithLoading } from '../../src/components/CameraScannerWithLoading';
+import { SearchScanner } from '../../src/components/SearchScanner';
 
 const WEEKDAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const ADD_MEAL_METHODS = [
+    { id: 'voice', icon: 'mic-outline', label: 'Giọng nói', desc: 'Nói tên món ăn' },
+    { id: 'camera', icon: 'camera-outline', label: 'Chụp hình', desc: 'AI Scan • Barcode' },
+    { id: 'search', icon: 'search-outline', label: 'Tìm kiếm', desc: 'Tìm món ăn' },
+] as const;
 
 const toIsoDate = (date: Date) => {
     const year = date.getFullYear();
@@ -153,7 +161,15 @@ export default function HomeScreen() {
     const [showHydration, setShowHydration] = useState(false);
     const [selectedDrink, setSelectedDrink] = useState('water');
     const [drinkAmount, setDrinkAmount] = useState(200);
+    const drinkFillAnim = useRef(new Animated.Value(200)).current;
+    const [showAddMethod, setShowAddMethod] = useState(false);
+    const [voiceVisible, setVoiceVisible] = useState(false);
+    const [cameraVisible, setCameraVisible] = useState(false);
+    const [searchVisible, setSearchVisible] = useState(false);
+    const addMethodScale = useRef(new Animated.Value(0)).current;
+    const addMethodOpacity = useRef(new Animated.Value(0)).current;
 
+    const GLASS_H = 240;
     const addWater = () => {
         setWaterByDate((prev) => ({
             ...prev,
@@ -161,6 +177,42 @@ export default function HomeScreen() {
         }));
         setShowHydration(false);
     };
+
+    const openAddMethod = () => {
+        setShowAddMethod(true);
+        Animated.parallel([
+            Animated.spring(addMethodScale, { toValue: 1, useNativeDriver: true, damping: 18, stiffness: 280 }),
+            Animated.timing(addMethodOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+        ]).start();
+    };
+
+    const closeAddMethod = () => {
+        Animated.parallel([
+            Animated.spring(addMethodScale, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 280 }),
+            Animated.timing(addMethodOpacity, { toValue: 0, duration: 120, useNativeDriver: true }),
+        ]).start(() => setShowAddMethod(false));
+    };
+
+    const handleSelectAddMethod = (methodId: 'voice' | 'camera' | 'search') => {
+        closeAddMethod();
+        if (methodId === 'voice') {
+            setTimeout(() => setVoiceVisible(true), 180);
+            return;
+        }
+        if (methodId === 'camera') {
+            setTimeout(() => setCameraVisible(true), 180);
+            return;
+        }
+        setTimeout(() => setSearchVisible(true), 180);
+    };
+
+    useEffect(() => {
+        Animated.timing(drinkFillAnim, {
+            toValue: (drinkAmount / 250) * GLASS_H,
+            duration: 180,
+            useNativeDriver: false,
+        }).start();
+    }, [drinkAmount, drinkFillAnim]);
 
     const prevMonth = () => {
         setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
@@ -456,7 +508,7 @@ export default function HomeScreen() {
                 {getMealsByType('BREAKFAST').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(() => router.push('/(tabs)/add'))}
+                        onPress={withAutoClose(openAddMethod)}
                     >
                         <Text style={styles.logMealText}>+ Log breakfast</Text>
                     </TouchableOpacity>
@@ -475,7 +527,7 @@ export default function HomeScreen() {
                 {getMealsByType('LUNCH').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(() => router.push('/(tabs)/add'))}
+                        onPress={withAutoClose(openAddMethod)}
                     >
                         <Text style={styles.logMealText}>+ Log lunch</Text>
                     </TouchableOpacity>
@@ -494,7 +546,7 @@ export default function HomeScreen() {
                 {getMealsByType('DINNER').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(() => router.push('/(tabs)/add'))}
+                        onPress={withAutoClose(openAddMethod)}
                     >
                         <Text style={styles.logMealText}>+ Log dinner</Text>
                     </TouchableOpacity>
@@ -513,7 +565,7 @@ export default function HomeScreen() {
                 {getMealsByType('SNACK').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(() => router.push('/(tabs)/add'))}
+                        onPress={withAutoClose(openAddMethod)}
                     >
                         <Text style={styles.logMealText}>+ Log snack</Text>
                     </TouchableOpacity>
@@ -523,6 +575,57 @@ export default function HomeScreen() {
                     </View>
                 </TouchableWithoutFeedback>
             </ScrollView>
+
+            {/* Add Meal Method Popup */}
+            <Modal visible={showAddMethod} transparent animationType="none" onRequestClose={closeAddMethod}>
+                <TouchableWithoutFeedback onPress={closeAddMethod}>
+                    <View style={styles.addMethodBackdrop}>
+                        <TouchableWithoutFeedback>
+                            <Animated.View
+                                style={[
+                                    styles.addMethodPopup,
+                                    {
+                                        opacity: addMethodOpacity,
+                                        transform: [
+                                            { scale: addMethodScale },
+                                            {
+                                                translateY: addMethodScale.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: [20, 0],
+                                                }),
+                                            },
+                                        ],
+                                    },
+                                ]}
+                            >
+                                <View style={styles.addMethodHeader}>
+                                    <Text style={styles.addMethodTitle}>Chọn cách thêm món ăn</Text>
+                                    <TouchableOpacity onPress={closeAddMethod} style={styles.addMethodCloseBtn}>
+                                        <Ionicons name="close" size={18} color="#666" />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={styles.addMethodOptionsRow}>
+                                    {ADD_MEAL_METHODS.map((opt) => (
+                                        <TouchableOpacity
+                                            key={opt.id}
+                                            style={styles.addMethodOptionCard}
+                                            onPress={() => handleSelectAddMethod(opt.id)}
+                                            activeOpacity={0.7}
+                                        >
+                                            <View style={styles.addMethodOptionIcon}>
+                                                <Ionicons name={opt.icon} size={24} color="#333" />
+                                            </View>
+                                            <Text style={styles.addMethodOptionLabel}>{opt.label}</Text>
+                                            <Text style={styles.addMethodOptionDesc}>{opt.desc}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </Animated.View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
 
             {/* Hydration Modal */}
             <Modal visible={showHydration} animationType="slide" transparent={false}>
@@ -564,7 +667,20 @@ export default function HomeScreen() {
 
                     {/* Water Glass Visualization */}
                     <View style={hStyles.glassArea}>
-                        <View style={hStyles.glass} pointerEvents="none">
+                        <View style={hStyles.glass}>
+                            <View style={hStyles.tapZonesOverlay}>
+                                {[250, 200, 150, 100, 50].map((amount) => (
+                                    <TouchableOpacity
+                                        key={amount}
+                                        style={[
+                                            hStyles.tapZone,
+                                            drinkAmount >= amount && hStyles.tapZoneActive,
+                                        ]}
+                                        activeOpacity={1}
+                                        onPress={() => setDrinkAmount(amount)}
+                                    />
+                                ))}
+                            </View>
                             {/* Ruler: full-width horizontal lines, no labels */}
                             <View style={hStyles.rulerInner} pointerEvents="none">
                                 {[200, 150, 100, 50].map((threshold, idx) => (
@@ -575,8 +691,9 @@ export default function HomeScreen() {
                                 ))}
                             </View>
                             {/* Water fill */}
-                            <View pointerEvents="none" style={[hStyles.waterFill, { height: `${(drinkAmount / 250) * 100}%` }]} />
+                            <Animated.View pointerEvents="none" style={[hStyles.waterFill, { height: drinkFillAnim }]} />
                         </View>
+                        <Text style={hStyles.glassHint}>Tap the glass to set amount</Text>
                     </View>
 
                     {/* Amount Controls */}
@@ -676,6 +793,10 @@ export default function HomeScreen() {
                     </View>
                 </TouchableWithoutFeedback>
             </Modal>
+
+            <VoiceModal visible={voiceVisible} onClose={() => setVoiceVisible(false)} />
+            <CameraScannerWithLoading visible={cameraVisible} onClose={() => setCameraVisible(false)} />
+            <SearchScanner visible={searchVisible} onClose={() => setSearchVisible(false)} />
         </SafeAreaView>
     );
 }
@@ -732,7 +853,7 @@ const hStyles = StyleSheet.create({
     drinkLabel: { fontSize: 10, color: Colors.textSecondary, marginTop: 4, fontWeight: '500' },
     drinkLabelSelected: { color: Colors.primary, fontWeight: '600' },
     drinkItemSelected: {},
-    glassArea: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 16, pointerEvents: 'none' },
+    glassArea: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 16 },
     glass: {
         width: 200,
         height: 240,
@@ -741,8 +862,29 @@ const hStyles = StyleSheet.create({
         justifyContent: 'flex-end',
         overflow: 'hidden',
     },
+    tapZonesOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 4,
+    },
+    tapZone: {
+        flex: 1,
+        width: '100%',
+    },
+    tapZoneActive: {
+        backgroundColor: '#2F80ED',
+    },
     waterFill: {
         backgroundColor: '#5BA3F5',
+    },
+    glassHint: {
+        marginTop: 12,
+        fontSize: 12,
+        color: Colors.textSecondary,
+        fontWeight: '500',
     },
     // ruler inside glass — full-width horizontal lines
     rulerInner: {
@@ -757,10 +899,10 @@ const hStyles = StyleSheet.create({
     },
     rulerLine: {
         width: '100%',
-        height: 1,
-        backgroundColor: 'rgba(0,0,0,0.08)',
+        height: 2,
+        backgroundColor: 'rgba(47, 128, 237, 0.08)',
     },
-    rulerLineActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
+    rulerLineActive: { backgroundColor: '#2F80ED' },
     controlsArea: { paddingHorizontal: 20, paddingBottom: 24, position: 'relative', zIndex: 3, elevation: 3 },
     amountRow: {
         flexDirection: 'row',
@@ -1012,6 +1154,76 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed',
     },
     logMealText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+    addMethodBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.25)',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        paddingBottom: 90,
+    },
+    addMethodPopup: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        paddingTop: 16,
+        paddingHorizontal: 16,
+        paddingBottom: 20,
+        width: 320,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
+        elevation: 20,
+    },
+    addMethodHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+    },
+    addMethodTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#111',
+    },
+    addMethodCloseBtn: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#F0F0F0',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    addMethodOptionsRow: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    addMethodOptionCard: {
+        flex: 1,
+        backgroundColor: '#F7F8FA',
+        borderRadius: 14,
+        paddingVertical: 16,
+        alignItems: 'center',
+        gap: 6,
+    },
+    addMethodOptionIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: '#EDEDEF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 2,
+    },
+    addMethodOptionLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#111',
+    },
+    addMethodOptionDesc: {
+        fontSize: 10,
+        color: '#888',
+        textAlign: 'center',
+    },
     calendarBackdrop: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.28)',

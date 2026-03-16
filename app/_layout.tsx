@@ -141,6 +141,9 @@ export default function RootLayout() {
                 <Stack.Screen name="edit-ingredients" options={{ presentation: 'modal' }} />
                 <Stack.Screen name="notifications" />
                 <Stack.Screen name="profile" />
+                <Stack.Screen name="profile-personal-info" />
+                <Stack.Screen name="profile-health-goal" />
+                <Stack.Screen name="profile-activity-level" />
                 <Stack.Screen name="settings" />
             </Stack>
 

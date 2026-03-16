@@ -7,18 +7,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, Shadows } from '../constants/colors';
-import { searchFoodNutrition } from '../services/geminiService';
+import { searchFoodNutrition, NutritionInfo } from '../services/geminiService';
 
 interface SearchScannerProps {
     visible: boolean;
     onClose: () => void;
 }
 
+const DEFAULT_PORTION_UNIT = 'khẩu phần';
+
 export function SearchScanner({ visible, onClose }: SearchScannerProps) {
     const router = useRouter();
     const [query, setQuery] = useState('');
     const [searching, setSearching] = useState(false);
     const [recent, setRecent] = useState<string[]>(['Phở Bò', 'Cơm Tấm', 'Ức Gà Nướng']);
+    const [activeTab, setActiveTab] = useState<'recent' | 'popular' | 'myfoods'>('recent');
 
     const handleSearch = useCallback(async (foodName: string) => {
         if (!foodName.trim() || searching) return;
@@ -53,23 +56,83 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
         }
     }, [searching, onClose, router]);
 
+    const buildQuickFoodData = useCallback((item: FoodTemplateItem): NutritionInfo => {
+        return {
+            name: item.name,
+            calories: item.kcal,
+            protein: item.protein,
+            carbs: item.carbs,
+            fat: item.fat,
+            servingSize: item.serving,
+            ingredients: [],
+            db_match_count: 0,
+            ai_fallback_count: 0,
+        };
+    }, []);
+
+    const handleQuickAdd = useCallback((item: FoodTemplateItem) => {
+        const foodData = buildQuickFoodData(item);
+        onClose();
+        router.push({
+            pathname: '/food-detail',
+            params: {
+                foodData: JSON.stringify(foodData),
+                source: 'quick_add',
+            },
+        });
+    }, [buildQuickFoodData, onClose, router]);
+
+    const renderFoodCard = (item: FoodTemplateItem) => (
+        <TouchableOpacity
+            key={item.name}
+            style={searchStyles.foodCard}
+            activeOpacity={0.85}
+            onPress={() => handleSearch(item.name)}
+            disabled={searching}
+        >
+            <View style={searchStyles.foodThumb}>
+                <Text style={searchStyles.foodEmoji}>{item.emoji}</Text>
+            </View>
+
+            <View style={searchStyles.foodMainInfo}>
+                <Text style={searchStyles.foodName}>{item.name}</Text>
+                <Text style={searchStyles.foodKcal}>{item.kcal} kcal • {item.serving}</Text>
+                <Text style={searchStyles.foodMacro}>P: {item.protein}g • C: {item.carbs}g • F: {item.fat}g</Text>
+            </View>
+
+            <TouchableOpacity
+                style={searchStyles.addBtn}
+                activeOpacity={0.8}
+                onPress={() => handleQuickAdd(item)}
+                disabled={searching}
+            >
+                <Text style={searchStyles.addBtnPlus}>+</Text>
+            </TouchableOpacity>
+        </TouchableOpacity>
+    );
+
+    const mergedSuggestions: FoodTemplateItem[] = [...POPULAR_FOODS, ...MY_FOODS];
+    const filteredSuggestions = mergedSuggestions.filter((item) =>
+        item.name.toLowerCase().includes(query.trim().toLowerCase())
+    );
+
     return (
         <Modal visible={visible} animationType="slide">
             <SafeAreaView style={searchStyles.container}>
                 <View style={searchStyles.header}>
-                    <TouchableOpacity onPress={onClose} style={searchStyles.backBtn}>
-                        <Ionicons name="arrow-back" size={22} color={Colors.primary} />
+                    <TouchableOpacity onPress={onClose} style={searchStyles.headerIconBtn}>
+                        <Ionicons name="arrow-back" size={22} color="#334155" />
                     </TouchableOpacity>
-                    <Text style={searchStyles.title}>Tìm kiếm món ăn</Text>
-                    <View style={{ width: 40 }} />
+                    <Text style={searchStyles.headerTitle}>Tìm kiếm món ăn</Text>
+                    <View style={searchStyles.headerSpacer} />
                 </View>
 
-                <View style={searchStyles.searchBar}>
-                    <Ionicons name="search-outline" size={18} color={Colors.textSecondary} />
+                <View style={searchStyles.searchWrap}>
+                    <Ionicons name="search-outline" size={18} color="#94A3B8" />
                     <TextInput
                         style={searchStyles.searchInput}
-                        placeholder="Nhập tên món ăn (VD: Phở bò, Pizza...)"
-                        placeholderTextColor="#A0AEC0"
+                        placeholder="Tìm món ăn (vd: Phở bò)"
+                        placeholderTextColor="#94A3B8"
                         value={query}
                         onChangeText={setQuery}
                         onSubmitEditing={() => handleSearch(query)}
@@ -79,15 +142,12 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
                     />
                     {query.length > 0 && !searching && (
                         <TouchableOpacity onPress={() => setQuery('')}>
-                            <Ionicons name="close-circle" size={18} color="#A0AEC0" />
+                            <Ionicons name="close-circle" size={18} color="#94A3B8" />
                         </TouchableOpacity>
                     )}
-                    {searching && (
-                        <ActivityIndicator size="small" color={Colors.primary} />
-                    )}
+                    {searching && <ActivityIndicator size="small" color={Colors.primary} />}
                 </View>
 
-                {/* Nút tìm kiếm */}
                 {query.length > 0 && (
                     <TouchableOpacity
                         style={[searchStyles.searchButton, searching && searchStyles.searchButtonDisabled]}
@@ -95,139 +155,267 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
                         disabled={searching}
                         activeOpacity={0.8}
                     >
-                        <Ionicons name="sparkles" size={18} color="#FFF" />
+                        <Ionicons name="sparkles" size={16} color="#FFF" />
                         <Text style={searchStyles.searchButtonText}>
-                            {searching ? 'Đang phân tích với AI...' : `Tìm kiếm "${query}"`}
+                            {searching ? 'Đang phân tích...' : `Tìm "${query}"`}
                         </Text>
                     </TouchableOpacity>
                 )}
 
-                {/* Loading state */}
+                <View style={searchStyles.tabRow}>
+                    <TouchableOpacity
+                        style={[searchStyles.tabBtn, activeTab === 'recent' && searchStyles.tabBtnActive]}
+                        onPress={() => setActiveTab('recent')}
+                    >
+                        <Text style={[searchStyles.tabText, activeTab === 'recent' && searchStyles.tabTextActive]}>Gần đây</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[searchStyles.tabBtn, activeTab === 'popular' && searchStyles.tabBtnActive]}
+                        onPress={() => setActiveTab('popular')}
+                    >
+                        <Text style={[searchStyles.tabText, activeTab === 'popular' && searchStyles.tabTextActive]}>Phổ biến</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[searchStyles.tabBtn, activeTab === 'myfoods' && searchStyles.tabBtnActive]}
+                        onPress={() => setActiveTab('myfoods')}
+                    >
+                        <Text style={[searchStyles.tabText, activeTab === 'myfoods' && searchStyles.tabTextActive]}>Món của tôi</Text>
+                    </TouchableOpacity>
+                </View>
+
                 {searching && (
-                    <View style={searchStyles.loadingContainer}>
+                    <View style={searchStyles.loadingBox}>
                         <ActivityIndicator size="large" color={Colors.primary} />
-                        <Text style={searchStyles.loadingText}>AI đang phân tích thành phần dinh dưỡng...</Text>
-                        <Text style={searchStyles.loadingSubtext}>Đối chiếu với cơ sở dữ liệu thực phẩm</Text>
+                        <Text style={searchStyles.loadingText}>AI đang phân tích dữ liệu dinh dưỡng...</Text>
                     </View>
                 )}
 
-                <ScrollView showsVerticalScrollIndicator={false}>
-                    {/* Lịch sử tìm kiếm */}
-                    {query.length === 0 && !searching && (
-                        <View style={searchStyles.section}>
-                            <Text style={searchStyles.sectionTitle}>Tìm kiếm gần đây</Text>
-                            <View style={searchStyles.recentRow}>
-                                {recent.map(r => (
-                                    <TouchableOpacity
-                                        key={r}
-                                        style={searchStyles.recentChip}
-                                        onPress={() => {
-                                            setQuery(r);
-                                            handleSearch(r);
-                                        }}
-                                    >
-                                        <Ionicons name="time-outline" size={13} color="#7F8C9B" />
-                                        <Text style={searchStyles.recentText}>{r}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </View>
-                    )}
+                {!searching && (
+                    <ScrollView style={searchStyles.listWrap} showsVerticalScrollIndicator={false}>
+                        {query.length > 0 ? (
+                            <>
+                                <Text style={searchStyles.sectionTitle}>Kết quả tìm kiếm</Text>
+                                {filteredSuggestions.length > 0 ? (
+                                    filteredSuggestions.map(renderFoodCard)
+                                ) : (
+                                    <Text style={searchStyles.emptyText}>Không có kết quả nhanh. Bấm Tìm ở trên để AI phân tích.</Text>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                {activeTab === 'recent' && (
+                                    <>
+                                        <Text style={searchStyles.sectionTitle}>Gần đây</Text>
+                                        {recent.map((name) => {
+                                            const mapped = mergedSuggestions.find((x) => x.name === name);
+                                            const item = mapped || {
+                                                name,
+                                                emoji: '🍽️',
+                                                kcal: 300,
+                                                serving: `1 ${DEFAULT_PORTION_UNIT}`,
+                                                protein: 18,
+                                                carbs: 38,
+                                                fat: 10,
+                                            };
+                                            return renderFoodCard(item);
+                                        })}
+                                    </>
+                                )}
 
-                    {/* Gợi ý phổ biến */}
-                    {query.length === 0 && !searching && (
-                        <View style={searchStyles.section}>
-                            <Text style={searchStyles.sectionTitle}>Gợi ý phổ biến</Text>
-                            {POPULAR_FOODS.map(item => (
-                                <TouchableOpacity
-                                    key={item.name}
-                                    style={searchStyles.foodItem}
-                                    activeOpacity={0.7}
-                                    onPress={() => {
-                                        setQuery(item.name);
-                                        handleSearch(item.name);
-                                    }}
-                                >
-                                    <View style={searchStyles.foodEmojiBg}>
-                                        <Text style={searchStyles.foodEmoji}>{item.emoji}</Text>
-                                    </View>
-                                    <View style={searchStyles.foodInfo}>
-                                        <Text style={searchStyles.foodName}>{item.name}</Text>
-                                        <Text style={searchStyles.foodMeta}>{item.category}</Text>
-                                    </View>
-                                    <View style={searchStyles.searchIconBtn}>
-                                        <Ionicons name="search" size={16} color={Colors.primary} />
-                                    </View>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    )}
+                                {activeTab === 'popular' && (
+                                    <>
+                                        <Text style={searchStyles.sectionTitle}>Phổ biến</Text>
+                                        {POPULAR_FOODS.map(renderFoodCard)}
+                                    </>
+                                )}
 
-                    {/* Hướng dẫn */}
-                    {query.length === 0 && !searching && (
-                        <View style={searchStyles.tipSection}>
-                            <Ionicons name="bulb-outline" size={20} color="#FFB84D" />
-                            <Text style={searchStyles.tipText}>
-                                Nhập tên món ăn bất kỳ, AI sẽ phân tích thành phần và đối chiếu dinh dưỡng chính xác từ cơ sở dữ liệu.
-                            </Text>
-                        </View>
-                    )}
-                </ScrollView>
+                                {activeTab === 'myfoods' && (
+                                    <>
+                                        <Text style={searchStyles.sectionTitle}>Món của tôi</Text>
+                                        {MY_FOODS.map(renderFoodCard)}
+                                    </>
+                                )}
+                            </>
+                        )}
+                        <View style={{ height: 20 }} />
+                    </ScrollView>
+                )}
             </SafeAreaView>
         </Modal>
     );
 }
 
-const POPULAR_FOODS = [
-    { name: 'Phở Bò', emoji: '🍜', category: 'Món Việt' },
-    { name: 'Cơm Tấm Sườn', emoji: '🍚', category: 'Món Việt' },
-    { name: 'Bánh Mì Thịt', emoji: '🥖', category: 'Món Việt' },
-    { name: 'Bún Bò Huế', emoji: '🍲', category: 'Món Việt' },
-    { name: 'Pizza', emoji: '🍕', category: 'Món Quốc Tế' },
-    { name: 'Hamburger', emoji: '🍔', category: 'Món Quốc Tế' },
-    { name: 'Sushi', emoji: '🍣', category: 'Món Quốc Tế' },
-    { name: 'Salad Caesar', emoji: '🥗', category: 'Món Quốc Tế' },
+type FoodTemplateItem = {
+    name: string;
+    emoji: string;
+    kcal: number;
+    serving: string;
+    protein: number;
+    carbs: number;
+    fat: number;
+};
+
+const POPULAR_FOODS: FoodTemplateItem[] = [
+    { name: 'Phở Bò', emoji: '🍜', kcal: 350, serving: `1 ${DEFAULT_PORTION_UNIT}`, protein: 22, carbs: 45, fat: 10 },
+    { name: 'Bún Chả', emoji: '🍲', kcal: 450, serving: `1 ${DEFAULT_PORTION_UNIT}`, protein: 25, carbs: 60, fat: 15 },
+    { name: 'Cơm Tấm', emoji: '🍚', kcal: 520, serving: '1 đĩa', protein: 30, carbs: 75, fat: 20 },
+    { name: 'Gỏi Cuốn', emoji: '🥗', kcal: 180, serving: '2 cuốn', protein: 10, carbs: 28, fat: 4 },
+    { name: 'Bánh Mì', emoji: '🥖', kcal: 310, serving: '1 ổ', protein: 15, carbs: 48, fat: 12 },
+];
+
+const MY_FOODS: FoodTemplateItem[] = [
+    { name: 'Ức Gà Áp Chảo', emoji: '🍗', kcal: 240, serving: '150g', protein: 35, carbs: 2, fat: 9 },
+    { name: 'Yến Mạch Sữa Chua', emoji: '🥣', kcal: 290, serving: '1 tô', protein: 14, carbs: 42, fat: 8 },
+    { name: 'Salad Cá Ngừ', emoji: '🥬', kcal: 260, serving: '1 tô', protein: 24, carbs: 14, fat: 12 },
 ];
 
 const searchStyles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F9FAFB' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
-    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F0F0F5', justifyContent: 'center', alignItems: 'center' },
-    title: { fontSize: 18, fontWeight: '700', color: Colors.primary },
-    searchBar: {
-        flexDirection: 'row', alignItems: 'center', gap: 10,
-        backgroundColor: '#FFF', marginHorizontal: 20, marginTop: 8, marginBottom: 12,
-        borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12,
-        ...Shadows.small,
+    container: { flex: 1, backgroundColor: '#F8FAFC' },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingTop: 8,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E2E8F0',
+        backgroundColor: 'rgba(248,250,252,0.96)',
     },
-    searchInput: { flex: 1, fontSize: 15, color: Colors.text, padding: 0 },
+    headerIconBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    headerTitle: {
+        flex: 1,
+        textAlign: 'center',
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#0F172A',
+    },
+    headerSpacer: { width: 40, height: 40 },
+    searchWrap: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        backgroundColor: '#E2E8F080',
+        marginHorizontal: 16,
+        marginTop: 12,
+        marginBottom: 8,
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+    },
+    searchInput: { flex: 1, fontSize: 15, color: '#0F172A', padding: 0 },
     searchButton: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-        backgroundColor: Colors.primary, marginHorizontal: 20, marginBottom: 16,
-        borderRadius: 14, paddingVertical: 14,
+        backgroundColor: '#10B981', marginHorizontal: 16, marginBottom: 10,
+        borderRadius: 12, paddingVertical: 12,
     },
     searchButtonDisabled: { opacity: 0.6 },
-    searchButtonText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
-    loadingContainer: {
-        alignItems: 'center', paddingVertical: 40, gap: 12,
+    searchButtonText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+    tabRow: {
+        flexDirection: 'row',
+        paddingHorizontal: 16,
+        gap: 24,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E2E8F0',
+        paddingBottom: 6,
     },
-    loadingText: { fontSize: 15, fontWeight: '600', color: Colors.primary },
-    loadingSubtext: { fontSize: 13, color: '#7F8C9B' },
-    section: { paddingHorizontal: 20, marginBottom: 16 },
-    sectionTitle: { fontSize: 14, fontWeight: '700', color: '#7F8C9B', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
-    recentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    recentChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: '#E8E8E8' },
-    recentText: { fontSize: 13, color: Colors.text, fontWeight: '500' },
-    foodItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 16, padding: 14, marginBottom: 10, gap: 12, ...Shadows.small },
-    foodEmojiBg: { width: 50, height: 50, borderRadius: 14, backgroundColor: '#F5F6F8', justifyContent: 'center', alignItems: 'center' },
-    foodEmoji: { fontSize: 28 },
-    foodInfo: { flex: 1 },
-    foodName: { fontSize: 15, fontWeight: '700', color: Colors.primary, marginBottom: 3 },
-    foodMeta: { fontSize: 12, color: '#7F8C9B' },
-    searchIconBtn: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#F0F4FF', justifyContent: 'center', alignItems: 'center' },
-    tipSection: {
-        flexDirection: 'row', gap: 10, marginHorizontal: 20, marginTop: 8, marginBottom: 20,
-        backgroundColor: '#FFF9E6', borderRadius: 14, padding: 16, alignItems: 'flex-start',
+    tabBtn: {
+        paddingVertical: 8,
+        borderBottomWidth: 2,
+        borderBottomColor: 'transparent',
     },
-    tipText: { flex: 1, fontSize: 13, color: '#7F6E30', lineHeight: 18 },
+    tabBtnActive: {
+        borderBottomColor: '#10B981',
+    },
+    tabText: {
+        color: '#64748B',
+        fontSize: 13,
+        fontWeight: '600',
+    },
+    tabTextActive: {
+        color: '#10B981',
+    },
+    loadingBox: {
+        alignItems: 'center',
+        paddingVertical: 44,
+        gap: 10,
+    },
+    loadingText: { fontSize: 14, fontWeight: '600', color: '#10B981' },
+    listWrap: {
+        flex: 1,
+        paddingHorizontal: 16,
+        paddingTop: 12,
+    },
+    sectionTitle: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#64748B',
+        marginBottom: 10,
+        textTransform: 'uppercase',
+        letterSpacing: 0.6,
+    },
+    foodCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 10,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+        ...Shadows.small,
+    },
+    foodThumb: {
+        width: 64,
+        height: 64,
+        borderRadius: 10,
+        backgroundColor: '#F1F5F9',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    foodEmoji: { fontSize: 30 },
+    foodMainInfo: { flex: 1 },
+    foodName: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#0F172A',
+        marginBottom: 2,
+    },
+    foodKcal: {
+        fontSize: 12,
+        color: '#64748B',
+        marginBottom: 2,
+    },
+    foodMacro: {
+        fontSize: 11,
+        color: '#94A3B8',
+        fontWeight: '600',
+    },
+    addBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#10B9811A',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    addBtnPlus: {
+        color: '#10B981',
+        fontSize: 24,
+        fontWeight: '700',
+        lineHeight: 26,
+    },
+    emptyText: {
+        fontSize: 13,
+        color: '#64748B',
+        lineHeight: 19,
+        marginTop: 4,
+    },
 });
