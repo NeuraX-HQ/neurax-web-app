@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Dimensions, Alert, TouchableWithoutFeedback, Modal } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, TouchableWithoutFeedback, Modal, FlatList } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -11,49 +11,73 @@ import { drinkTypes } from '../../src/data/mockData';
 import { CalorieGauge } from '../../src/components/CalorieGauge';
 import { useMealStore, Meal } from '../../src/store/mealStore';
 import { getOnboardingData } from '../../src/store/userStore';
+import { useAuthStore } from '../../src/store/authStore';
+
+const WEEKDAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+const toIsoDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const fromIsoDate = (iso: string) => {
+    const [year, month, day] = iso.split('-').map(Number);
+    return new Date(year, month - 1, day);
+};
+
+const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
 
 export default function HomeScreen() {
     const router = useRouter();
-
-    // Generate dynamic calendar dates
-    const { weekDaysLabels, dates, fullDates, monthName, todayIndex } = useMemo(() => {
-        const today = new Date();
-        const currentMonthName = today.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        
-        const dayOfWeek = today.getDay();
-        const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        const monday = new Date(today);
-        monday.setDate(diffToMonday);
-        
-        const d_labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-        const d_dates = [];
-        const d_fullDates = [];
-        let tIndex = 0;
-        
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(monday);
-            d.setDate(monday.getDate() + i);
-            d_dates.push(d.getDate());
-            
-            const isoDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            d_fullDates.push(isoDate);
-            
-            if (d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()) {
-                tIndex = i;
-            }
-        }
-        
-        return { weekDaysLabels: d_labels, dates: d_dates, fullDates: d_fullDates, monthName: currentMonthName, todayIndex: tIndex };
-    }, []);
+    const todayIso = useMemo(() => toIsoDate(new Date()), []);
 
     const [refreshing, setRefreshing] = useState(false);
-    const [selectedDay, setSelectedDay] = useState(todayIndex);
+    const [selectedDateStr, setSelectedDateStr] = useState(todayIso);
     const [gender, setGender] = useState<string>('');
-    const selectedDateStr = fullDates[selectedDay];
+    const [showMonthPicker, setShowMonthPicker] = useState(false);
+    const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
+    const userEmail = useAuthStore((state) => state.email);
 
     // Meal store
-    const { meals, getTodayStats, loadMeals, getMealsByDate, removeMeal } = useMealStore();
+    const { loadMeals, getMealsByDate, removeMeal } = useMealStore();
     const displayedMeals = getMealsByDate(selectedDateStr);
+
+    const dateStrip = useMemo(() => {
+        const center = new Date();
+        const daysBefore = 180;
+        const daysAfter = 180;
+        return Array.from({ length: daysBefore + daysAfter + 1 }, (_, i) => {
+            const d = new Date(center);
+            d.setDate(center.getDate() + i - daysBefore);
+            return {
+                iso: toIsoDate(d),
+                weekdayIndex: (d.getDay() + 6) % 7,
+                day: d.getDate(),
+            };
+        });
+    }, []);
+
+    const selectedDate = useMemo(() => fromIsoDate(selectedDateStr), [selectedDateStr]);
+    const monthName = useMemo(
+        () => selectedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase(),
+        [selectedDate]
+    );
+
+    const displayedDateLabel = useMemo(() => {
+        return selectedDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+        });
+    }, [selectedDate]);
+
+    const greetingName = useMemo(() => {
+        if (!userEmail) return 'there';
+        const localPart = userEmail.split('@')[0];
+        return localPart || 'there';
+    }, [userEmail]);
 
     const swipeableRefs = useRef(new Map<string, any>());
     const openMealIdRef = useRef<string | null>(null);
@@ -67,6 +91,15 @@ export default function HomeScreen() {
         }
         return false;
     };
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            await loadMeals();
+        } finally {
+            setRefreshing(false);
+        }
+    }, [loadMeals]);
 
     const withAutoClose = (action: () => void) => () => {
         if (closeOpenRow()) return;
@@ -87,8 +120,22 @@ export default function HomeScreen() {
     const protein = { current: Math.round(stats.totalProtein), max: 140 };
     const carbs = { current: Math.round(stats.totalCarbs), max: 280 };
     const fat = { current: Math.round(stats.totalFat), max: 75 };
-    const [waterCurrent, setWaterCurrent] = useState(800);
+    const [waterByDate, setWaterByDate] = useState<Record<string, number>>({
+        [todayIso]: 800,
+    });
     const waterMax = 2500;
+    const waterCurrent = waterByDate[selectedDateStr] ?? 0;
+    const [exerciseByDate] = useState<Record<string, number>>(() => {
+        const seeded: Record<string, number> = {};
+        for (let i = -6; i <= 0; i++) {
+            const d = new Date();
+            d.setDate(d.getDate() + i);
+            const iso = toIsoDate(d);
+            seeded[iso] = i === 0 ? 0 : Math.max(0, 25 + i * 3);
+        }
+        return seeded;
+    });
+    const exerciseMinutes = exerciseByDate[selectedDateStr] ?? 0;
 
     // Load meals on mount
     useEffect(() => {
@@ -107,13 +154,40 @@ export default function HomeScreen() {
     const [selectedDrink, setSelectedDrink] = useState('water');
     const [drinkAmount, setDrinkAmount] = useState(200);
 
-    const STEPS = [50, 100, 150, 200, 250];
-    const GLASS_H = 240;
-
     const addWater = () => {
-        setWaterCurrent(prev => Math.min(prev + drinkAmount, waterMax));
+        setWaterByDate((prev) => ({
+            ...prev,
+            [selectedDateStr]: Math.min((prev[selectedDateStr] ?? 0) + drinkAmount, waterMax),
+        }));
         setShowHydration(false);
     };
+
+    const prevMonth = () => {
+        setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    };
+
+    const nextMonth = () => {
+        setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    };
+
+    const monthPickerGrid = useMemo(() => {
+        const year = calendarMonth.getFullYear();
+        const month = calendarMonth.getMonth();
+        const first = new Date(year, month, 1);
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDayMondayBased = (first.getDay() + 6) % 7;
+
+        const cells: Array<{ type: 'empty' } | { type: 'day'; iso: string; day: number }> = [];
+        for (let i = 0; i < firstDayMondayBased; i++) {
+            cells.push({ type: 'empty' });
+        }
+        for (let day = 1; day <= daysInMonth; day++) {
+            const d = new Date(year, month, day);
+            cells.push({ type: 'day', iso: toIsoDate(d), day });
+        }
+
+        return cells;
+    }, [calendarMonth]);
 
     // Group meals by type
     const getMealsByType = (type: Meal['type']) => {
@@ -201,7 +275,11 @@ export default function HomeScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false} onScrollBeginDrag={closeOpenRow}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                onScrollBeginDrag={closeOpenRow}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
                 <TouchableWithoutFeedback onPress={closeOpenRow}>
                     <View style={{ flex: 1 }}>
                 {/* Header */}
@@ -217,7 +295,7 @@ export default function HomeScreen() {
                             )}
                             <View style={styles.statusDot} />
                         </TouchableOpacity>
-                        <Text style={styles.greeting}>Hi Admin!</Text>
+                        <Text style={styles.greeting}>Hi {greetingName}!</Text>
                     </View>
                     <View style={styles.headerRight}>
                         <TouchableOpacity onPress={withAutoClose(() => router.push('/notifications'))}>
@@ -231,25 +309,54 @@ export default function HomeScreen() {
 
                 {/* Month & Streak */}
                 <View style={styles.monthRow}>
-                    <Text style={styles.monthText}>{monthName} ▾</Text>
+                    <TouchableOpacity
+                        style={styles.monthDropdown}
+                        onPress={withAutoClose(() => {
+                            setCalendarMonth(startOfMonth(selectedDate));
+                            setShowMonthPicker(true);
+                        })}
+                    >
+                        <Text style={styles.monthText}>{monthName} ▾</Text>
+                    </TouchableOpacity>
                     <View style={styles.streakBadge}>
                         <Text style={styles.streakText}>14 days 🔥</Text>
                     </View>
                 </View>
 
-                {/* Week Days */}
-                <View style={styles.weekRow}>
-                    {weekDaysLabels.map((day, i) => (
-                        <TouchableOpacity
-                            key={i}
-                            style={[styles.dayItem, selectedDay === i && styles.dayItemSelected]}
-                            onPress={withAutoClose(() => setSelectedDay(i))}
-                        >
-                            <Text style={[styles.dayLabel, selectedDay === i && styles.dayLabelSelected]}>{day}</Text>
-                            <Text style={[styles.dayDate, selectedDay === i && styles.dayDateSelected]}>{dates[i]}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                {/* Sliding Date Strip */}
+                <FlatList
+                    data={dateStrip}
+                    keyExtractor={(item) => item.iso}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.weekRow}
+                    initialScrollIndex={Math.max(0, dateStrip.findIndex((d) => d.iso === selectedDateStr) - 3)}
+                    getItemLayout={(_, index) => ({ length: 56, offset: 56 * index, index })}
+                    renderItem={({ item }) => {
+                        const isSelected = item.iso === selectedDateStr;
+                        const isPast = item.iso < todayIso;
+                        const isToday = item.iso === todayIso;
+
+                        return (
+                            <TouchableOpacity
+                                style={[
+                                    styles.dayItem,
+                                    isSelected && styles.dayItemSelected,
+                                    !isSelected && isPast && styles.dayItemPast,
+                                    !isSelected && isToday && styles.dayItemToday,
+                                ]}
+                                onPress={withAutoClose(() => setSelectedDateStr(item.iso))}
+                            >
+                                <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected, !isSelected && isPast && styles.dayTextPast]}>
+                                    {WEEKDAY_LABELS[item.weekdayIndex]}
+                                </Text>
+                                <Text style={[styles.dayDate, isSelected && styles.dayDateSelected, !isSelected && isPast && styles.dayTextPast]}>
+                                    {item.day}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    }}
+                />
 
                 {/* Calorie Card */}
                 <View style={[styles.card, Shadows.medium]}>
@@ -264,7 +371,7 @@ export default function HomeScreen() {
                                         <Text style={styles.macroValue}>{protein.current}/{protein.max}g</Text>
                                     </View>
                                     <View style={styles.macroBarBg}>
-                                        <View style={[styles.macroBar, { width: `${(protein.current / protein.max) * 100}%`, backgroundColor: Colors.protein }]} />
+                                        <View style={[styles.macroBar, { width: `${Math.min((protein.current / protein.max) * 100, 100)}%`, backgroundColor: Colors.protein }]} />
                                     </View>
                                 </View>
                             </View>
@@ -276,7 +383,7 @@ export default function HomeScreen() {
                                         <Text style={styles.macroValue}>{carbs.current}/{carbs.max}g</Text>
                                     </View>
                                     <View style={styles.macroBarBg}>
-                                        <View style={[styles.macroBar, { width: `${(carbs.current / carbs.max) * 100}%`, backgroundColor: Colors.carbs }]} />
+                                        <View style={[styles.macroBar, { width: `${Math.min((carbs.current / carbs.max) * 100, 100)}%`, backgroundColor: Colors.carbs }]} />
                                     </View>
                                 </View>
                             </View>
@@ -323,7 +430,7 @@ export default function HomeScreen() {
                         <View style={styles.exerciseInfo}>
                             <Text style={styles.exerciseTitle}>Exercise</Text>
                         </View>
-                        <Text style={styles.exerciseValue}>0 / 45 min</Text>
+                        <Text style={styles.exerciseValue}>{exerciseMinutes} / 45 min</Text>
                         <View style={styles.exerciseArrow}>
                             <Text style={styles.exerciseArrowText}>›</Text>
                         </View>
@@ -332,7 +439,7 @@ export default function HomeScreen() {
 
                 {/* Today's Meals */}
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Today's Meals</Text>
+                    <Text style={styles.sectionTitle}>Meals</Text>
                     <Text style={styles.sectionSubtitle}>{Math.round(stats.totalCalories)} kcal total</Text>
                 </View>
 
@@ -427,7 +534,7 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                         <View style={hStyles.headerCenter}>
                             <Text style={hStyles.title}>Add Hydration</Text>
-                            <Text style={hStyles.subtitle}>Today, Feb 2, 2026</Text>
+                            <Text style={hStyles.subtitle}>{displayedDateLabel}</Text>
                         </View>
                         <View style={{ width: 24 }} />
                     </View>
@@ -457,9 +564,9 @@ export default function HomeScreen() {
 
                     {/* Water Glass Visualization */}
                     <View style={hStyles.glassArea}>
-                        <View style={hStyles.glass}>
+                        <View style={hStyles.glass} pointerEvents="none">
                             {/* Ruler: full-width horizontal lines, no labels */}
-                            <View style={hStyles.rulerInner}>
+                            <View style={hStyles.rulerInner} pointerEvents="none">
                                 {[200, 150, 100, 50].map((threshold, idx) => (
                                     <View key={idx} style={[
                                         hStyles.rulerLine,
@@ -468,7 +575,7 @@ export default function HomeScreen() {
                                 ))}
                             </View>
                             {/* Water fill */}
-                            <View style={[hStyles.waterFill, { height: `${(drinkAmount / 250) * 100}%` }]} />
+                            <View pointerEvents="none" style={[hStyles.waterFill, { height: `${(drinkAmount / 250) * 100}%` }]} />
                         </View>
                     </View>
 
@@ -477,6 +584,7 @@ export default function HomeScreen() {
                         <View style={hStyles.amountRow}>
                             <TouchableOpacity
                                 style={hStyles.amountBtn}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 onPress={() => setDrinkAmount(Math.max(50, drinkAmount - 50))}
                             >
                                 <Text style={hStyles.amountBtnText}>—</Text>
@@ -486,6 +594,7 @@ export default function HomeScreen() {
                             </View>
                             <TouchableOpacity
                                 style={[hStyles.amountBtn, hStyles.amountBtnPlus]}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 onPress={() => setDrinkAmount(Math.min(250, drinkAmount + 50))}
                             >
                                 <Text style={[hStyles.amountBtnText, hStyles.amountBtnPlusText]}>+</Text>
@@ -499,6 +608,73 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                     </View>
                 </SafeAreaView>
+            </Modal>
+
+            {/* Month Picker */}
+            <Modal visible={showMonthPicker} animationType="fade" transparent>
+                <TouchableWithoutFeedback onPress={() => setShowMonthPicker(false)}>
+                    <View style={styles.calendarBackdrop}>
+                        <TouchableWithoutFeedback>
+                            <View style={styles.calendarCard}>
+                                <View style={styles.calendarHeader}>
+                                    <TouchableOpacity onPress={prevMonth} style={styles.calendarNavBtn}>
+                                        <Text style={styles.calendarNavText}>‹</Text>
+                                    </TouchableOpacity>
+                                    <Text style={styles.calendarHeaderTitle}>
+                                        {calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                    </Text>
+                                    <TouchableOpacity onPress={nextMonth} style={styles.calendarNavBtn}>
+                                        <Text style={styles.calendarNavText}>›</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={styles.calendarWeekHeader}>
+                                    {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, index) => (
+                                        <Text key={`${d}-${index}`} style={styles.calendarWeekLabel}>{d}</Text>
+                                    ))}
+                                </View>
+
+                                <View style={styles.calendarGrid}>
+                                    {monthPickerGrid.map((cell, index) => {
+                                        if (cell.type === 'empty') {
+                                            return <View key={`e-${index}`} style={styles.calendarCell} />;
+                                        }
+
+                                        const isSelected = cell.iso === selectedDateStr;
+                                        const isPast = cell.iso < todayIso;
+                                        const isToday = cell.iso === todayIso;
+
+                                        return (
+                                            <TouchableOpacity
+                                                key={cell.iso}
+                                                style={[
+                                                    styles.calendarCell,
+                                                    styles.calendarDay,
+                                                    isSelected && styles.calendarDaySelected,
+                                                    !isSelected && isToday && styles.calendarDayToday,
+                                                ]}
+                                                onPress={() => {
+                                                    setSelectedDateStr(cell.iso);
+                                                    setShowMonthPicker(false);
+                                                }}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.calendarDayText,
+                                                        isSelected && styles.calendarDayTextSelected,
+                                                        !isSelected && isPast && styles.calendarDayTextPast,
+                                                    ]}
+                                                >
+                                                    {cell.day}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
             </Modal>
         </SafeAreaView>
     );
@@ -556,7 +732,7 @@ const hStyles = StyleSheet.create({
     drinkLabel: { fontSize: 10, color: Colors.textSecondary, marginTop: 4, fontWeight: '500' },
     drinkLabelSelected: { color: Colors.primary, fontWeight: '600' },
     drinkItemSelected: {},
-    glassArea: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 16 },
+    glassArea: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 16, pointerEvents: 'none' },
     glass: {
         width: 200,
         height: 240,
@@ -585,7 +761,7 @@ const hStyles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.08)',
     },
     rulerLineActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
-    controlsArea: { paddingHorizontal: 20, paddingBottom: 24 },
+    controlsArea: { paddingHorizontal: 20, paddingBottom: 24, position: 'relative', zIndex: 3, elevation: 3 },
     amountRow: {
         flexDirection: 'row',
         justifyContent: 'center',
@@ -671,6 +847,10 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
     },
     monthText: { fontSize: 15, fontWeight: '600', color: Colors.text },
+    monthDropdown: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     streakBadge: {
         backgroundColor: '#FFF3E6',
         borderRadius: 16,
@@ -679,14 +859,25 @@ const styles = StyleSheet.create({
     },
     streakText: { fontSize: 12, color: Colors.streak, fontWeight: '600' },
     weekRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        paddingHorizontal: 12,
+        paddingHorizontal: 10,
         paddingVertical: 8,
     },
-    dayItem: { alignItems: 'center', paddingVertical: 6, paddingHorizontal: 8, borderRadius: 12 },
+    dayItem: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 8,
+        width: 46,
+        borderRadius: 12,
+        marginHorizontal: 5,
+    },
+    dayItemPast: { opacity: 0.45 },
+    dayItemToday: {
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+    },
     dayItemSelected: { backgroundColor: Colors.primary },
     dayLabel: { fontSize: 11, color: Colors.textSecondary, fontWeight: '500', marginBottom: 3 },
+    dayTextPast: { color: '#9CA3AF' },
     dayLabelSelected: { color: '#FFFFFF' },
     dayDate: { fontSize: 14, fontWeight: '700', color: Colors.text },
     dayDateSelected: { color: '#FFFFFF' },
@@ -821,4 +1012,85 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed',
     },
     logMealText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+    calendarBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.28)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    calendarCard: {
+        width: '100%',
+        maxWidth: 360,
+        borderRadius: 16,
+        backgroundColor: '#FFFFFF',
+        padding: 16,
+    },
+    calendarHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    calendarNavBtn: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F3F4F6',
+    },
+    calendarNavText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: Colors.primary,
+    },
+    calendarHeaderTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: Colors.text,
+    },
+    calendarWeekHeader: {
+        flexDirection: 'row',
+        marginBottom: 8,
+    },
+    calendarWeekLabel: {
+        flex: 1,
+        textAlign: 'center',
+        fontSize: 12,
+        color: Colors.textSecondary,
+        fontWeight: '600',
+    },
+    calendarGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+    },
+    calendarCell: {
+        width: '14.2857%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: 3,
+    },
+    calendarDay: {
+        height: 36,
+        borderRadius: 10,
+    },
+    calendarDayToday: {
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+    },
+    calendarDaySelected: {
+        backgroundColor: Colors.primary,
+    },
+    calendarDayText: {
+        fontSize: 14,
+        color: Colors.text,
+        fontWeight: '600',
+    },
+    calendarDayTextSelected: {
+        color: '#FFFFFF',
+    },
+    calendarDayTextPast: {
+        color: '#9CA3AF',
+    },
 });

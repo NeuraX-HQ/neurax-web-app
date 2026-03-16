@@ -7,6 +7,13 @@ import Svg, { Path } from 'react-native-svg';
 import { signIn, fetchAuthSession, signInWithRedirect } from "aws-amplify/auth";
 import { useAuthStore } from '../src/store/authStore';
 
+const MOCK_LOGIN = {
+    email: 'demo@neurax.app',
+    password: '123456',
+    userId: 'mock-user-001',
+    token: 'mock-token-dev-login'
+};
+
 function GoogleIcon({ size = 20 }: { size?: number }) {
     return (
         <Svg width={size} height={size} viewBox="0 0 24 24">
@@ -32,6 +39,16 @@ export default function LoginScreen() {
         try {
 
             setLoading(true);
+
+            const isMockCredential =
+                email.trim().toLowerCase() === MOCK_LOGIN.email &&
+                password === MOCK_LOGIN.password;
+
+            if (isMockCredential) {
+                await login(MOCK_LOGIN.email, MOCK_LOGIN.userId, MOCK_LOGIN.token);
+                router.replace("/(tabs)/home");
+                return;
+            }
 
             const result = await signIn({
                 username: email,
@@ -91,6 +108,10 @@ export default function LoginScreen() {
                     value={password}
                     onChangeText={setPassword}
                 />
+
+                <Text style={styles.mockHint}>
+                    Demo login: {MOCK_LOGIN.email} / {MOCK_LOGIN.password}
+                </Text>
 
                 <TouchableOpacity
                     style={styles.button}
@@ -217,5 +238,11 @@ const styles = StyleSheet.create({
         color: '#1E2B22',
         fontWeight: '700',
         fontSize: 15
+    },
+    mockHint: {
+        marginTop: -6,
+        marginBottom: 12,
+        color: '#6B7280',
+        fontSize: 12
     }
 });
