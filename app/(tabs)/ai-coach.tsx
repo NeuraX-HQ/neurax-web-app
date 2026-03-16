@@ -6,6 +6,7 @@ import { useMealStore } from '../../src/store/mealStore';
 import { useFridgeStore } from '../../src/store/fridgeStore';
 import { getUserData, UserData } from '../../src/store/userStore';
 import { generateCoachResponse } from '../../src/services/geminiService';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 interface Message {
     id: string;
@@ -21,12 +22,20 @@ interface Message {
 }
 
 export default function AiCoachScreen() {
+    const { t, language } = useAppLanguage();
     const [input, setInput] = useState('');
+    const getWelcomeMessage = () => ({
+        id: 'welcome',
+        sender: 'ai' as const,
+        text: t('aiCoach.welcome'),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+
     const [messages, setMessages] = useState<Message[]>([
         {
             id: 'welcome',
             sender: 'ai',
-            text: 'Chào Admin! Tôi là Bảo, huấn luyện viên dinh dưỡng của bạn. Hôm nay tôi có thể giúp gì cho bạn? Bạn có thể hỏi về thực đơn, cách cải thiện chế độ ăn hoặc gợi ý món ăn từ tủ lạnh nhé! 🥗',
+            text: t('aiCoach.welcome'),
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         }
     ]);
@@ -45,28 +54,35 @@ export default function AiCoachScreen() {
         fetchUser();
     }, []);
 
+    useEffect(() => {
+        setMessages(prev => {
+            const withoutWelcome = prev.filter(msg => msg.id !== 'welcome');
+            return [getWelcomeMessage(), ...withoutWelcome];
+        });
+    }, [language]);
+
     const constructContext = () => {
         const stats = getTodayStats();
         const meals = getTodayMeals();
         const fridge = fridgeItems.map(i => `${i.name} (${i.amount})`).join(', ');
 
-        return `User Profile:
-- Name: ${userData?.name || 'User'}
-- Weight: ${userData?.weight}kg
-- Goal Weight: ${userData?.goalWeight}kg
-- Daily Calorie Goal: ${userData?.dailyCalories}kcal
+        return `${t('aiCoach.context.profile')}:
+    - ${t('aiCoach.context.name')}: ${userData?.name || t('aiCoach.context.user')}
+    - ${t('aiCoach.context.weight')}: ${userData?.weight}kg
+    - ${t('aiCoach.context.goalWeight')}: ${userData?.goalWeight}kg
+    - ${t('aiCoach.context.calorieGoal')}: ${userData?.dailyCalories}kcal
 
-Today's Progress:
-- Calories: ${stats.totalCalories} / ${userData?.dailyCalories}
-- Protein: ${stats.totalProtein}g
-- Carbs: ${stats.totalCarbs}g
-- Fat: ${stats.totalFat}g
+    ${t('aiCoach.context.todayProgress')}:
+    - ${t('aiCoach.context.calories')}: ${stats.totalCalories} / ${userData?.dailyCalories}
+    - ${t('aiCoach.context.protein')}: ${stats.totalProtein}g
+    - ${t('aiCoach.context.carbs')}: ${stats.totalCarbs}g
+    - ${t('aiCoach.context.fat')}: ${stats.totalFat}g
 
-Today's Logged Meals:
-${meals.map(m => `- ${m.name} (${m.calories} kcal)`).join('\n')}
+    ${t('aiCoach.context.loggedMeals')}:
+    ${meals.map(m => `- ${m.name} (${m.calories} kcal)`).join('\n')}
 
-Fridge Ingredients:
-${fridge || 'Empty'}`;
+    ${t('aiCoach.context.fridge')}:
+    ${fridge || t('aiCoach.context.empty')}`;
     };
 
     const handleSend = async () => {
@@ -109,7 +125,7 @@ ${fridge || 'Empty'}`;
             const errMsg: Message = {
                 id: (Date.now() + 1).toString(),
                 sender: 'ai',
-                text: 'Xin lỗi, tôi gặp chút trục trặc khi kết nối. Bạn thử lại nhé!',
+                text: t('aiCoach.errorReply'),
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             };
             setMessages(prev => [...prev, errMsg]);
@@ -127,10 +143,10 @@ ${fridge || 'Empty'}`;
                     <Image source={require('../../assets/images/coachAI.jpeg')} style={styles.aiAvatarImage} />
                 </View>
                 <View style={styles.headerInfo}>
-                    <Text style={styles.headerName}>AI Bảo</Text>
+                    <Text style={styles.headerName}>{t('aiCoach.headerName')}</Text>
                     <View style={styles.onlineRow}>
                         <View style={styles.onlineDot} />
-                        <Text style={styles.onlineText}>Online</Text>
+                        <Text style={styles.onlineText}>{t('aiCoach.online')}</Text>
                     </View>
                 </View>
                 <TouchableOpacity style={styles.moreBtn}>
@@ -180,7 +196,7 @@ ${fridge || 'Empty'}`;
                                         <View style={styles.foodMeta}>
                                             <Text style={styles.foodCalories}>🔥 {msg.foodCard.calories} kcal</Text>
                                             <TouchableOpacity style={styles.addLogBtn}>
-                                                <Text style={styles.addLogText}>+ Thêm vào</Text>
+                                                <Text style={styles.addLogText}>{t('aiCoach.addFood')}</Text>
                                             </TouchableOpacity>
                                         </View>
                                     </View>
@@ -195,7 +211,7 @@ ${fridge || 'Empty'}`;
                 <View style={styles.inputArea}>
                     <TextInput
                         style={[styles.input, isLoading && { opacity: 0.7 }]}
-                        placeholder="Hỏi AI Bảo..."
+                        placeholder={t('aiCoach.placeholder')}
                         placeholderTextColor={Colors.textLight}
                         value={input}
                         onChangeText={setInput}

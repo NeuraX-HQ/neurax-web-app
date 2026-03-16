@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, Shadows } from '../constants/colors';
 import { searchFoodNutrition, NutritionInfo } from '../services/geminiService';
+import { useAppLanguage } from '../i18n/LanguageProvider';
 
 interface SearchScannerProps {
     visible: boolean;
@@ -18,6 +19,7 @@ const DEFAULT_PORTION_UNIT = 'khẩu phần';
 
 export function SearchScanner({ visible, onClose }: SearchScannerProps) {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const [query, setQuery] = useState('');
     const [searching, setSearching] = useState(false);
     const [recent, setRecent] = useState<string[]>(['Phở Bò', 'Cơm Tấm', 'Ức Gà Nướng']);
@@ -46,11 +48,11 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
                     }
                 });
             } else {
-                Alert.alert('Không tìm thấy', result.error || 'Không thể tìm thông tin món ăn này. Thử lại với tên khác.');
+                Alert.alert(t('search.notFound.title'), result.error || t('search.error.notFound'));
             }
         } catch (error) {
             console.error('Search error:', error);
-            Alert.alert('Lỗi', 'Có lỗi xảy ra khi tìm kiếm. Vui lòng thử lại.');
+            Alert.alert(t('common.error'), t('search.error.searchFailed'));
         } finally {
             setSearching(false);
         }
@@ -123,7 +125,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
                     <TouchableOpacity onPress={onClose} style={searchStyles.headerIconBtn}>
                         <Ionicons name="arrow-back" size={22} color="#334155" />
                     </TouchableOpacity>
-                    <Text style={searchStyles.headerTitle}>Tìm kiếm món ăn</Text>
+                    <Text style={searchStyles.headerTitle}>{t('search.title')}</Text>
                     <View style={searchStyles.headerSpacer} />
                 </View>
 
@@ -131,7 +133,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
                     <Ionicons name="search-outline" size={18} color="#94A3B8" />
                     <TextInput
                         style={searchStyles.searchInput}
-                        placeholder="Tìm món ăn (vd: Phở bò)"
+                        placeholder={t('search.placeholder')}
                         placeholderTextColor="#94A3B8"
                         value={query}
                         onChangeText={setQuery}
@@ -157,7 +159,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
                     >
                         <Ionicons name="sparkles" size={16} color="#FFF" />
                         <Text style={searchStyles.searchButtonText}>
-                            {searching ? 'Đang phân tích...' : `Tìm "${query}"`}
+                            {searching ? t('search.analyzing') : t('search.findQuery', { query })}
                         </Text>
                     </TouchableOpacity>
                 )}
@@ -167,26 +169,26 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
                         style={[searchStyles.tabBtn, activeTab === 'recent' && searchStyles.tabBtnActive]}
                         onPress={() => setActiveTab('recent')}
                     >
-                        <Text style={[searchStyles.tabText, activeTab === 'recent' && searchStyles.tabTextActive]}>Gần đây</Text>
+                        <Text style={[searchStyles.tabText, activeTab === 'recent' && searchStyles.tabTextActive]}>{t('search.tab.recent')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[searchStyles.tabBtn, activeTab === 'popular' && searchStyles.tabBtnActive]}
                         onPress={() => setActiveTab('popular')}
                     >
-                        <Text style={[searchStyles.tabText, activeTab === 'popular' && searchStyles.tabTextActive]}>Phổ biến</Text>
+                        <Text style={[searchStyles.tabText, activeTab === 'popular' && searchStyles.tabTextActive]}>{t('search.tab.popular')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[searchStyles.tabBtn, activeTab === 'myfoods' && searchStyles.tabBtnActive]}
                         onPress={() => setActiveTab('myfoods')}
                     >
-                        <Text style={[searchStyles.tabText, activeTab === 'myfoods' && searchStyles.tabTextActive]}>Món của tôi</Text>
+                        <Text style={[searchStyles.tabText, activeTab === 'myfoods' && searchStyles.tabTextActive]}>{t('search.tab.myFoods')}</Text>
                     </TouchableOpacity>
                 </View>
 
                 {searching && (
                     <View style={searchStyles.loadingBox}>
                         <ActivityIndicator size="large" color={Colors.primary} />
-                        <Text style={searchStyles.loadingText}>AI đang phân tích dữ liệu dinh dưỡng...</Text>
+                        <Text style={searchStyles.loadingText}>{t('search.loading')}</Text>
                     </View>
                 )}
 
@@ -194,18 +196,18 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
                     <ScrollView style={searchStyles.listWrap} showsVerticalScrollIndicator={false}>
                         {query.length > 0 ? (
                             <>
-                                <Text style={searchStyles.sectionTitle}>Kết quả tìm kiếm</Text>
+                                <Text style={searchStyles.sectionTitle}>{t('search.results')}</Text>
                                 {filteredSuggestions.length > 0 ? (
                                     filteredSuggestions.map(renderFoodCard)
                                 ) : (
-                                    <Text style={searchStyles.emptyText}>Không có kết quả nhanh. Bấm Tìm ở trên để AI phân tích.</Text>
+                                    <Text style={searchStyles.emptyText}>{t('search.noQuickResult')}</Text>
                                 )}
                             </>
                         ) : (
                             <>
                                 {activeTab === 'recent' && (
                                     <>
-                                        <Text style={searchStyles.sectionTitle}>Gần đây</Text>
+                                        <Text style={searchStyles.sectionTitle}>{t('search.tab.recent')}</Text>
                                         {recent.map((name) => {
                                             const mapped = mergedSuggestions.find((x) => x.name === name);
                                             const item = mapped || {
@@ -224,14 +226,14 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
 
                                 {activeTab === 'popular' && (
                                     <>
-                                        <Text style={searchStyles.sectionTitle}>Phổ biến</Text>
+                                        <Text style={searchStyles.sectionTitle}>{t('search.tab.popular')}</Text>
                                         {POPULAR_FOODS.map(renderFoodCard)}
                                     </>
                                 )}
 
                                 {activeTab === 'myfoods' && (
                                     <>
-                                        <Text style={searchStyles.sectionTitle}>Món của tôi</Text>
+                                        <Text style={searchStyles.sectionTitle}>{t('search.tab.myFoods')}</Text>
                                         {MY_FOODS.map(renderFoodCard)}
                                     </>
                                 )}

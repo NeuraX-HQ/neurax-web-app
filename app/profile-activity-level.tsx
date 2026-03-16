@@ -6,10 +6,20 @@ import { Colors } from '../src/constants/colors';
 import { saveOnboardingData, getOnboardingData } from '../src/store/userStore';
 import { activityLevels } from '../src/data/mockData';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function ProfileActivityLevelScreen() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const [selected, setSelected] = useState('');
+
+    const getActivityLabel = (id: string) => {
+        return t(`profile.activityOption.${id}.label`);
+    };
+
+    const getActivityDesc = (id: string) => {
+        return t(`profile.activityOption.${id}.desc`);
+    };
 
     useEffect(() => {
         const loadData = async () => {
@@ -34,16 +44,16 @@ export default function ProfileActivityLevelScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={22} color={Colors.primary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Mức độ hoạt động</Text>
+                <Text style={styles.headerTitle}>{t('profile.activityLevel')}</Text>
                 <View style={styles.headerSpacer} />
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.titleRow}>
                     <Ionicons name="flash-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
-                    <Text style={styles.title}>Mức độ vận động của bạn?</Text>
+                    <Text style={styles.title}>{t('profile.al.title')}</Text>
                 </View>
-                <Text style={styles.subtitle}>AI Bảo sẽ dựa vào đây để tính toán lượng calo cần thiết mỗi ngày cho bạn.</Text>
+                <Text style={styles.subtitle}>{t('profile.al.subtitle')}</Text>
 
                 {activityLevels.map((level) => (
                     <TouchableOpacity
@@ -59,8 +69,8 @@ export default function ProfileActivityLevelScreen() {
                             />
                         </View>
                         <View style={styles.optionContent}>
-                            <Text style={[styles.optionTitle, selected === level.id && styles.optionTitleSelected]}>{level.label}</Text>
-                            <Text style={styles.optionDesc}>{level.description}</Text>
+                            <Text style={[styles.optionTitle, selected === level.id && styles.optionTitleSelected]}>{getActivityLabel(level.id)}</Text>
+                            <Text style={styles.optionDesc}>{getActivityDesc(level.id)}</Text>
                         </View>
                         <View style={[styles.radio, selected === level.id && styles.radioSelected]}>
                             {selected === level.id && <View style={styles.radioDot} />}
@@ -77,7 +87,7 @@ export default function ProfileActivityLevelScreen() {
                     onPress={handleSave}
                     disabled={!selected}
                 >
-                    <Text style={styles.buttonText}>Lưu thay đổi</Text>
+                    <Text style={styles.buttonText}>{t('profile.saveChanges')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

@@ -5,9 +5,11 @@ import { useRouter } from 'expo-router';
 import { Colors } from '../src/constants/colors';
 import { getOnboardingData, saveOnboardingData, saveUserData } from '../src/store/userStore';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function ProfilePersonalInfoScreen() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const [name, setName] = useState('');
     const [isFocused, setIsFocused] = useState(false);
 
@@ -41,26 +43,26 @@ export default function ProfilePersonalInfoScreen() {
                     <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                         <Ionicons name="arrow-back" size={22} color={Colors.primary} />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Thông tin cá nhân</Text>
+                    <Text style={styles.headerTitle}>{t('profile.personalInfo')}</Text>
                     <View style={styles.headerSpacer} />
                 </View>
 
                 <View style={styles.content}>
                     <View style={styles.titleRow}>
                         <Ionicons name="person-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
-                        <Text style={styles.title}>Tên bạn là gì?</Text>
+                        <Text style={styles.title}>{t('profile.pi.whatsYourName')}</Text>
                     </View>
                     <Text style={styles.subtitle}>
-                        Chúng mình sẽ dùng tên này để cá nhân hóa trải nghiệm cho bạn.
+                        {t('profile.pi.subtitle')}
                     </Text>
 
-                    <Text style={styles.label}>Tên hiển thị</Text>
+                    <Text style={styles.label}>{t('profile.pi.displayName')}</Text>
                     <TextInput
                         style={[
                             styles.input,
                             (isFocused || name.length > 0) && styles.inputActive,
                         ]}
-                        placeholder="Ví dụ: Minh Bảo"
+                        placeholder={t('profile.pi.placeholder')}
                         placeholderTextColor={Colors.textLight}
                         value={name}
                         onChangeText={setName}
@@ -73,11 +75,11 @@ export default function ProfilePersonalInfoScreen() {
                 <View style={styles.footer}>
                     <View style={styles.infoBox}>
                         <Ionicons name="shield-checkmark-outline" size={18} color={Colors.primary} />
-                        <Text style={styles.infoText}>Tên chỉ hiển thị trong ứng dụng và có thể thay đổi bất cứ lúc nào.</Text>
+                        <Text style={styles.infoText}>{t('profile.pi.info')}</Text>
                     </View>
 
                     <TouchableOpacity style={[styles.button, !name.trim() && styles.buttonDisabled]} onPress={handleSave} disabled={!name.trim()}>
-                        <Text style={styles.buttonText}>Lưu thay đổi</Text>
+                        <Text style={styles.buttonText}>{t('profile.saveChanges')}</Text>
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>

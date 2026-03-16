@@ -9,6 +9,7 @@ import { HomeIcon, BattleIcon, ScanIcon, KitchenIcon, AICoachIcon } from '../../
 import { VoiceModal } from '../../src/components/VoiceModal';
 import { CameraScannerWithLoading } from '../../src/components/CameraScannerWithLoading';
 import { SearchScanner } from '../../src/components/SearchScanner';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 function TabItem({ icon, label, focused }: { icon: React.ReactNode; label: string; focused: boolean }) {
     return (
@@ -25,32 +26,9 @@ function TabItem({ icon, label, focused }: { icon: React.ReactNode; label: strin
     );
 }
 
-const SCAN_OPTIONS = [
-    {
-        id: 'voice',
-        icon: 'mic-outline' as const,
-        label: 'Giọng nói',
-        desc: 'Nói tên món ăn',
-        route: '#' as const,
-    },
-    {
-        id: 'camera',
-        icon: 'camera-outline' as const,
-        label: 'Chụp hình',
-        desc: 'AI Scan • Barcode',
-        route: '#' as const,
-    },
-    {
-        id: 'search',
-        icon: 'search-outline' as const,
-        label: 'Tìm kiếm',
-        desc: 'Tìm món ăn',
-        route: '#' as const,
-    },
-] as const;
-
 export default function TabsLayout() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const activeColor = '#000000';
     const inactiveColor = '#A0AEC0';
     const [popupVisible, setPopupVisible] = useState(false);
@@ -59,6 +37,30 @@ export default function TabsLayout() {
     const [searchVisible, setSearchVisible] = useState(false);
     const scaleAnim = useRef(new Animated.Value(0)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
+
+    const scanOptions = [
+        {
+            id: 'voice',
+            icon: 'mic-outline' as const,
+            label: t('tabs.voice'),
+            desc: t('tabs.voiceDesc'),
+            route: '#' as const,
+        },
+        {
+            id: 'camera',
+            icon: 'camera-outline' as const,
+            label: t('tabs.camera'),
+            desc: t('tabs.cameraDesc'),
+            route: '#' as const,
+        },
+        {
+            id: 'search',
+            icon: 'search-outline' as const,
+            label: t('tabs.search'),
+            desc: t('tabs.searchDesc'),
+            route: '#' as const,
+        },
+    ] as const;
 
     const openPopup = () => {
         setPopupVisible(true);
@@ -104,7 +106,7 @@ export default function TabsLayout() {
                         tabBarIcon: ({ focused }) => (
                             <TabItem
                                 icon={<HomeIcon size={22} color={focused ? activeColor : inactiveColor} />}
-                                label="Home"
+                                label={t('tabs.home')}
                                 focused={focused}
                             />
                         ),
@@ -116,7 +118,7 @@ export default function TabsLayout() {
                         tabBarIcon: ({ focused }) => (
                             <TabItem
                                 icon={<BattleIcon size={22} color={focused ? activeColor : inactiveColor} />}
-                                label="Battle"
+                                label={t('tabs.battle')}
                                 focused={focused}
                             />
                         ),
@@ -134,7 +136,7 @@ export default function TabsLayout() {
                         tabBarIcon: ({ focused }) => (
                             <TabItem
                                 icon={<KitchenIcon size={22} color={focused ? activeColor : inactiveColor} />}
-                                label="Kitchen"
+                                label={t('tabs.kitchen')}
                                 focused={focused}
                             />
                         ),
@@ -146,7 +148,7 @@ export default function TabsLayout() {
                         tabBarIcon: ({ focused }) => (
                             <TabItem
                                 icon={<AICoachIcon size={22} color={focused ? activeColor : inactiveColor} />}
-                                label="AI Coach"
+                                label={t('tabs.aiCoach')}
                                 focused={focused}
                             />
                         ),
@@ -187,7 +189,7 @@ export default function TabsLayout() {
                     >
                         {/* Header */}
                         <View style={styles.popupHeader}>
-                            <Text style={styles.popupTitle}>Chọn cách thêm món ăn</Text>
+                            <Text style={styles.popupTitle}>{t('tabs.addFoodMethodTitle')}</Text>
                             <TouchableOpacity onPress={closePopup} style={styles.closeBtn}>
                                 <Ionicons name="close" size={18} color="#666" />
                             </TouchableOpacity>
@@ -195,7 +197,7 @@ export default function TabsLayout() {
 
                         {/* Options */}
                         <View style={styles.optionsRow}>
-                            {SCAN_OPTIONS.map((opt) => (
+                            {scanOptions.map((opt) => (
                                 <TouchableOpacity
                                     key={opt.id}
                                     style={styles.optionCard}

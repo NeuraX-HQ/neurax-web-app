@@ -8,6 +8,7 @@ import { Colors } from '../constants/colors';
 import { parseVoiceToFood, transcribeAudio, NutritionInfo } from '../services/geminiService';
 import { startRecording, stopRecording, cancelRecording } from '../services/audioService';
 import { useRouter } from 'expo-router';
+import { useAppLanguage } from '../i18n/LanguageProvider';
 
 const { width } = Dimensions.get('window');
 
@@ -19,6 +20,7 @@ interface VoiceModalProps {
 
 export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps) {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const pulseAnim = useRef(new Animated.Value(1)).current;
     const waveAnims = [
         useRef(new Animated.Value(0)).current,
@@ -52,7 +54,7 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
 
         if (!started) {
             console.error('VoiceModal: Failed to start recording');
-            Alert.alert('Lỗi', 'Không thể bắt đầu ghi âm. Vui lòng cấp quyền microphone.');
+            Alert.alert(t('common.error'), t('voice.error.cantStartRecording'));
             setListening(false);
             return;
         }
@@ -90,7 +92,7 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
         console.log('VoiceModal: Stop result:', { success: result.success, hasBase64: !!result.base64, base64Length: result.base64?.length, error: result.error });
 
         if (!result.success || !result.base64) {
-            Alert.alert('Lỗi', result.error || 'Không thể lưu ghi âm');
+            Alert.alert(t('common.error'), result.error || t('voice.error.cantSaveRecording'));
             setTranscribing(false);
             return;
         }
@@ -101,7 +103,7 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
         console.log('VoiceModal: Transcription result:', { success: transcription.success, text: transcription.text, error: transcription.error });
 
         if (!transcription.success || !transcription.text) {
-            Alert.alert('Lỗi', transcription.error || 'Không thể chuyển đổi giọng nói');
+            Alert.alert(t('common.error'), transcription.error || t('voice.error.cantTranscribe'));
             setTranscribing(false);
             return;
         }
@@ -123,10 +125,10 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
             if (result.success && result.data) {
                 setFoodData(result.data);
             } else {
-                Alert.alert('Lỗi', result.error || 'Không thể phân tích món ăn');
+                Alert.alert(t('common.error'), result.error || t('voice.error.cantAnalyze'));
             }
         } catch (error) {
-            Alert.alert('Lỗi', 'Có lỗi xảy ra khi phân tích');
+            Alert.alert(t('common.error'), t('voice.error.analysisFailed'));
         } finally {
             setAnalyzing(false);
         }
@@ -153,13 +155,13 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
                     {/* Handle */}
                     <View style={vStyles.handle} />
 
-                    <Text style={vStyles.title}>Tìm bằng giọng nói</Text>
+                    <Text style={vStyles.title}>{t('voice.title')}</Text>
                     <Text style={vStyles.subtitle}>
                         {transcribing
-                            ? 'Đang chuyển đổi giọng nói...'
+                            ? t('voice.converting')
                             : listening
-                                ? 'Đang nghe... Nhấn để dừng'
-                                : 'Nhấn micro và nói tên món ăn'}
+                                ? t('voice.listening')
+                                : t('voice.instruction')}
                     </Text>
 
                     {/* Mic button */}
@@ -191,20 +193,20 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
                     {transcribing && (
                         <View style={vStyles.transcriptBox}>
                             <ActivityIndicator size="large" color={Colors.primary} />
-                            <Text style={vStyles.analyzingText}>Đang chuyển đổi giọng nói...</Text>
+                            <Text style={vStyles.analyzingText}>{t('voice.converting')}</Text>
                         </View>
                     )}
 
                     {analyzing && !transcribing && (
                         <View style={vStyles.transcriptBox}>
                             <ActivityIndicator size="large" color={Colors.primary} />
-                            <Text style={vStyles.analyzingText}>Đang phân tích món ăn...</Text>
+                            <Text style={vStyles.analyzingText}>{t('voice.analyzing')}</Text>
                         </View>
                     )}
 
                     {foodData && !analyzing && !transcribing && (
                         <View style={vStyles.transcriptBox}>
-                            <Text style={vStyles.transcriptLabel}>Nhận diện được:</Text>
+                            <Text style={vStyles.transcriptLabel}>{t('voice.detected')}</Text>
                             <Text style={vStyles.transcriptText}>"{foodData.name}"</Text>
                             <View style={vStyles.nutritionRow}>
                                 <Text style={vStyles.nutritionItem}>🔥 {foodData.calories} kcal</Text>
@@ -213,20 +215,20 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
                                 <Text style={vStyles.nutritionItem}>🥑 {foodData.fat}g</Text>
                             </View>
                             <TouchableOpacity style={vStyles.searchBtn} onPress={handleAddMeal}>
-                                <Text style={vStyles.searchBtnText}>Thêm món ăn →</Text>
+                                <Text style={vStyles.searchBtnText}>{t('voice.addFood')}</Text>
                             </TouchableOpacity>
                         </View>
                     )}
 
                     {transcript && !foodData && !analyzing && !transcribing && (
                         <View style={vStyles.transcriptBox}>
-                            <Text style={vStyles.transcriptLabel}>Bạn nói:</Text>
+                            <Text style={vStyles.transcriptLabel}>{t('voice.youSaid')}</Text>
                             <Text style={vStyles.transcriptText}>"{transcript}"</Text>
                         </View>
                     )}
 
                     <TouchableOpacity style={vStyles.closeBtn} onPress={onClose}>
-                        <Text style={vStyles.closeBtnText}>Đóng</Text>
+                        <Text style={vStyles.closeBtnText}>{t('voice.close')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>

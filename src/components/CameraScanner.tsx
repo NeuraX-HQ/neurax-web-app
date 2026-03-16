@@ -12,6 +12,7 @@ import { Colors } from '../constants/colors';
 import { analyzeFoodImage, NutritionInfo } from '../services/geminiService';
 import { useRouter } from 'expo-router';
 import { LoadingAnalysis } from './LoadingAnalysis';
+import { useAppLanguage } from '../i18n/LanguageProvider';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +26,7 @@ interface CameraScannerProps {
 
 export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerProps) {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const cameraRef = useRef<any>(null);
     const webVideoRef = useRef<HTMLVideoElement | null>(null);
     const webStreamRef = useRef<MediaStream | null>(null);
@@ -65,7 +67,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                 setTimeout(() => clearInterval(checkVideo), 3000);
             } catch (err) {
                 console.error('Web getUserMedia error:', err);
-                Alert.alert('Lỗi Camera', 'Không thể truy cập webcam. Kiểm tra quyền truy cập camera.');
+                Alert.alert(t('camera.error.title'), t('camera.error.noAccess'));
             }
         };
 
@@ -113,7 +115,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                 console.log('Web: Capturing frame from webcam...');
                 base64Data = captureWebFrame();
                 if (!base64Data) {
-                    throw new Error('Không thể chụp ảnh từ webcam. Hãy đảm bảo camera đang hoạt động.');
+                    throw new Error(t('camera.error.captureWebcam'));
                 }
             } else {
                 // === NATIVE: Use ImagePicker for reliable camera ===
@@ -146,7 +148,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
             }
 
             if (!base64Data) {
-                throw new Error('Không thể đọc dữ liệu ảnh');
+                throw new Error(t('camera.error.readData'));
             }
 
             console.log('Base64 ready, length:', base64Data.length);
@@ -169,13 +171,13 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                     }
                 });
             } else {
-                Alert.alert('Lỗi', analysisResult.error || 'Không thể phân tích món ăn');
+                Alert.alert(t('common.error'), analysisResult.error || t('camera.error.analysisError'));
             }
         } catch (error) {
             console.error('Camera capture error:', error);
             Alert.alert(
-                'Lỗi chụp ảnh',
-                error instanceof Error ? error.message : 'Có lỗi xảy ra khi chụp ảnh. Vui lòng thử lại.'
+                t('camera.error.captureTitle'),
+                error instanceof Error ? error.message : t('camera.error.captureFailed')
             );
         } finally {
             setAnalyzing(false);
@@ -192,16 +194,16 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
             <Modal visible={visible} animationType="slide">
                 <View style={[camStyles.container, { justifyContent: 'center', alignItems: 'center', padding: 20 }]}>
                     <Text style={{ color: '#FFF', fontSize: 16, textAlign: 'center', marginBottom: 20 }}>
-                        Chúng tôi cần quyền truy cập camera để quét món ăn
+                        {t('camera.needPermission')}
                     </Text>
                     <TouchableOpacity
                         style={{ backgroundColor: '#2ECC71', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
                         onPress={requestPermission}
                     >
-                        <Text style={{ color: '#FFF', fontWeight: '700' }}>Cấp quyền Camera</Text>
+                        <Text style={{ color: '#FFF', fontWeight: '700' }}>{t('camera.grantPermission')}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={onClose} style={{ marginTop: 20 }}>
-                        <Text style={{ color: 'rgba(255,255,255,0.6)' }}>Quay lại</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.6)' }}>{t('common.back')}</Text>
                     </TouchableOpacity>
                 </View>
             </Modal>
@@ -239,7 +241,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                         }}
                         onMountError={(error) => {
                             console.error('Camera mount error:', error);
-                            Alert.alert('Lỗi Camera', 'Không thể khởi tạo camera. Vui lòng thử lại.');
+                            Alert.alert(t('camera.error.title'), t('camera.error.initFailed'));
                         }}
                     />
                 )}
@@ -257,8 +259,8 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                     <View style={camStyles.analyzingBanner}>
                         <Ionicons name="nutrition-outline" size={22} color="#FFF" />
                         <View>
-                            <Text style={camStyles.analyzingTitle}>Phân tích món ăn...</Text>
-                            <Text style={camStyles.analyzingDesc}>Giữ chắc điện thoại</Text>
+                            <Text style={camStyles.analyzingTitle}>{t('camera.analyzing')}</Text>
+                            <Text style={camStyles.analyzingDesc}>{t('camera.holdSteady')}</Text>
                         </View>
                     </View>
                 )}
@@ -282,7 +284,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                     <View style={camStyles.modeTabs}>
                         {modes.map(m => (
                             <TouchableOpacity key={m} style={camStyles.modeTab} onPress={() => setMode(m)}>
-                                <Text style={[camStyles.modeText, mode === m && camStyles.modeTextActive]}>{m}</Text>
+                                <Text style={[camStyles.modeText, mode === m && camStyles.modeTextActive]}>{m === 'AI Scan' ? t('camera.mode.aiScan') : t('camera.mode.barcode')}</Text>
                                 {mode === m && <View style={camStyles.modeUnderline} />}
                             </TouchableOpacity>
                         ))}

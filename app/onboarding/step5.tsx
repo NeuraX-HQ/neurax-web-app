@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { saveOnboardingData, getOnboardingData } from '../../src/store/userStore';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 const ITEM_WIDTH = 12;
 const MIN_VAL = 30;
@@ -12,6 +13,7 @@ const MAX_VAL = 200;
 
 export default function Step5() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const [weight, setWeight] = useState(65);
     const [rulerWidth, setRulerWidth] = useState(0);
     const scrollViewRef = useRef<ScrollView>(null);
@@ -71,9 +73,9 @@ export default function Step5() {
             <View style={styles.content}>
                 <View style={styles.titleRow}>
                     <Ionicons name="speedometer-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
-                    <Text style={styles.title}>Cân nặng hiện tại</Text>
+                    <Text style={styles.title}>{t('onboarding.step5.title')}</Text>
                 </View>
-                <Text style={styles.subtitle}>Cân nặng của bạn để AI Bảo tính toán chính xác nhất.</Text>
+                <Text style={styles.subtitle}>{t('onboarding.step5.subtitle')}</Text>
 
                 <View style={styles.valueContainer}>
                     <Text style={styles.value}>{weight}</Text>
@@ -134,7 +136,7 @@ export default function Step5() {
 
             <View style={styles.footer}>
                 <TouchableOpacity style={styles.button} onPress={handleNext}>
-                    <Text style={styles.buttonText}>Tiếp tục  →</Text>
+                    <Text style={styles.buttonText}>{t('onboarding.continue')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

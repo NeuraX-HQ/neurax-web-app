@@ -8,6 +8,7 @@ import { getOnboardingData, getUserData, UserData } from '../src/store/userStore
 import { Colors, Shadows } from '../src/constants/colors';
 import { ProfileIcon } from '../src/components/TabIcons';
 import Svg, { Path, Circle, Line, Polyline, Rect } from 'react-native-svg';
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 // --- Inline SVG Icons ---
 function BackArrow({ size = 22, color = Colors.primary }: { size?: number; color?: string }) {
@@ -83,6 +84,7 @@ function ChevronRight({ size = 18, color = Colors.textLight }: { size?: number; 
 
 export default function ProfileScreen() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const { logout, email } = useAuthStore();
     const [gender, setGender] = React.useState<string>('');
     const [userData, setUserData] = React.useState<UserData>({
@@ -96,7 +98,7 @@ export default function ProfileScreen() {
         waterGoal: 2500,
     });
     const [profileName, setProfileName] = React.useState('Admin');
-    const [activityLevel, setActivityLevel] = React.useState('Chưa cập nhật');
+    const [activityLevel, setActivityLevel] = React.useState('');
 
     React.useEffect(() => {
         const fetchUserData = async () => {
@@ -124,10 +126,10 @@ export default function ProfileScreen() {
     }, []);
 
     const handleSignOut = async () => {
-        Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất không?', [
-            { text: 'Hủy', style: 'cancel' },
+        Alert.alert(t('settings.logoutTitle'), t('settings.logoutMessage'), [
+            { text: t('common.cancel'), style: 'cancel' },
             {
-                text: 'Đăng xuất',
+                text: t('settings.logout'),
                 style: 'destructive',
                 onPress: async () => {
                     try {
@@ -144,23 +146,23 @@ export default function ProfileScreen() {
 
     const formatActivityLevel = (value: string) => {
         const normalized = value.toLowerCase();
-        if (normalized.includes('light')) return 'Nhẹ';
-        if (normalized.includes('moderate')) return 'Trung bình';
-        if (normalized.includes('active')) return 'Năng động';
-        if (normalized.includes('very')) return 'Rất năng động';
-        return value;
+        if (normalized.includes('light')) return t('profile.activity.light');
+        if (normalized.includes('moderate')) return t('profile.activity.moderate');
+        if (normalized.includes('active')) return t('profile.activity.active');
+        if (normalized.includes('very')) return t('profile.activity.veryActive');
+        return value || t('profile.activity.notSet');
     };
 
     const stats = [
-        { label: 'Cân nặng', value: String(userData.weight), unit: 'kg' },
-        { label: 'Mục tiêu', value: String(userData.goalWeight), unit: 'kg' },
-        { label: 'Chuỗi ngày', value: String(userData.streak), unit: '🔥' },
+        { label: t('profile.weight'), value: String(userData.weight), unit: 'kg' },
+        { label: t('profile.goal'), value: String(userData.goalWeight), unit: 'kg' },
+        { label: t('profile.streak'), value: String(userData.streak), unit: '🔥' },
     ];
 
     const accountItems = [
-        { label: 'Thông tin cá nhân', icon: <PersonIcon />, onPress: () => router.push('/profile-personal-info') },
-        { label: 'Mục tiêu sức khỏe', icon: <TargetIcon />, onPress: () => router.push('/profile-health-goal') },
-        { label: `Mức độ hoạt động: ${formatActivityLevel(activityLevel)}`, icon: <ActivityIcon />, onPress: () => router.push('/profile-activity-level') },
+        { label: t('profile.personalInfo'), icon: <PersonIcon />, onPress: () => router.push('/profile-personal-info') },
+        { label: t('profile.healthGoal'), icon: <TargetIcon />, onPress: () => router.push('/profile-health-goal') },
+        { label: `${t('profile.activityLevel')}: ${formatActivityLevel(activityLevel)}`, icon: <ActivityIcon />, onPress: () => router.push('/profile-activity-level') },
     ];
 
     return (
@@ -170,7 +172,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity style={styles.headerBtn} onPress={() => router.back()}>
                     <BackArrow />
                 </TouchableOpacity>
-                <Text style={styles.title}>Hồ sơ</Text>
+                <Text style={styles.title}>{t('profile.title')}</Text>
                 <TouchableOpacity style={styles.headerBtn}>
                     <MoreIcon />
                 </TouchableOpacity>
@@ -211,7 +213,7 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Account Section */}
-                <Text style={styles.sectionTitle}>TÀI KHOẢN</Text>
+                <Text style={styles.sectionTitle}>{t('settings.section.account')}</Text>
                 <View style={styles.menuGroup}>
                     {accountItems.map((item, idx) => (
                         <TouchableOpacity
@@ -230,23 +232,23 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Integrations Section */}
-                <Text style={styles.sectionTitle}>TÍCH HỢP</Text>
+                <Text style={styles.sectionTitle}>{t('profile.integrations')}</Text>
                 <View style={styles.menuGroup}>
                     <TouchableOpacity
                         style={styles.menuItem}
-                        onPress={() => Alert.alert('Thông báo', 'Tính năng đồng bộ ứng dụng sẽ được cập nhật sớm.')}
+                        onPress={() => Alert.alert(t('common.success'), t('profile.integrationSoon'))}
                     >
                         <View style={styles.menuIconBox}>
                             <SyncIcon />
                         </View>
-                        <Text style={styles.menuLabel}>Ứng dụng đã kết nối</Text>
-                        <Text style={styles.menuBadge}>2 đang hoạt động</Text>
+                        <Text style={styles.menuLabel}>{t('profile.connectedApps')}</Text>
+                        <Text style={styles.menuBadge}>{t('profile.activeCount', { count: 2 })}</Text>
                         <ChevronRight />
                     </TouchableOpacity>
                 </View>
 
                 {/* Preferences Section */}
-                <Text style={styles.sectionTitle}>TÙY CHỌN</Text>
+                <Text style={styles.sectionTitle}>{t('settings.section.preferences')}</Text>
                 <View style={styles.menuGroup}>
                     <TouchableOpacity style={[styles.menuItem, styles.menuItemBorder]} onPress={() => router.push('/settings')}>
                         <View style={styles.menuIconBox}>
@@ -255,7 +257,7 @@ export default function ProfileScreen() {
                                 <Path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                             </Svg>
                         </View>
-                        <Text style={styles.menuLabel}>Cài đặt</Text>
+                        <Text style={styles.menuLabel}>{t('settings.title')}</Text>
                         <ChevronRight />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/notifications')}>
@@ -265,7 +267,7 @@ export default function ProfileScreen() {
                                 <Path d="M13.73 21a2 2 0 0 1-3.46 0" />
                             </Svg>
                         </View>
-                        <Text style={styles.menuLabel}>Thông báo</Text>
+                        <Text style={styles.menuLabel}>{t('profile.notifications')}</Text>
                         <ChevronRight />
                     </TouchableOpacity>
 
@@ -277,7 +279,7 @@ export default function ProfileScreen() {
                                 <Line x1="21" y1="12" x2="9" y2="12" />
                             </Svg>
                         </View>
-                        <Text style={[styles.menuLabel, { color: '#FF4D4D' }]}>Đăng xuất</Text>
+                        <Text style={[styles.menuLabel, { color: '#FF4D4D' }]}>{t('settings.logout')}</Text>
                         <ChevronRight color="#FF4D4D" />
                     </TouchableOpacity>
                 </View>

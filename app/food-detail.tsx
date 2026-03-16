@@ -11,19 +11,21 @@ import { Colors, Shadows } from '../src/constants/colors';
 import { useMealStore, MealType } from '../src/store/mealStore';
 import { NutritionInfo } from '../src/services/geminiService';
 import * as FileSystem from 'expo-file-system/legacy';
-
-const MEAL_TYPES: { value: MealType; label: string; emoji: string; color: string }[] = [
-    { value: 'BREAKFAST', label: 'Bữa sáng', emoji: '🌅', color: '#FFB84D' },
-    { value: 'LUNCH', label: 'Bữa trưa', emoji: '☀️', color: '#FF9500' },
-    { value: 'DINNER', label: 'Bữa tối', emoji: '🌙', color: '#5856D6' },
-    { value: 'SNACK', label: 'Bữa phụ', emoji: '🍪', color: '#34C759' },
-];
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function FoodDetailScreen() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
     const addMeal = useMealStore(state => state.addMeal);
+
+    const mealTypes: { value: MealType; label: string; emoji: string; color: string }[] = [
+        { value: 'BREAKFAST', label: t('foodDetail.mealType.breakfast'), emoji: '🌅', color: '#FFB84D' },
+        { value: 'LUNCH', label: t('foodDetail.mealType.lunch'), emoji: '☀️', color: '#FF9500' },
+        { value: 'DINNER', label: t('foodDetail.mealType.dinner'), emoji: '🌙', color: '#5856D6' },
+        { value: 'SNACK', label: t('foodDetail.mealType.snack'), emoji: '🍪', color: '#34C759' },
+    ];
 
     const [showMealTypeModal, setShowMealTypeModal] = useState(false);
     const [selectedMealType, setSelectedMealType] = useState<MealType>('LUNCH');
@@ -52,12 +54,12 @@ export default function FoodDetailScreen() {
         return (
             <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
                 <View style={styles.errorContainer}>
-                    <Text style={styles.errorText}>Không có dữ liệu món ăn</Text>
+                    <Text style={styles.errorText}>{t('foodDetail.noData')}</Text>
                     <TouchableOpacity
                         style={styles.backButton}
                         onPress={() => router.back()}
                     >
-                        <Text style={styles.backButtonText}>Quay lại</Text>
+                        <Text style={styles.backButtonText}>{t('common.back')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -99,7 +101,7 @@ export default function FoodDetailScreen() {
             // Navigate back to home
             router.replace('/(tabs)/home');
         } catch (error) {
-            Alert.alert('Lỗi', 'Không thể thêm món ăn');
+            Alert.alert(t('common.error'), t('foodDetail.addMealError'));
         } finally {
             setIsAdding(false);
         }
@@ -136,7 +138,7 @@ export default function FoodDetailScreen() {
         return '🍽️';
     };
 
-    const selectedMealTypeData = MEAL_TYPES.find(t => t.value === selectedMealType);
+    const selectedMealTypeData = mealTypes.find(type => type.value === selectedMealType);
 
     return (
         <View style={styles.container}>
@@ -177,7 +179,7 @@ export default function FoodDetailScreen() {
                 <View style={styles.nutritionSection}>
                     <View style={styles.nutritionHeader}>
                         <View>
-                            <Text style={styles.totalEnergyLabel}>Tổng năng lượng</Text>
+                            <Text style={styles.totalEnergyLabel}>{t('foodDetail.totalEnergy')}</Text>
                             <View style={styles.calorieRow}>
                                 <Text style={styles.calorieValueLarge}>{Math.round(foodData.calories * portionCount)}</Text>
                                 <Text style={styles.calorieUnit}>kcal</Text>
@@ -185,21 +187,21 @@ export default function FoodDetailScreen() {
                         </View>
                         <View style={styles.macrosColumn}>
                             <View style={styles.macroRowCompact}>
-                                <Text style={styles.macroLabel}>Đạm</Text>
+                                <Text style={styles.macroLabel}>{t('foodDetail.protein')}</Text>
                                 <View style={styles.macroBar}>
                                     <View style={[styles.macroBarFill, { width: '60%', backgroundColor: '#FF6B6B' }]} />
                                 </View>
                                 <Text style={styles.macroValue}>{Math.round(foodData.protein * portionCount)}g</Text>
                             </View>
                             <View style={styles.macroRowCompact}>
-                                <Text style={styles.macroLabel}>Carb</Text>
+                                <Text style={styles.macroLabel}>{t('foodDetail.carbs')}</Text>
                                 <View style={styles.macroBar}>
                                     <View style={[styles.macroBarFill, { width: '80%', backgroundColor: '#FFA500' }]} />
                                 </View>
                                 <Text style={styles.macroValue}>{Math.round(foodData.carbs * portionCount)}g</Text>
                             </View>
                             <View style={styles.macroRowCompact}>
-                                <Text style={styles.macroLabel}>Béo</Text>
+                                <Text style={styles.macroLabel}>{t('foodDetail.fat')}</Text>
                                 <View style={styles.macroBar}>
                                     <View style={[styles.macroBarFill, { width: '40%', backgroundColor: '#FFD700' }]} />
                                 </View>
@@ -212,9 +214,9 @@ export default function FoodDetailScreen() {
                 {/* Portion Size */}
                 <View style={styles.portionSection}>
                     <View style={styles.portionHeader}>
-                        <Text style={styles.portionTitle}>Khẩu phần</Text>
+                        <Text style={styles.portionTitle}>{t('foodDetail.portion')}</Text>
                         <TouchableOpacity>
-                            <Text style={styles.editWeight}>Chỉnh khối lượng</Text>
+                            <Text style={styles.editWeight}>{t('foodDetail.editWeight')}</Text>
                         </TouchableOpacity>
                     </View>
                     <View style={styles.portionControls}>
@@ -246,9 +248,9 @@ export default function FoodDetailScreen() {
                         <Text style={styles.aiEmoji}>🤖</Text>
                     </View>
                     <View style={styles.aiContent}>
-                        <Text style={styles.aiTitle}>AI Bảo gợi ý</Text>
+                        <Text style={styles.aiTitle}>{t('foodDetail.aiSuggestionTitle')}</Text>
                         <Text style={styles.aiText}>
-                            Lựa chọn rất tốt! <Text style={styles.aiBold}>{foodData.name}</Text> giàu đạm, hỗ trợ mục tiêu tăng cơ của bạn.
+                            {t('foodDetail.aiSuggestionText', { foodName: foodData.name })}
                         </Text>
                     </View>
                 </View>
@@ -259,14 +261,14 @@ export default function FoodDetailScreen() {
                         <View style={styles.sourceBadge}>
                             <Ionicons name="server-outline" size={14} color="#10B981" />
                             <Text style={styles.sourceBadgeText}>
-                                {foodData.db_match_count || 0} từ DB
+                                {t('foodDetail.dbMatches', { count: foodData.db_match_count || 0 })}
                             </Text>
                         </View>
                         {(foodData.ai_fallback_count || 0) > 0 && (
                             <View style={[styles.sourceBadge, styles.sourceBadgeAI]}>
                                 <Ionicons name="sparkles" size={14} color="#F59E0B" />
                                 <Text style={[styles.sourceBadgeText, { color: '#92400E' }]}>
-                                    {foodData.ai_fallback_count} AI ước tính
+                                    {t('foodDetail.aiEstimated', { count: foodData.ai_fallback_count || 0 })}
                                 </Text>
                             </View>
                         )}
@@ -277,10 +279,10 @@ export default function FoodDetailScreen() {
                 {foodData.ingredients && foodData.ingredients.length > 0 && (
                     <View style={styles.ingredientsSection}>
                         <View style={styles.ingredientsHeader}>
-                            <Text style={styles.ingredientsTitle}>Thành phần</Text>
+                            <Text style={styles.ingredientsTitle}>{t('foodDetail.ingredients')}</Text>
                             <TouchableOpacity style={styles.editButton} onPress={handleEditIngredients}>
                                 <Ionicons name="create-outline" size={18} color="#666" />
-                                <Text style={styles.editButtonText}>Sửa</Text>
+                                <Text style={styles.editButtonText}>{t('foodDetail.edit')}</Text>
                             </TouchableOpacity>
                         </View>
                         <View style={styles.ingredientsList}>
@@ -325,14 +327,14 @@ export default function FoodDetailScreen() {
             <View style={[styles.bottomButtons, { paddingBottom: Math.max(insets.bottom, 24) }]}>
                 <TouchableOpacity style={styles.fridgeButton} onPress={handleAddToFridge}>
                     <Ionicons name="cube-outline" size={20} color="#111827" />
-                    <Text style={styles.fridgeButtonText}>Thêm vào tủ lạnh</Text>
+                    <Text style={styles.fridgeButtonText}>{t('foodDetail.addToFridge')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={styles.logButton}
                     onPress={() => setShowMealTypeModal(true)}
                 >
                     <Ionicons name="checkmark" size={20} color="#FFF" />
-                    <Text style={styles.logButtonText}>Ghi bữa ăn</Text>
+                    <Text style={styles.logButtonText}>{t('foodDetail.logMeal')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -346,14 +348,14 @@ export default function FoodDetailScreen() {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Chọn bữa ăn</Text>
+                            <Text style={styles.modalTitle}>{t('foodDetail.selectMealType')}</Text>
                             <TouchableOpacity onPress={() => setShowMealTypeModal(false)}>
                                 <Ionicons name="close" size={24} color="#666" />
                             </TouchableOpacity>
                         </View>
                         
                         <View style={styles.mealTypeGrid}>
-                            {MEAL_TYPES.map((type) => (
+                            {mealTypes.map((type) => (
                                 <TouchableOpacity
                                     key={type.value}
                                     style={[
@@ -377,7 +379,7 @@ export default function FoodDetailScreen() {
                             disabled={isAdding}
                         >
                             <Text style={styles.confirmButtonText}>
-                                {isAdding ? 'Đang thêm...' : 'Xác nhận ghi bữa'}
+                                {isAdding ? t('foodDetail.adding') : t('foodDetail.confirmLogMeal')}
                             </Text>
                         </TouchableOpacity>
                     </View>

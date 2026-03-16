@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../constants/colors';
+import { useAppLanguage } from '../i18n/LanguageProvider';
 
 interface CalorieGaugeProps {
     current: number;
@@ -11,6 +12,7 @@ interface CalorieGaugeProps {
 }
 
 export function CalorieGauge({ current, max, size = 120, strokeWidth = 10 }: CalorieGaugeProps) {
+    const { t } = useAppLanguage();
     const radius = (size - strokeWidth) / 2;
     const cx = size / 2;
     const cy = size / 2;
@@ -72,7 +74,7 @@ export function CalorieGauge({ current, max, size = 120, strokeWidth = 10 }: Cal
             <View style={styles.center}>
                 <Text style={styles.fireEmoji}>🔥</Text>
                 <Text style={styles.value}>{current}</Text>
-                <Text style={styles.label}>CALORIES</Text>
+                <Text style={styles.label}>{t('calorieGauge.label')}</Text>
             </View>
         </View>
     );

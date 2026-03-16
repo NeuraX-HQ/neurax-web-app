@@ -4,9 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '../src/constants/colors';
 import { drinkTypes } from '../src/data/mockData';
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function AddHydrationScreen() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const [selectedDrink, setSelectedDrink] = useState('water');
     const [amount, setAmount] = useState(200);
 
@@ -20,7 +22,7 @@ export default function AddHydrationScreen() {
                 <TouchableOpacity onPress={() => router.back()}>
                     <Text style={styles.backArrow}>←</Text>
                 </TouchableOpacity>
-                <Text style={styles.title}>Add Hydration</Text>
+                <Text style={styles.title}>{t('addHydration.title')}</Text>
                 <View style={{ width: 24 }} />
             </View>
 
@@ -34,7 +36,7 @@ export default function AddHydrationScreen() {
                     >
                         <Text style={styles.drinkEmoji}>{drink.emoji}</Text>
                         <Text style={[styles.drinkLabel, selectedDrink === drink.id && styles.drinkLabelSelected]}>
-                            {drink.label}
+                            {t(`addHydration.drink.${drink.id}`)}
                         </Text>
                     </TouchableOpacity>
                 ))}
@@ -95,7 +97,7 @@ export default function AddHydrationScreen() {
             {/* Add Button */}
             <View style={styles.footer}>
                 <TouchableOpacity style={styles.addBtn} onPress={() => router.back()}>
-                    <Text style={styles.addBtnText}>Add Drink  💧</Text>
+                    <Text style={styles.addBtnText}>{t('addHydration.addDrink')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

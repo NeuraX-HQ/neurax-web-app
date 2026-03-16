@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 import { signIn, fetchAuthSession, signInWithRedirect } from "aws-amplify/auth";
 import { useAuthStore } from '../src/store/authStore';
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 const MOCK_LOGIN = {
     email: 'demo@neurax.app',
@@ -28,6 +29,7 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
 export default function LoginScreen() {
 
     const router = useRouter();
+    const { t } = useAppLanguage();
     const { login } = useAuthStore();
 
     const [email, setEmail] = useState("");
@@ -91,11 +93,11 @@ export default function LoginScreen() {
         <View style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
 
-                <Text style={styles.title}>Login</Text>
+                <Text style={styles.title}>{t('login.title')}</Text>
 
                 <TextInput
                     style={styles.input}
-                    placeholder="Email"
+                    placeholder={t('login.email')}
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
@@ -103,14 +105,14 @@ export default function LoginScreen() {
 
                 <TextInput
                     style={styles.input}
-                    placeholder="Password"
+                    placeholder={t('login.password')}
                     secureTextEntry
                     value={password}
                     onChangeText={setPassword}
                 />
 
                 <Text style={styles.mockHint}>
-                    Demo login: {MOCK_LOGIN.email} / {MOCK_LOGIN.password}
+                    {t('login.demoHint', { email: MOCK_LOGIN.email, password: MOCK_LOGIN.password })}
                 </Text>
 
                 <TouchableOpacity
@@ -119,13 +121,13 @@ export default function LoginScreen() {
                     disabled={loading}
                 >
                     <Text style={styles.buttonText}>
-                        {loading ? "Signing in..." : "Sign In"}
+                        {loading ? t('login.signingIn') : t('login.signIn')}
                     </Text>
                 </TouchableOpacity>
 
                 <View style={styles.dividerContainer}>
                     <View style={styles.divider} />
-                    <Text style={styles.dividerText}>OR</Text>
+                    <Text style={styles.dividerText}>{t('login.or')}</Text>
                     <View style={styles.divider} />
                 </View>
 
@@ -137,13 +139,13 @@ export default function LoginScreen() {
                     <View style={styles.googleIcon}>
                         <GoogleIcon size={24} />
                     </View>
-                    <Text style={styles.googleButtonText}>Sign in with Google</Text>
+                    <Text style={styles.googleButtonText}>{t('login.google')}</Text>
                 </TouchableOpacity>
 
                 <View style={styles.footerContainer}>
-                    <Text style={styles.footerText}>Chưa có tài khoản? </Text>
+                    <Text style={styles.footerText}>{t('login.noAccount')} </Text>
                     <TouchableOpacity onPress={() => router.push('/signup')}>
-                        <Text style={styles.footerLink}>Đăng ký ngay</Text>
+                        <Text style={styles.footerLink}>{t('login.signUpNow')}</Text>
                     </TouchableOpacity>
                 </View>
 

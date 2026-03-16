@@ -6,10 +6,16 @@ import { Colors } from '../src/constants/colors';
 import { getOnboardingData, saveOnboardingData } from '../src/store/userStore';
 import { goals } from '../src/data/mockData';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function ProfileHealthGoalScreen() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const [selected, setSelected] = useState('');
+
+    const getGoalLabel = (id: string) => {
+        return t(`profile.goalOption.${id}`);
+    };
 
     useEffect(() => {
         const loadData = async () => {
@@ -33,16 +39,16 @@ export default function ProfileHealthGoalScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={22} color={Colors.primary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Mục tiêu sức khỏe</Text>
+                <Text style={styles.headerTitle}>{t('profile.healthGoal')}</Text>
                 <View style={styles.headerSpacer} />
             </View>
 
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.titleRow}>
                     <Ionicons name="flag-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
-                    <Text style={styles.title}>Mục tiêu của bạn là gì?</Text>
+                    <Text style={styles.title}>{t('profile.hg.title')}</Text>
                 </View>
-                <Text style={styles.subtitle}>Chúng mình sẽ điều chỉnh kế hoạch dinh dưỡng dựa trên mục tiêu này.</Text>
+                <Text style={styles.subtitle}>{t('profile.hg.subtitle')}</Text>
 
                 {goals.map((goal) => (
                     <TouchableOpacity
@@ -57,7 +63,7 @@ export default function ProfileHealthGoalScreen() {
                                 color={selected === goal.id ? '#FFFFFF' : Colors.primary}
                             />
                         </View>
-                        <Text style={[styles.optionText, selected === goal.id && styles.optionTextSelected]}>{goal.label}</Text>
+                        <Text style={[styles.optionText, selected === goal.id && styles.optionTextSelected]}>{getGoalLabel(goal.id)}</Text>
                         <View style={[styles.radio, selected === goal.id && styles.radioSelected]}>
                             {selected === goal.id && <View style={styles.radioDot} />}
                         </View>
@@ -73,7 +79,7 @@ export default function ProfileHealthGoalScreen() {
                     onPress={handleSave}
                     disabled={!selected}
                 >
-                    <Text style={styles.buttonText}>Lưu thay đổi</Text>
+                    <Text style={styles.buttonText}>{t('profile.saveChanges')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

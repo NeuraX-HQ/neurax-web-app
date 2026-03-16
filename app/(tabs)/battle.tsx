@@ -1,23 +1,56 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable, Animated, Easing } from 'react-native';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable, Animated, Easing, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadows } from '../../src/constants/colors';
 import { mockLeaderboard } from '../../src/data/mockData';
-import Svg, { Path, Circle, Line } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
-type SortMode = 'streak' | 'petScore';
+const CHIBI_DRAGON_MODEL_URL =
+    'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DragonAttenuation/glTF-Binary/DragonAttenuation.glb';
 
-function SortIcon({ size = 20, color = '#000' }: { size?: number; color?: string }) {
+let WebCanvas: any = null;
+let WebUseFrame: any = null;
+let WebUseGLTF: any = null;
+let WebEnvironment: any = null;
+
+if (Platform.OS === 'web') {
+    try {
+        const fiber = require('@react-three/fiber');
+        const drei = require('@react-three/drei');
+        WebCanvas = fiber.Canvas;
+        WebUseFrame = fiber.useFrame;
+        WebUseGLTF = drei.useGLTF;
+        WebEnvironment = drei.Environment;
+    } catch (error) {
+        console.warn('3D modules not available on this platform/build:', error);
+    }
+}
+
+function DragonModelWeb({ scaleFactor }: { scaleFactor: number }) {
+    const groupRef = useRef<any>(null);
+    const model = WebUseGLTF ? WebUseGLTF(CHIBI_DRAGON_MODEL_URL) : null;
+    const clonedScene = useMemo(() => (model?.scene ? model.scene.clone() : null), [model?.scene]);
+
+    if (WebUseFrame && groupRef.current) {
+        WebUseFrame((state: any) => {
+            const t = state.clock.getElapsedTime();
+            groupRef.current.rotation.y = t * 0.55;
+            groupRef.current.rotation.z = Math.sin(t * 2.4) * 0.06;
+            groupRef.current.position.y = Math.sin(t * 1.8) * 0.08;
+        });
+    }
+
+    if (!clonedScene) return null;
+
     return (
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <Line x1="4" y1="6" x2="13" y2="6" />
-            <Line x1="4" y1="12" x2="11" y2="12" />
-            <Line x1="4" y1="18" x2="9" y2="18" />
-            <Path d="M17 8l3 -3 3 3" />
-            <Path d="M20 5v14" />
-        </Svg>
+        <group ref={groupRef} scale={scaleFactor}>
+            <primitive object={clonedScene} />
+        </group>
     );
 }
+
+type SortMode = 'streak' | 'petScore';
 
 function ChevronDown({ size = 16, color = '#666' }: { size?: number; color?: string }) {
     return (
@@ -43,12 +76,13 @@ function ArrowDown({ size = 14, color = '#E74C3C' }: { size?: number; color?: st
     );
 }
 
-const SORT_OPTIONS: { key: SortMode; label: string; icon: string }[] = [
-    { key: 'streak', label: 'Chuỗi ngày', icon: '🔥' },
-    { key: 'petScore', label: 'Điểm nuôi dưỡng bé', icon: '🐾' },
+const SORT_OPTIONS: { key: SortMode; labelKey: string; icon: string }[] = [
+    { key: 'streak', labelKey: 'battle.sort.streak', icon: '🔥' },
+    { key: 'petScore', labelKey: 'battle.sort.petScore', icon: '🐾' },
 ];
 
 export default function BattleScreen() {
+    const { t } = useAppLanguage();
     const [tab, setTab] = useState<'friends' | 'achievements'>('friends');
     const [sortMode, setSortMode] = useState<SortMode>('streak');
     const [showSortMenu, setShowSortMenu] = useState(false);
@@ -57,7 +91,6 @@ export default function BattleScreen() {
 
     const floatAnim = useState(new Animated.Value(0))[0];
     const breatheAnim = useState(new Animated.Value(0))[0];
-    const blinkAnim = useState(new Animated.Value(1))[0];
     const tailAnim = useState(new Animated.Value(0))[0];
     const celebrateAnim = useState(new Animated.Value(0))[0];
 
@@ -83,21 +116,13 @@ export default function BattleScreen() {
 
         Animated.loop(
             Animated.sequence([
-                Animated.delay(1900),
-                Animated.timing(blinkAnim, { toValue: 0.15, duration: 90, useNativeDriver: true }),
-                Animated.timing(blinkAnim, { toValue: 1, duration: 90, useNativeDriver: true }),
-            ])
-        ).start();
-
-        Animated.loop(
-            Animated.sequence([
                 Animated.timing(tailAnim, { toValue: 1, duration: 280, useNativeDriver: true }),
                 Animated.timing(tailAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
                 Animated.timing(tailAnim, { toValue: -1, duration: 280, useNativeDriver: true }),
                 Animated.timing(tailAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
             ])
         ).start();
-    }, [blinkAnim, breatheAnim, floatAnim, tailAnim]);
+    }, [breatheAnim, floatAnim, tailAnim]);
 
     const sortedData = useMemo(() => {
         const data = [...mockLeaderboard];
@@ -113,7 +138,9 @@ export default function BattleScreen() {
     const rest = sortedData.slice(3);
 
     const getDisplayScore = (user: typeof mockLeaderboard[0]) => {
-        return sortMode === 'streak' ? `${user.streak} ngày` : `${user.petScore}`;
+        return sortMode === 'streak'
+            ? t('battle.dayCount', { count: user.streak })
+            : String(user.petScore);
     };
 
     const getDisplayScoreShort = (user: typeof mockLeaderboard[0]) => {
@@ -133,6 +160,11 @@ export default function BattleScreen() {
     };
 
     const petSize = getPetSize();
+    const dragonModelScale =
+        petStreak >= 30 ? 1.45 :
+            petStreak >= 14 ? 1.2 :
+                petStreak >= 7 ? 1 :
+                    petStreak >= 3 ? 0.85 : 0.7;
     const dragonScale = breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] });
     const dragonFloat = floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -10] });
     const dragonTilt = floatAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['-2deg', '2deg', '-2deg'] });
@@ -143,23 +175,16 @@ export default function BattleScreen() {
     const milestones = [3, 7, 14, 30];
     const achievedMilestones = milestones.filter((m) => petStreak >= m).length;
     const currentBadge =
-        petStreak >= 30 ? 'Huyen thoai' :
-            petStreak >= 14 ? 'Kim cuong' :
-                petStreak >= 7 ? 'Vang' :
-                    petStreak >= 3 ? 'Bac' : 'Khoi dau';
+        petStreak >= 30 ? t('battle.badge.legendary') :
+            petStreak >= 14 ? t('battle.badge.diamond') :
+                petStreak >= 7 ? t('battle.badge.gold') :
+                    petStreak >= 3 ? t('battle.badge.silver') : t('battle.badge.starter');
 
     const playPetCelebrate = () => {
         Animated.sequence([
             Animated.timing(celebrateAnim, { toValue: 1, duration: 240, useNativeDriver: true }),
             Animated.timing(celebrateAnim, { toValue: 0, duration: 260, useNativeDriver: true }),
         ]).start();
-        setPetScore((prev) => prev + 25);
-    };
-
-    const completeDailyStreak = () => {
-        setPetStreak((prev) => prev + 1);
-        setPetScore((prev) => prev + 60);
-        playPetCelebrate();
     };
 
     const podiumColors = ['#FFF5E1', '#E8F0FE', '#FFE8E0'];
@@ -174,18 +199,18 @@ export default function BattleScreen() {
         <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.title}>Bảng xếp hạng</Text>
+                <Text style={styles.title}>{t('battle.title')}</Text>
                 {tab === 'friends' ? (
                     <TouchableOpacity
                         style={styles.sortButton}
                         onPress={() => setShowSortMenu(true)}
                     >
-                        <Text style={styles.sortButtonText}>Sắp xếp</Text>
+                        <Text style={styles.sortButtonText}>{t('battle.sortButton')}</Text>
                         <ChevronDown size={14} color={Colors.textSecondary} />
                     </TouchableOpacity>
                 ) : (
                     <View style={styles.levelPill}>
-                        <Text style={styles.levelPillText}>Lv {level}</Text>
+                        <Text style={styles.levelPillText}>{t('battle.levelShort', { level })}</Text>
                     </View>
                 )}
             </View>
@@ -196,13 +221,13 @@ export default function BattleScreen() {
                     style={[styles.tab, tab === 'friends' && styles.tabActive]}
                     onPress={() => setTab('friends')}
                 >
-                    <Text style={[styles.tabText, tab === 'friends' && styles.tabTextActive]}>Bạn bè</Text>
+                    <Text style={[styles.tabText, tab === 'friends' && styles.tabTextActive]}>{t('battle.tab.friends')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.tab, tab === 'achievements' && styles.tabActive]}
                     onPress={() => setTab('achievements')}
                 >
-                    <Text style={[styles.tabText, tab === 'achievements' && styles.tabTextActive]}>Thành tích</Text>
+                    <Text style={[styles.tabText, tab === 'achievements' && styles.tabTextActive]}>{t('battle.tab.achievements')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -216,7 +241,7 @@ export default function BattleScreen() {
                             {SORT_OPTIONS.find(o => o.key === sortMode)?.icon}
                         </Text>
                         <Text style={styles.sortBadgeText}>
-                            {SORT_OPTIONS.find(o => o.key === sortMode)?.label}
+                            {t(SORT_OPTIONS.find(o => o.key === sortMode)?.labelKey || 'battle.sort.streak')}
                         </Text>
                     </View>
                 </View>
@@ -256,8 +281,8 @@ export default function BattleScreen() {
 
                 {/* Rankings divider */}
                 <View style={styles.rankingsDivider}>
-                    <Text style={styles.rankingsLabel}>Xếp hạng</Text>
-                    <Text style={styles.rankingsTimer}>Làm mới sau 4h</Text>
+                    <Text style={styles.rankingsLabel}>{t('battle.rankings')}</Text>
+                    <Text style={styles.rankingsTimer}>{t('battle.refreshInHours', { hours: 4 })}</Text>
                 </View>
 
                 {/* Rankings List */}
@@ -274,8 +299,8 @@ export default function BattleScreen() {
                                 <Text style={styles.rankName}>{user.name}</Text>
                                 <Text style={styles.rankStreak}>
                                     {sortMode === 'streak'
-                                        ? `🔥 ${user.streak} ngày liên tiếp`
-                                        : `🐾 ${user.petScore} điểm`}
+                                        ? t('battle.streakWithEmoji', { count: user.streak })
+                                        : t('battle.petScoreWithEmoji', { score: user.petScore })}
                                 </Text>
                             </View>
                             <Text style={styles.rankScore}>{getDisplayScoreShort(user)}</Text>
@@ -309,9 +334,11 @@ export default function BattleScreen() {
                                 <Text>👤</Text>
                             </View>
                             <View style={styles.rankInfo}>
-                                <Text style={[styles.rankName, { color: Colors.accent }]}>Bạn</Text>
+                                <Text style={[styles.rankName, { color: Colors.accent }]}>{t('battle.you')}</Text>
                                 <Text style={styles.rankStreak}>
-                                    {sortMode === 'streak' ? `🔥 ${petStreak} ngày liên tiếp` : `🐾 ${petScore} điểm`}
+                                    {sortMode === 'streak'
+                                        ? t('battle.streakWithEmoji', { count: petStreak })
+                                        : t('battle.petScoreWithEmoji', { score: petScore })}
                                 </Text>
                             </View>
                             <Text style={[styles.rankScore, { color: Colors.accent }]}>
@@ -328,11 +355,11 @@ export default function BattleScreen() {
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.achievementsContent}>
                     <View style={styles.petStatRow}>
                         <View style={styles.petStatCard}>
-                            <Text style={styles.petStatLabel}>Chuỗi hiện tại</Text>
+                            <Text style={styles.petStatLabel}>{t('battle.currentStreak')}</Text>
                             <Text style={styles.petStatValue}>🔥 {petStreak}</Text>
                         </View>
                         <View style={styles.petStatCard}>
-                            <Text style={styles.petStatLabel}>Badge</Text>
+                            <Text style={styles.petStatLabel}>{t('battle.badge')}</Text>
                             <Text style={styles.petStatValue}>🏅 {currentBadge}</Text>
                         </View>
                     </View>
@@ -367,51 +394,51 @@ export default function BattleScreen() {
                             ]}
                         >
                             <Animated.View style={[styles.dragonTail, { transform: [{ rotate: tailRotate }] }]} />
-                            <Text style={[styles.dragonEmoji, { fontSize: Math.round(petSize * 0.38) }]}>🐲</Text>
-                            <View style={styles.dragonFaceRow}>
-                                <Animated.View style={[styles.dragonEye, { transform: [{ scaleY: blinkAnim }] }]} />
-                                <Animated.View style={[styles.dragonEye, { transform: [{ scaleY: blinkAnim }] }]} />
-                            </View>
+                            {Platform.OS === 'web' && WebCanvas ? (
+                                <View style={styles.dragonCanvasShell}>
+                                    <WebCanvas camera={{ position: [0, 0.9, 3.1], fov: 42 }}>
+                                        <ambientLight intensity={0.95} />
+                                        <directionalLight position={[2, 3, 2]} intensity={1.6} />
+                                        <directionalLight position={[-2, 1, -2]} intensity={0.7} />
+                                        {WebEnvironment ? <WebEnvironment preset="city" /> : null}
+                                        <DragonModelWeb scaleFactor={dragonModelScale} />
+                                    </WebCanvas>
+                                </View>
+                            ) : (
+                                <Text style={[styles.dragonEmoji, { fontSize: Math.round(petSize * 0.38) }]}>🐲</Text>
+                            )}
                         </Animated.View>
                     </View>
 
-                    <Text style={styles.petName}>Rong Chibi cua ban</Text>
-                    <Text style={styles.petDesc}>Chuoi ngay cang dai, be rong cang lon va nang cap ngoai hinh.</Text>
+                    <Text style={styles.petName}>{t('battle.petName')}</Text>
+                    <Text style={styles.petDesc}>{t('battle.petDesc')}</Text>
 
                     <View style={styles.xpCard}>
                         <View style={styles.xpTopRow}>
-                            <Text style={styles.xpTitle}>XP & Level</Text>
+                            <Text style={styles.xpTitle}>{t('battle.xpAndLevel')}</Text>
                             <Text style={styles.xpValue}>{xpInLevel}/{xpNeed} XP</Text>
                         </View>
                         <View style={styles.xpTrack}>
                             <View style={[styles.xpFill, { width: `${Math.min(100, (xpInLevel / xpNeed) * 100)}%` }]} />
                         </View>
-                        <Text style={styles.xpHint}>Con {xpNeed - xpInLevel} XP de len Level {level + 1}</Text>
+                        <Text style={styles.xpHint}>{t('battle.xpToNextLevel', { xp: xpNeed - xpInLevel, level: level + 1 })}</Text>
                     </View>
 
                     <View style={styles.milestoneCard}>
-                        <Text style={styles.milestoneTitle}>Moc lon len theo chuoi ngay</Text>
+                        <Text style={styles.milestoneTitle}>{t('battle.milestoneTitle')}</Text>
                         <View style={styles.milestoneRow}>
                             {milestones.map((m) => {
                                 const unlocked = petStreak >= m;
                                 return (
                                     <View key={m} style={[styles.milestoneChip, unlocked && styles.milestoneChipActive]}>
-                                        <Text style={[styles.milestoneText, unlocked && styles.milestoneTextActive]}>{m} ngay</Text>
+                                        <Text style={[styles.milestoneText, unlocked && styles.milestoneTextActive]}>{t('battle.dayCount', { count: m })}</Text>
                                     </View>
                                 );
                             })}
                         </View>
-                        <Text style={styles.milestoneHint}>Da mo khoa: {achievedMilestones}/4 moc</Text>
+                        <Text style={styles.milestoneHint}>{t('battle.unlockedMilestones', { unlocked: achievedMilestones, total: 4 })}</Text>
                     </View>
 
-                    <View style={styles.petActionRow}>
-                        <TouchableOpacity style={styles.petActionButton} onPress={playPetCelebrate}>
-                            <Text style={styles.petActionText}>Vuot ve +25 XP</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.petActionButton, styles.petActionButtonPrimary]} onPress={completeDailyStreak}>
-                            <Text style={[styles.petActionText, styles.petActionTextPrimary]}>Hoan thanh ngay +60 XP</Text>
-                        </TouchableOpacity>
-                    </View>
                 </ScrollView>
             )}
 
@@ -420,7 +447,7 @@ export default function BattleScreen() {
                 <Pressable style={styles.overlay} onPress={() => setShowSortMenu(false)}>
                     <View style={styles.sortMenuContainer}>
                         <View style={styles.sortMenu}>
-                            <Text style={styles.sortMenuTitle}>Sắp xếp theo</Text>
+                            <Text style={styles.sortMenuTitle}>{t('battle.sortBy')}</Text>
                             {SORT_OPTIONS.map((option) => (
                                 <TouchableOpacity
                                     key={option.key}
@@ -438,7 +465,7 @@ export default function BattleScreen() {
                                         styles.sortMenuItemText,
                                         sortMode === option.key && styles.sortMenuItemTextActive,
                                     ]}>
-                                        {option.label}
+                                        {t(option.labelKey)}
                                     </Text>
                                     {sortMode === option.key && (
                                         <View style={styles.checkCircle}>
@@ -645,6 +672,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         ...Shadows.medium,
+        overflow: 'hidden',
+    },
+    dragonCanvasShell: {
+        width: '100%',
+        height: '100%',
     },
     dragonTail: {
         position: 'absolute',
@@ -657,18 +689,6 @@ const styles = StyleSheet.create({
     },
     dragonEmoji: {
         lineHeight: 90,
-    },
-    dragonFaceRow: {
-        position: 'absolute',
-        top: '38%',
-        flexDirection: 'row',
-        gap: 18,
-    },
-    dragonEye: {
-        width: 8,
-        height: 10,
-        borderRadius: 4,
-        backgroundColor: '#111827',
     },
     petName: {
         textAlign: 'center',
@@ -735,29 +755,6 @@ const styles = StyleSheet.create({
     milestoneText: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
     milestoneTextActive: { color: Colors.accent, fontWeight: '700' },
     milestoneHint: { fontSize: 12, color: Colors.textSecondary },
-    petActionRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
-    petActionButton: {
-        flex: 1,
-        borderRadius: 12,
-        paddingVertical: 13,
-        alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        borderWidth: 1,
-        borderColor: '#D1D5DB',
-    },
-    petActionButtonPrimary: {
-        backgroundColor: '#DEF7EC',
-        borderColor: Colors.accent,
-    },
-    petActionText: {
-        color: Colors.text,
-        fontSize: 13,
-        fontWeight: '700',
-    },
-    petActionTextPrimary: {
-        color: Colors.accent,
-    },
-
     // Sort Modal
     overlay: {
         flex: 1,

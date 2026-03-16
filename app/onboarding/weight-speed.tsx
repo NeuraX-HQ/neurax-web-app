@@ -5,17 +5,19 @@ import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { saveOnboardingData, getOnboardingData } from '../../src/store/userStore';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 const speeds = [
-    { value: 0.2, label: 'Thong thả', effort: 'Dễ', icon: 'bicycle-outline', color: '#2ECC71', desc: 'Dành cho người mới bắt đầu, không quá khắt khe.' },
-    { value: 0.4, label: 'Bền vững', effort: 'Vừa', icon: 'walk-outline', color: '#4A90D9', desc: 'Tốc độ lý tưởng để duy trì thói quen lâu dài.' },
-    { value: 0.6, label: 'Cân bằng', effort: 'Trung bình', icon: 'fitness-outline', color: '#F39C12', desc: 'Sự kết hợp hoàn hảo giữa nỗ lực và kết quả.' },
-    { value: 0.8, label: 'Quyết tâm', effort: 'Khó', icon: 'trending-up-outline', color: '#E67E22', desc: 'Đòi hỏi sự kỷ luật cao trong ăn uống và tập luyện.' },
-    { value: 1.0, label: 'Cực độ', effort: 'Rất khó', icon: 'flash-outline', color: '#E74C3C', desc: 'Tốc độ nhanh nhất, yêu cầu cam kết tuyệt đối.' },
+    { value: 0.2, icon: 'bicycle-outline', color: '#2ECC71' },
+    { value: 0.4, icon: 'walk-outline', color: '#4A90D9' },
+    { value: 0.6, icon: 'fitness-outline', color: '#F39C12' },
+    { value: 0.8, icon: 'trending-up-outline', color: '#E67E22' },
+    { value: 1.0, icon: 'flash-outline', color: '#E74C3C' },
 ];
 
 export default function WeightSpeed() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const [selected, setSelected] = useState(0.4);
     const [goalType, setGoalType] = useState('');
 
@@ -53,10 +55,10 @@ export default function WeightSpeed() {
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.titleRow}>
                     <Ionicons name="speedometer-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
-                    <Text style={styles.title}>Tốc độ mục tiêu?</Text>
+                    <Text style={styles.title}>{t('onboarding.weightSpeed.title')}</Text>
                 </View>
                 <Text style={styles.subtitle}>
-                    {goalType === 'lose' ? 'Chọn mức độ nỗ lực bạn muốn bỏ ra để giảm cân.' : 'Chọn mức độ nỗ lực bạn muốn bỏ ra để tăng cân.'}
+                    {goalType === 'lose' ? t('onboarding.weightSpeed.subtitleLose') : t('onboarding.weightSpeed.subtitleGain')}
                 </Text>
 
                 <View style={styles.cardContainer}>
@@ -75,13 +77,13 @@ export default function WeightSpeed() {
 
                             <View style={styles.cardInfo}>
                                 <View style={styles.cardHeader}>
-                                    <Text style={styles.cardLabel}>{item.label}</Text>
+                                    <Text style={styles.cardLabel}>{t(`onboarding.weightSpeed.label.${item.value}`)}</Text>
                                     <View style={[styles.effortTag, { backgroundColor: item.color }]}>
-                                        <Text style={styles.effortText}>{item.effort}</Text>
+                                        <Text style={styles.effortText}>{t(`onboarding.weightSpeed.effort.${item.value}`)}</Text>
                                     </View>
                                 </View>
-                                <Text style={styles.speedValue}>{item.value.toFixed(1)} kg/tuần</Text>
-                                <Text style={styles.cardDesc}>{item.desc}</Text>
+                                <Text style={styles.speedValue}>{t('onboarding.weightSpeed.valuePerWeek', { value: item.value.toFixed(1) })}</Text>
+                                <Text style={styles.cardDesc}>{t(`onboarding.weightSpeed.desc.${item.value}`)}</Text>
                             </View>
 
                             <View style={styles.radioBox}>
@@ -101,7 +103,7 @@ export default function WeightSpeed() {
 
             <View style={styles.footer}>
                 <TouchableOpacity style={styles.button} onPress={handleNext}>
-                    <Text style={styles.buttonText}>Tiếp tục  →</Text>
+                    <Text style={styles.buttonText}>{t('onboarding.continue')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

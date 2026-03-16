@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityInd
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { confirmSignUp, resendSignUpCode } from "aws-amplify/auth";
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function VerifyOtpScreen() {
     const router = useRouter();
     const params = useLocalSearchParams();
+    const { t } = useAppLanguage();
     const email = params.email as string;
 
     const [code, setCode] = useState("");
@@ -15,7 +17,7 @@ export default function VerifyOtpScreen() {
 
     const handleVerify = async () => {
         if (!code) {
-            Alert.alert("Lỗi", "Vui lòng nhập mã xác nhận.");
+            Alert.alert(t('common.error'), t('verify.errorEmpty'));
             return;
         }
 
@@ -28,13 +30,13 @@ export default function VerifyOtpScreen() {
             });
 
             if (isSignUpComplete) {
-                Alert.alert("Thành công", "Xác thực thành công! Vui lòng đăng nhập.");
+                Alert.alert(t('common.success'), t('verify.success'));
                 router.replace('/login');
             }
 
         } catch (error: any) {
             console.log("Verify error:", error);
-            Alert.alert("Lỗi xác thực", error.message || "Mã không hợp lệ hoặc đã hết hạn.");
+            Alert.alert(t('verify.errorTitle'), error.message || t('verify.errorFallback'));
         } finally {
             setLoading(false);
         }
@@ -44,10 +46,10 @@ export default function VerifyOtpScreen() {
         try {
             setResendLoading(true);
             await resendSignUpCode({ username: email });
-            Alert.alert("Thành công", "Đã gửi lại mã xác nhận qua email.");
+            Alert.alert(t('common.success'), t('verify.resendSuccess'));
         } catch (error: any) {
             console.log("Resend code error:", error);
-            Alert.alert("Lỗi", error.message || "Không thể gửi lại mã vào lúc này.");
+            Alert.alert(t('common.error'), error.message || t('verify.resendError'));
         } finally {
             setResendLoading(false);
         }
@@ -57,15 +59,15 @@ export default function VerifyOtpScreen() {
         <View style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
 
-                <Text style={styles.title}>Xác thực Email</Text>
+                <Text style={styles.title}>{t('verify.title')}</Text>
                 <Text style={styles.subtitle}>
-                    Chúng tôi đã gửi mã gồm 6 chữ số tới email:{"\n"}
+                    {t('verify.subtitle')}{"\n"}
                     <Text style={{ fontWeight: 'bold' }}>{email}</Text>
                 </Text>
 
                 <TextInput
                     style={styles.input}
-                    placeholder="Nhập mã xác nhận (Ví dụ: 123456)"
+                    placeholder={t('verify.placeholder')}
                     value={code}
                     onChangeText={setCode}
                     keyboardType="number-pad"
@@ -80,7 +82,7 @@ export default function VerifyOtpScreen() {
                     {loading ? (
                         <ActivityIndicator color="white" />
                     ) : (
-                        <Text style={styles.buttonText}>Xác thực</Text>
+                        <Text style={styles.buttonText}>{t('verify.button')}</Text>
                     )}
                 </TouchableOpacity>
 
@@ -92,7 +94,7 @@ export default function VerifyOtpScreen() {
                     {resendLoading ? (
                         <ActivityIndicator color="#1E2B22" size="small" />
                     ) : (
-                        <Text style={styles.resendText}>Chưa nhận được mã? Gửi lại</Text>
+                        <Text style={styles.resendText}>{t('verify.resend')}</Text>
                     )}
                 </TouchableOpacity>
 

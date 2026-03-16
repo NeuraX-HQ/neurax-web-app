@@ -15,12 +15,16 @@ import { useAuthStore } from '../../src/store/authStore';
 import { VoiceModal } from '../../src/components/VoiceModal';
 import { CameraScannerWithLoading } from '../../src/components/CameraScannerWithLoading';
 import { SearchScanner } from '../../src/components/SearchScanner';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
-const WEEKDAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const WEEKDAY_LABELS_BY_LANG: Record<'vi' | 'en', string[]> = {
+    vi: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'],
+    en: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+};
 const ADD_MEAL_METHODS = [
-    { id: 'voice', icon: 'mic-outline', label: 'Giọng nói', desc: 'Nói tên món ăn' },
-    { id: 'camera', icon: 'camera-outline', label: 'Chụp hình', desc: 'AI Scan • Barcode' },
-    { id: 'search', icon: 'search-outline', label: 'Tìm kiếm', desc: 'Tìm món ăn' },
+    { id: 'voice', icon: 'mic-outline', labelKey: 'tabs.voice', descKey: 'tabs.voiceDesc' },
+    { id: 'camera', icon: 'camera-outline', labelKey: 'tabs.camera', descKey: 'tabs.cameraDesc' },
+    { id: 'search', icon: 'search-outline', labelKey: 'tabs.search', descKey: 'tabs.searchDesc' },
 ] as const;
 
 const toIsoDate = (date: Date) => {
@@ -39,6 +43,9 @@ const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(
 
 export default function HomeScreen() {
     const router = useRouter();
+    const { t, language } = useAppLanguage();
+    const locale = language === 'vi' ? 'vi-VN' : 'en-US';
+    const weekdayLabels = WEEKDAY_LABELS_BY_LANG[language];
     const todayIso = useMemo(() => toIsoDate(new Date()), []);
 
     const [refreshing, setRefreshing] = useState(false);
@@ -69,8 +76,8 @@ export default function HomeScreen() {
 
     const selectedDate = useMemo(() => fromIsoDate(selectedDateStr), [selectedDateStr]);
     const monthName = useMemo(
-        () => selectedDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }).toUpperCase(),
-        [selectedDate]
+        () => selectedDate.toLocaleDateString(locale, { month: 'short', year: 'numeric' }).toUpperCase(),
+        [locale, selectedDate]
     );
 
     const displayedDateLabel = useMemo(() => {
@@ -79,13 +86,20 @@ export default function HomeScreen() {
             month: 'short',
             day: 'numeric',
         });
-    }, [selectedDate]);
+    }, [locale, selectedDate]);
 
     const greetingName = useMemo(() => {
-        if (!userEmail) return 'there';
+        if (!userEmail) return t('home.greetingFallback');
         const localPart = userEmail.split('@')[0];
-        return localPart || 'there';
-    }, [userEmail]);
+        return localPart || t('home.greetingFallback');
+    }, [t, userEmail]);
+
+    const mealTypeLabel = (type: Meal['type']) => {
+        if (type === 'BREAKFAST') return t('home.mealType.breakfast');
+        if (type === 'LUNCH') return t('home.mealType.lunch');
+        if (type === 'DINNER') return t('home.mealType.dinner');
+        return t('home.mealType.snack');
+    };
 
     const swipeableRefs = useRef(new Map<string, any>());
     const openMealIdRef = useRef<string | null>(null);
@@ -248,11 +262,11 @@ export default function HomeScreen() {
 
     const confirmDelete = (mealId: string, mealName: string) => {
         Alert.alert(
-            'Xóa món ăn',
-            `Bạn có chắc chắn muốn xóa "${mealName}" khỏi nhật ký không?`,
+            t('home.deleteMealTitle'),
+            t('home.deleteMealMessage', { mealName }),
             [
-                { text: 'Hủy', style: 'cancel' },
-                { text: 'Xóa', style: 'destructive', onPress: () => removeMeal(mealId) },
+                { text: t('common.cancel'), style: 'cancel' },
+                { text: t('home.delete'), style: 'destructive', onPress: () => removeMeal(mealId) },
             ]
         );
     };
@@ -347,7 +361,7 @@ export default function HomeScreen() {
                             )}
                             <View style={styles.statusDot} />
                         </TouchableOpacity>
-                        <Text style={styles.greeting}>Hi {greetingName}!</Text>
+                        <Text style={styles.greeting}>{t('home.greeting', { name: greetingName })}</Text>
                     </View>
                     <View style={styles.headerRight}>
                         <TouchableOpacity onPress={withAutoClose(() => router.push('/notifications'))}>
@@ -371,7 +385,7 @@ export default function HomeScreen() {
                         <Text style={styles.monthText}>{monthName} ▾</Text>
                     </TouchableOpacity>
                     <View style={styles.streakBadge}>
-                        <Text style={styles.streakText}>14 days 🔥</Text>
+                        <Text style={styles.streakText}>{t('home.streakDays', { count: 14 })} 🔥</Text>
                     </View>
                 </View>
 
@@ -400,7 +414,7 @@ export default function HomeScreen() {
                                 onPress={withAutoClose(() => setSelectedDateStr(item.iso))}
                             >
                                 <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected, !isSelected && isPast && styles.dayTextPast]}>
-                                    {WEEKDAY_LABELS[item.weekdayIndex]}
+                                    {weekdayLabels[item.weekdayIndex]}
                                 </Text>
                                 <Text style={[styles.dayDate, isSelected && styles.dayDateSelected, !isSelected && isPast && styles.dayTextPast]}>
                                     {item.day}
@@ -419,7 +433,7 @@ export default function HomeScreen() {
                                 <Text style={styles.macroEmoji}>🥩</Text>
                                 <View style={styles.macroInfo}>
                                     <View style={styles.macroHeader}>
-                                        <Text style={styles.macroName}>Protein</Text>
+                                        <Text style={styles.macroName}>{t('home.protein')}</Text>
                                         <Text style={styles.macroValue}>{protein.current}/{protein.max}g</Text>
                                     </View>
                                     <View style={styles.macroBarBg}>
@@ -431,7 +445,7 @@ export default function HomeScreen() {
                                 <Text style={styles.macroEmoji}>🍞</Text>
                                 <View style={styles.macroInfo}>
                                     <View style={styles.macroHeader}>
-                                        <Text style={styles.macroName}>Carbs</Text>
+                                        <Text style={styles.macroName}>{t('home.carbs')}</Text>
                                         <Text style={styles.macroValue}>{carbs.current}/{carbs.max}g</Text>
                                     </View>
                                     <View style={styles.macroBarBg}>
@@ -443,7 +457,7 @@ export default function HomeScreen() {
                                 <Text style={styles.macroEmoji}>🧀</Text>
                                 <View style={styles.macroInfo}>
                                     <View style={styles.macroHeader}>
-                                        <Text style={styles.macroName}>Fat</Text>
+                                        <Text style={styles.macroName}>{t('home.fat')}</Text>
                                         <Text style={styles.macroValue}>{fat.current}/{fat.max}g</Text>
                                     </View>
                                     <View style={styles.macroBarBg}>
@@ -460,7 +474,7 @@ export default function HomeScreen() {
                     <View style={styles.waterRow}>
                         <Text style={styles.waterIcon}>💧</Text>
                         <View style={styles.waterInfo}>
-                            <Text style={styles.waterTitle}>Water Intake</Text>
+                            <Text style={styles.waterTitle}>{t('home.waterIntake')}</Text>
                             <View style={styles.waterBarBg}>
                                 <View style={[styles.waterBar, { width: `${(waterCurrent / waterMax) * 100}%` }]} />
                             </View>
@@ -480,9 +494,9 @@ export default function HomeScreen() {
                     <View style={styles.exerciseRow}>
                         <Text style={styles.exerciseIcon}>🏃</Text>
                         <View style={styles.exerciseInfo}>
-                            <Text style={styles.exerciseTitle}>Exercise</Text>
+                            <Text style={styles.exerciseTitle}>{t('home.exercise')}</Text>
                         </View>
-                        <Text style={styles.exerciseValue}>{exerciseMinutes} / 45 min</Text>
+                        <Text style={styles.exerciseValue}>{exerciseMinutes} / 45 {t('home.min')}</Text>
                         <View style={styles.exerciseArrow}>
                             <Text style={styles.exerciseArrowText}>›</Text>
                         </View>
@@ -491,13 +505,13 @@ export default function HomeScreen() {
 
                 {/* Today's Meals */}
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Meals</Text>
-                    <Text style={styles.sectionSubtitle}>{Math.round(stats.totalCalories)} kcal total</Text>
+                    <Text style={styles.sectionTitle}>{t('home.meals')}</Text>
+                    <Text style={styles.sectionSubtitle}>{Math.round(stats.totalCalories)} {t('home.kcalTotal')}</Text>
                 </View>
 
                 {/* Breakfast Section */}
                 <View style={styles.mealSection}>
-                    <Text style={styles.mealSectionLabel}>BREAKFAST</Text>
+                    <Text style={styles.mealSectionLabel}>{mealTypeLabel('BREAKFAST')}</Text>
                     {getMealsByType('BREAKFAST').length > 0 && (
                         <Text style={styles.mealSectionCalories}>
                             {getMealsByType('BREAKFAST').reduce((sum, m) => sum + m.calories, 0)} kcal
@@ -510,13 +524,13 @@ export default function HomeScreen() {
                         style={[styles.logMealCard, Shadows.small]}
                         onPress={withAutoClose(openAddMethod)}
                     >
-                        <Text style={styles.logMealText}>+ Log breakfast</Text>
+                        <Text style={styles.logMealText}>{t('home.logMeal.breakfast')}</Text>
                     </TouchableOpacity>
                 )}
 
                 {/* Lunch Section */}
                 <View style={styles.mealSection}>
-                    <Text style={styles.mealSectionLabel}>LUNCH</Text>
+                    <Text style={styles.mealSectionLabel}>{mealTypeLabel('LUNCH')}</Text>
                     {getMealsByType('LUNCH').length > 0 && (
                         <Text style={styles.mealSectionCalories}>
                             {getMealsByType('LUNCH').reduce((sum, m) => sum + m.calories, 0)} kcal
@@ -529,13 +543,13 @@ export default function HomeScreen() {
                         style={[styles.logMealCard, Shadows.small]}
                         onPress={withAutoClose(openAddMethod)}
                     >
-                        <Text style={styles.logMealText}>+ Log lunch</Text>
+                        <Text style={styles.logMealText}>{t('home.logMeal.lunch')}</Text>
                     </TouchableOpacity>
                 )}
 
                 {/* Dinner Section */}
                 <View style={styles.mealSection}>
-                    <Text style={styles.mealSectionLabel}>DINNER</Text>
+                    <Text style={styles.mealSectionLabel}>{mealTypeLabel('DINNER')}</Text>
                     {getMealsByType('DINNER').length > 0 && (
                         <Text style={styles.mealSectionCalories}>
                             {getMealsByType('DINNER').reduce((sum, m) => sum + m.calories, 0)} kcal
@@ -548,13 +562,13 @@ export default function HomeScreen() {
                         style={[styles.logMealCard, Shadows.small]}
                         onPress={withAutoClose(openAddMethod)}
                     >
-                        <Text style={styles.logMealText}>+ Log dinner</Text>
+                        <Text style={styles.logMealText}>{t('home.logMeal.dinner')}</Text>
                     </TouchableOpacity>
                 )}
 
                 {/* Snack Section */}
                 <View style={styles.mealSection}>
-                    <Text style={styles.mealSectionLabel}>SNACK</Text>
+                    <Text style={styles.mealSectionLabel}>{mealTypeLabel('SNACK')}</Text>
                     {getMealsByType('SNACK').length > 0 && (
                         <Text style={styles.mealSectionCalories}>
                             {getMealsByType('SNACK').reduce((sum, m) => sum + m.calories, 0)} kcal
@@ -567,7 +581,7 @@ export default function HomeScreen() {
                         style={[styles.logMealCard, Shadows.small]}
                         onPress={withAutoClose(openAddMethod)}
                     >
-                        <Text style={styles.logMealText}>+ Log snack</Text>
+                        <Text style={styles.logMealText}>{t('home.logMeal.snack')}</Text>
                     </TouchableOpacity>
                 )}
 
@@ -599,7 +613,7 @@ export default function HomeScreen() {
                                 ]}
                             >
                                 <View style={styles.addMethodHeader}>
-                                    <Text style={styles.addMethodTitle}>Chọn cách thêm món ăn</Text>
+                                    <Text style={styles.addMethodTitle}>{t('tabs.addFoodMethodTitle')}</Text>
                                     <TouchableOpacity onPress={closeAddMethod} style={styles.addMethodCloseBtn}>
                                         <Ionicons name="close" size={18} color="#666" />
                                     </TouchableOpacity>
@@ -616,8 +630,8 @@ export default function HomeScreen() {
                                             <View style={styles.addMethodOptionIcon}>
                                                 <Ionicons name={opt.icon} size={24} color="#333" />
                                             </View>
-                                            <Text style={styles.addMethodOptionLabel}>{opt.label}</Text>
-                                            <Text style={styles.addMethodOptionDesc}>{opt.desc}</Text>
+                                            <Text style={styles.addMethodOptionLabel}>{t(opt.labelKey)}</Text>
+                                            <Text style={styles.addMethodOptionDesc}>{t(opt.descKey)}</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </View>
@@ -636,7 +650,7 @@ export default function HomeScreen() {
                             <Text style={hStyles.backArrow}>←</Text>
                         </TouchableOpacity>
                         <View style={hStyles.headerCenter}>
-                            <Text style={hStyles.title}>Add Hydration</Text>
+                            <Text style={hStyles.title}>{t('home.addHydration')}</Text>
                             <Text style={hStyles.subtitle}>{displayedDateLabel}</Text>
                         </View>
                         <View style={{ width: 24 }} />
@@ -693,7 +707,7 @@ export default function HomeScreen() {
                             {/* Water fill */}
                             <Animated.View pointerEvents="none" style={[hStyles.waterFill, { height: drinkFillAnim }]} />
                         </View>
-                        <Text style={hStyles.glassHint}>Tap the glass to set amount</Text>
+                        <Text style={hStyles.glassHint}>{t('home.tapToSetAmount')}</Text>
                     </View>
 
                     {/* Amount Controls */}
@@ -721,7 +735,7 @@ export default function HomeScreen() {
                         {/* Add Button */}
                         <TouchableOpacity style={hStyles.addBtn} onPress={addWater}>
                             <Text style={hStyles.addBtnIcon}>💧</Text>
-                            <Text style={hStyles.addBtnText}>Add Drink</Text>
+                            <Text style={hStyles.addBtnText}>{t('home.addDrink')}</Text>
                         </TouchableOpacity>
                     </View>
                 </SafeAreaView>
@@ -738,7 +752,7 @@ export default function HomeScreen() {
                                         <Text style={styles.calendarNavText}>‹</Text>
                                     </TouchableOpacity>
                                     <Text style={styles.calendarHeaderTitle}>
-                                        {calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                        {calendarMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
                                     </Text>
                                     <TouchableOpacity onPress={nextMonth} style={styles.calendarNavBtn}>
                                         <Text style={styles.calendarNavText}>›</Text>
@@ -746,7 +760,7 @@ export default function HomeScreen() {
                                 </View>
 
                                 <View style={styles.calendarWeekHeader}>
-                                    {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, index) => (
+                                    {weekdayLabels.map((d, index) => (
                                         <Text key={`${d}-${index}`} style={styles.calendarWeekLabel}>{d}</Text>
                                     ))}
                                 </View>

@@ -6,17 +6,20 @@ import { Colors, Shadows } from '../src/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { NutritionInfo } from '../src/services/geminiService';
 import { useFridgeStore } from '../src/store/fridgeStore';
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function AddToFridgeScreen() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const params = useLocalSearchParams();
-    const addItem = useFridgeStore(state => state.addItem);
+    const addItem = useFridgeStore((state) => state.addItem);
 
     const [selectedDuration, setSelectedDuration] = useState('7');
     const [reminder, setReminder] = useState(true);
     const [isCustomModalVisible, setCustomModalVisible] = useState(false);
     const [isSuccessModalVisible, setSuccessModalVisible] = useState(false);
     const [customDays, setCustomDays] = useState(1);
+    const [selectionStep, setSelectionStep] = useState<'start' | 'end'>('start');
 
     const foodData: NutritionInfo | null = params.foodData
         ? JSON.parse(params.foodData as string)
@@ -24,44 +27,99 @@ export default function AddToFridgeScreen() {
 
     const getEmojiForFood = (name: string): string => {
         const lowerName = name.toLowerCase();
-        if (lowerName.includes('phở')) return '🍜';
-        if (lowerName.includes('cơm')) return '🍚';
-        if (lowerName.includes('bánh mì')) return '🥖';
-        if (lowerName.includes('bún')) return '🍲';
-        if (lowerName.includes('gà') || lowerName.includes('chicken')) return '🍗';
+        if (lowerName.includes('pho')) return '🍜';
+        if (lowerName.includes('com')) return '🍚';
+        if (lowerName.includes('banh mi')) return '🥖';
+        if (lowerName.includes('bun')) return '🍲';
+        if (lowerName.includes('ga') || lowerName.includes('chicken')) return '🍗';
         if (lowerName.includes('salad')) return '🥗';
         if (lowerName.includes('burger')) return '🍔';
         if (lowerName.includes('pizza')) return '🍕';
         return '🍽️';
     };
 
-    // Lấy thông tin ngày hiện tại
     const now = new Date();
     const currentDay = now.getDate();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const monthNames = ["Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"];
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const offsetMonday = (firstDay + 6) % 7;
+    const monthNames = [
+        t('calendar.month.1'),
+        t('calendar.month.2'),
+        t('calendar.month.3'),
+        t('calendar.month.4'),
+        t('calendar.month.5'),
+        t('calendar.month.6'),
+        t('calendar.month.7'),
+        t('calendar.month.8'),
+        t('calendar.month.9'),
+        t('calendar.month.10'),
+        t('calendar.month.11'),
+        t('calendar.month.12'),
+    ];
+    const weekdayLabels = [
+        t('calendar.weekday.mon'),
+        t('calendar.weekday.tue'),
+        t('calendar.weekday.wed'),
+        t('calendar.weekday.thu'),
+        t('calendar.weekday.fri'),
+        t('calendar.weekday.sat'),
+        t('calendar.weekday.sun'),
+    ];
+
+    const initialDuration = 7;
+    const [selectedStartDay, setSelectedStartDay] = useState(currentDay);
+    const [selectedEndDay, setSelectedEndDay] = useState(Math.min(daysInMonth, currentDay + initialDuration - 1));
 
     const durations = [
-        { id: '1', label: '1 ngày' },
-        { id: '3', label: '3 ngày' },
-        { id: '7', label: '7 ngày' },
-        { id: 'custom', label: 'Tùy chọn' },
+        { id: '1', label: t('addToFridge.duration.1') },
+        { id: '3', label: t('addToFridge.duration.3') },
+        { id: '7', label: t('addToFridge.duration.7') },
+        { id: 'custom', label: t('addToFridge.duration.custom') },
     ];
 
     const handleDurationSelect = (id: string) => {
         if (id === 'custom') {
             setCustomModalVisible(true);
-        } else {
-            setSelectedDuration(id);
+            return;
         }
+
+        const durationDays = parseInt(id, 10);
+        setSelectedDuration(id);
+        setSelectedStartDay(currentDay);
+        setSelectedEndDay(Math.min(daysInMonth, currentDay + durationDays - 1));
+        setSelectionStep('start');
+    };
+
+    const handleSelectDay = (day: number) => {
+        if (day < currentDay) return;
+
+        if (selectionStep === 'start') {
+            setSelectedStartDay(day);
+            setSelectedEndDay(day);
+            setSelectionStep('end');
+            setSelectedDuration('custom');
+            setCustomDays(1);
+            return;
+        }
+
+        const start = Math.min(selectedStartDay, day);
+        const end = Math.max(selectedStartDay, day);
+        const rangeDays = end - start + 1;
+
+        setSelectedStartDay(start);
+        setSelectedEndDay(end);
+        setSelectionStep('start');
+        setSelectedDuration('custom');
+        setCustomDays(rangeDays);
     };
 
     const handleConfirmAdd = async () => {
         if (!foodData) return;
 
-        const days = selectedDuration === 'custom' ? customDays : parseInt(selectedDuration);
+        const days = Math.max(1, selectedEndDay - selectedStartDay + 1);
         const expiryDate = new Date();
         expiryDate.setDate(expiryDate.getDate() + days);
 
@@ -69,14 +127,14 @@ export default function AddToFridgeScreen() {
             await addItem({
                 name: foodData.name,
                 amount: foodData.servingSize || '1 phần',
-                location: 'Ngăn mát', // Default location
+                location: t('addToFridge.location'),
                 daysLeft: days,
                 expiryDate: expiryDate.toISOString(),
                 emoji: getEmojiForFood(foodData.name),
             });
             setSuccessModalVisible(true);
         } catch (error) {
-            Alert.alert('Lỗi', 'Không thể thêm vào tủ lạnh');
+            Alert.alert(t('common.error'), t('addToFridge.errorAdd'));
         }
     };
 
@@ -86,7 +144,7 @@ export default function AddToFridgeScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color="#111827" />
                 </TouchableOpacity>
-                <Text style={styles.title}>Thêm vào tủ lạnh</Text>
+                <Text style={styles.title}>{t('addToFridge.title')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -95,24 +153,23 @@ export default function AddToFridgeScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Food Card */}
                 <View style={styles.foodCard}>
                     <View style={styles.foodImageContainer}>
                         <Text style={styles.foodEmoji}>{foodData ? getEmojiForFood(foodData.name) : '🍜'}</Text>
                     </View>
                     <View style={styles.foodInfo}>
-                        <Text style={styles.foodName}>{foodData ? foodData.name : 'Phở Bò'}</Text>
+                        <Text style={styles.foodName}>{foodData ? foodData.name : t('addToFridge.defaultFoodName')}</Text>
                         <Text style={styles.foodCalories}>
-                            {foodData ? `${Math.round(foodData.calories)} kcal • 1 phần` : '450 kcal • 1 tô'}
+                            {foodData ? `${Math.round(foodData.calories)} kcal • ${t('addToFridge.portion')}` : `450 kcal • ${t('addToFridge.defaultServing')}`}
                         </Text>
                     </View>
                 </View>
 
-                {/* Expiry Duration Header */}
                 <View style={styles.expiryHeader}>
-                    <Text style={styles.sectionTitle}>HẠN SỬ DỤNG</Text>
+                    <Text style={styles.sectionTitle}>{t('addToFridge.expiry')}</Text>
                     <Text style={styles.expiryMonthText}>{monthNames[currentMonth]}, {currentYear}</Text>
                 </View>
+
                 <View style={styles.durationRow}>
                     {durations.map((d) => (
                         <TouchableOpacity
@@ -127,54 +184,69 @@ export default function AddToFridgeScreen() {
                     ))}
                 </View>
 
-                {/* Calendar Placeholder */}
                 <View style={styles.calendarCard}>
                     <View style={styles.calendarDays}>
-                        {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((d) => (
+                        {weekdayLabels.map((d) => (
                             <Text key={d} style={styles.dayHeader}>{d}</Text>
                         ))}
                     </View>
+
                     <View style={styles.calendarGrid}>
+                        {Array.from({ length: offsetMonday }, (_, i) => (
+                            <View key={`offset-${i}`} style={styles.calDay} />
+                        ))}
+
                         {Array.from({ length: daysInMonth }, (_, i) => {
                             const day = i + 1;
-                            const duration = selectedDuration === 'custom' ? customDays : parseInt(selectedDuration);
-                            const today = now.getDate();
-                            const isInRange = day >= today && day < today + duration;
-                            const isStart = day === today;
-                            const isEnd = day === today + duration - 1;
+                            const isDisabled = day < currentDay;
+                            const isInRange = day >= selectedStartDay && day <= selectedEndDay;
+                            const isStart = day === selectedStartDay;
+                            const isEnd = day === selectedEndDay;
+                            const isSingle = isStart && isEnd;
 
                             return (
                                 <TouchableOpacity
-                                    key={i}
+                                    key={`day-${day}`}
                                     style={styles.calDay}
                                     activeOpacity={0.8}
+                                    disabled={isDisabled}
+                                    onPress={() => handleSelectDay(day)}
                                 >
-                                    <View style={[
-                                        styles.calDayInner,
-                                        isInRange && styles.calDayInRange,
-                                        isInRange && isStart && styles.calDayRangeStart,
-                                        isInRange && isEnd && styles.calDayRangeEnd,
-                                    ]}>
-                                        <Text style={[styles.calDayText, isInRange && styles.calDayTextSelected]}>
+                                    <View
+                                        style={[
+                                            styles.calDayInner,
+                                            isDisabled && styles.calDayDisabled,
+                                            isInRange && styles.calDayInRange,
+                                            isInRange && isStart && styles.calDayRangeStart,
+                                            isInRange && isEnd && styles.calDayRangeEnd,
+                                            isInRange && isSingle && styles.calDaySingle,
+                                        ]}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.calDayText,
+                                                isDisabled && styles.calDayTextDisabled,
+                                                isInRange && styles.calDayTextSelected,
+                                            ]}
+                                        >
                                             {day}
                                         </Text>
                                     </View>
-                                    {day === 10 && !isInRange && <View style={styles.todayDot} />}
+                                    {day === currentDay && !isInRange && <View style={styles.todayDot} />}
                                 </TouchableOpacity>
                             );
                         })}
                     </View>
                 </View>
 
-                {/* Reminder Toggle */}
                 <View style={styles.reminderRow}>
                     <View style={styles.reminderInfo}>
                         <View style={styles.reminderIconCircle}>
                             <Ionicons name="notifications-outline" size={20} color="#6B7280" />
                         </View>
                         <View>
-                            <Text style={styles.reminderTitle}>Thông báo nhắc nhở</Text>
-                            <Text style={styles.reminderDesc}>Nhắc trước khi hết hạn 1 ngày</Text>
+                            <Text style={styles.reminderTitle}>{t('addToFridge.reminderTitle')}</Text>
+                            <Text style={styles.reminderDesc}>{t('addToFridge.reminderDesc')}</Text>
                         </View>
                     </View>
                     <Switch
@@ -185,19 +257,14 @@ export default function AddToFridgeScreen() {
                     />
                 </View>
 
-                {/* Add Button moved inside ScrollView */}
                 <View style={styles.footer}>
-                    <TouchableOpacity
-                        style={styles.addBtn}
-                        onPress={handleConfirmAdd}
-                    >
+                    <TouchableOpacity style={styles.addBtn} onPress={handleConfirmAdd}>
                         <Ionicons name="cube-outline" size={20} color="#FFFFFF" />
-                        <Text style={styles.addBtnText}>Xác nhận thêm</Text>
+                        <Text style={styles.addBtnText}>{t('addToFridge.confirmAdd')}</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
 
-            {/* Custom Modal */}
             <Modal
                 transparent={true}
                 visible={isCustomModalVisible}
@@ -206,21 +273,21 @@ export default function AddToFridgeScreen() {
             >
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Tùy chỉnh ngày hết hạn</Text>
+                        <Text style={styles.modalTitle}>{t('addToFridge.customTitle')}</Text>
                         <View style={styles.counterRow}>
                             <TouchableOpacity
                                 style={styles.counterBtn}
-                                onPress={() => setCustomDays(prev => Math.max(1, prev - 1))}
+                                onPress={() => setCustomDays((prev) => Math.max(1, prev - 1))}
                             >
                                 <Text style={styles.counterBtnText}>−</Text>
                             </TouchableOpacity>
                             <View style={styles.countDisplay}>
                                 <Text style={styles.countText}>{customDays}</Text>
-                                <Text style={styles.countSubText}>ngày</Text>
+                                <Text style={styles.countSubText}>{t('addToFridge.day')}</Text>
                             </View>
                             <TouchableOpacity
                                 style={styles.counterBtn}
-                                onPress={() => setCustomDays(prev => prev + 1)}
+                                onPress={() => setCustomDays((prev) => prev + 1)}
                             >
                                 <Text style={styles.counterBtnText}>+</Text>
                             </TouchableOpacity>
@@ -229,40 +296,37 @@ export default function AddToFridgeScreen() {
                             style={styles.modalConfirmBtn}
                             onPress={() => {
                                 setSelectedDuration('custom');
+                                setSelectedStartDay(currentDay);
+                                setSelectedEndDay(Math.min(daysInMonth, currentDay + customDays - 1));
+                                setSelectionStep('start');
                                 setCustomModalVisible(false);
                             }}
                         >
-                            <Text style={styles.modalConfirmText}>Xác nhận</Text>
+                            <Text style={styles.modalConfirmText}>{t('addToFridge.confirm')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
 
-            {/* Success Modal */}
-            <Modal
-                transparent={true}
-                visible={isSuccessModalVisible}
-                animationType="fade"
-            >
+            <Modal transparent={true} visible={isSuccessModalVisible} animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.successIconCircle}>
                             <Ionicons name="checkmark" size={40} color="#FFFFFF" />
                         </View>
-                        <Text style={styles.successTitle}>Thành công!</Text>
+                        <Text style={styles.successTitle}>{t('addToFridge.successTitle')}</Text>
                         <Text style={styles.successDesc}>
-                            Món ăn của bạn đã được thêm vào tủ lạnh và sẵn sàng để theo dõi.
+                            {t('addToFridge.successDesc')}
                         </Text>
                         <TouchableOpacity
                             style={styles.modalConfirmBtn}
                             onPress={() => router.replace('/(tabs)/home')}
                         >
-                            <Text style={styles.modalConfirmText}>Về trang chủ</Text>
+                            <Text style={styles.modalConfirmText}>{t('addToFridge.backHome')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
-
         </SafeAreaView>
     );
 }
@@ -277,7 +341,7 @@ const styles = StyleSheet.create({
         paddingTop: 16,
         paddingBottom: 12,
     },
-    backBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginLeft: -8, },
+    backBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginLeft: -8 },
     title: { fontSize: 18, fontWeight: '700', color: '#111827' },
     foodCard: {
         flexDirection: 'row',
@@ -285,7 +349,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#F9FAFB',
         borderRadius: 16,
         padding: 16,
-        marginHorizontal: 20,
         marginBottom: 24,
         gap: 16,
         borderWidth: 1,
@@ -307,14 +370,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
         marginBottom: 16,
     },
     sectionTitle: { fontSize: 13, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.5 },
     expiryMonthText: { fontSize: 14, fontWeight: '600', color: '#2563EB' },
     durationRow: {
         flexDirection: 'row',
-        paddingHorizontal: 20,
         gap: 10,
         marginBottom: 24,
     },
@@ -324,14 +385,20 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         backgroundColor: '#F3F4F6',
     },
-    durationChipSelected: { backgroundColor: '#000000', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 4 },
+    durationChipSelected: {
+        backgroundColor: '#000000',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        elevation: 4,
+    },
     durationText: { fontSize: 14, color: '#4B5563', fontWeight: '500' },
     durationTextSelected: { color: '#FFFFFF', fontWeight: '600' },
     calendarCard: {
         backgroundColor: '#FFFFFF',
         borderRadius: 24,
         padding: 16,
-        marginHorizontal: 20,
         marginBottom: 24,
         borderWidth: 1,
         borderColor: '#F3F4F6',
@@ -351,8 +418,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    calDayDisabled: {
+        opacity: 0.38,
+    },
     calDayInRange: {
         backgroundColor: '#000000',
+    },
+    calDaySingle: {
+        borderRadius: 16,
     },
     calDayRangeStart: {
         borderTopLeftRadius: 16,
@@ -363,6 +436,7 @@ const styles = StyleSheet.create({
         borderBottomRightRadius: 16,
     },
     calDayText: { fontSize: 14, color: '#374151', fontWeight: '500' },
+    calDayTextDisabled: { color: '#C7CDD4' },
     calDayTextSelected: { color: '#FFFFFF', fontWeight: '700' },
     todayDot: {
         width: 4,
@@ -372,7 +446,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 4,
     },
-    // Modal Styles
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -415,7 +488,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     modalConfirmText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-    // Success Modal specific styles
     successIconCircle: {
         width: 80,
         height: 80,
@@ -447,11 +519,46 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     reminderInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    reminderIconCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F9FAFB', justifyContent: 'center', alignItems: 'center' },
+    reminderIconCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F9FAFB',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     reminderTitle: { fontSize: 15, fontWeight: '600', color: '#111827' },
     reminderDesc: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-    footer: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 32, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#F3F4F6', shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.05, shadowRadius: 40, elevation: 10 },
-    addBtn: { backgroundColor: '#000000', borderRadius: 16, height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: '#E5E7EB', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 1, shadowRadius: 15, elevation: 10 },
+    footer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        paddingVertical: 16,
+        paddingBottom: 32,
+        backgroundColor: '#FFFFFF',
+        borderTopWidth: 1,
+        borderTopColor: '#F3F4F6',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -10 },
+        shadowOpacity: 0.05,
+        shadowRadius: 40,
+        elevation: 10,
+    },
+    addBtn: {
+        backgroundColor: '#000000',
+        borderRadius: 16,
+        height: 56,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        shadowColor: '#E5E7EB',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 1,
+        shadowRadius: 15,
+        elevation: 10,
+    },
     addBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
     scrollContainer: { flex: 1 },
     scrollContent: { paddingBottom: 100, paddingHorizontal: 20 },
