@@ -912,8 +912,4 @@ export const dietaryRestrictions = [
 
 export const drinkTypes = [
     { id: 'water', label: 'Water', emoji: '💧' },
-    { id: 'tea', label: 'Tea', emoji: '🍵' },
-    { id: 'coffee', label: 'Coffee', emoji: '☕' },
-    { id: 'juice', label: 'Juice', emoji: '🍊' },
-    { id: 'beer', label: 'Beer', emoji: '🍺' },
 ];
