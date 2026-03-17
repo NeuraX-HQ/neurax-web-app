@@ -1,0 +1,706 @@
+{
+  "auth": {
+    "user_pool_id": "ap-southeast-1_mDyCNINFZ",
+    "aws_region": "ap-southeast-1",
+    "user_pool_client_id": "14tl2bs59injts8duu8l432uk6",
+    "identity_pool_id": "ap-southeast-1:108e98a0-a41d-40f5-9ce1-16192e830bf8",
+    "mfa_methods": [],
+    "standard_required_attributes": [
+      "email"
+    ],
+    "username_attributes": [
+      "email"
+    ],
+    "user_verification_types": [
+      "email"
+    ],
+    "groups": [],
+    "mfa_configuration": "NONE",
+    "password_policy": {
+      "min_length": 8,
+      "require_lowercase": true,
+      "require_numbers": true,
+      "require_symbols": true,
+      "require_uppercase": true
+    },
+    "oauth": {
+      "identity_providers": [
+        "GOOGLE"
+      ],
+      "redirect_sign_in_uri": [
+        "nutritrack://",
+        "https://nutri-track.link/home"
+      ],
+      "redirect_sign_out_uri": [
+        "nutritrack://",
+        "https://nutri-track.link/welcome"
+      ],
+      "response_type": "code",
+      "scopes": [
+        "phone",
+        "email",
+        "openid",
+        "profile",
+        "aws.cognito.signin.user.admin"
+      ],
+      "domain": "b0cc913a22616008a12d.auth.ap-southeast-1.amazoncognito.com"
+    },
+    "unauthenticated_identities_enabled": true
+  },
+  "data": {
+    "url": "https://nsjtl54yorfndntjbogeydsryy.appsync-api.ap-southeast-1.amazonaws.com/graphql",
+    "aws_region": "ap-southeast-1",
+    "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
+    "authorization_types": [
+      "AWS_IAM"
+    ],
+    "model_introspection": {
+      "version": 1,
+      "models": {
+        "Food": {
+          "name": "Food",
+          "fields": {
+            "food_id": {
+              "name": "food_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "name_vi": {
+              "name": "name_vi",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "name_en": {
+              "name": "name_en",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "aliases_vi": {
+              "name": "aliases_vi",
+              "isArray": true,
+              "type": "String",
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true
+            },
+            "aliases_en": {
+              "name": "aliases_en",
+              "isArray": true,
+              "type": "String",
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true
+            },
+            "macros": {
+              "name": "macros",
+              "isArray": false,
+              "type": {
+                "nonModel": "Macros"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "micronutrients": {
+              "name": "micronutrients",
+              "isArray": false,
+              "type": {
+                "nonModel": "Micronutrients"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "serving": {
+              "name": "serving",
+              "isArray": false,
+              "type": {
+                "nonModel": "Serving"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "verified": {
+              "name": "verified",
+              "isArray": false,
+              "type": "Boolean",
+              "isRequired": false,
+              "attributes": []
+            },
+            "source": {
+              "name": "source",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "Foods",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "fields": [
+                  "food_id"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "allow": "public",
+                    "provider": "iam",
+                    "operations": [
+                      "read"
+                    ]
+                  },
+                  {
+                    "allow": "private",
+                    "operations": [
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": true,
+            "primaryKeyFieldName": "food_id",
+            "sortKeyFieldNames": []
+          }
+        },
+        "user": {
+          "name": "user",
+          "fields": {
+            "user_id": {
+              "name": "user_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "email": {
+              "name": "email",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "display_name": {
+              "name": "display_name",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "avatar_url": {
+              "name": "avatar_url",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "created_at": {
+              "name": "created_at",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "updated_at": {
+              "name": "updated_at",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "onboarding_status": {
+              "name": "onboarding_status",
+              "isArray": false,
+              "type": "Boolean",
+              "isRequired": false,
+              "attributes": []
+            },
+            "biometric": {
+              "name": "biometric",
+              "isArray": false,
+              "type": {
+                "nonModel": "biometric"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "goal": {
+              "name": "goal",
+              "isArray": false,
+              "type": {
+                "nonModel": "goal"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "dietary_profile": {
+              "name": "dietary_profile",
+              "isArray": false,
+              "type": {
+                "nonModel": "dietary_profile"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "gamification": {
+              "name": "gamification",
+              "isArray": false,
+              "type": {
+                "nonModel": "gamification"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "users",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "fields": [
+                  "user_id"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "provider": "userPools",
+                    "ownerField": "owner",
+                    "allow": "owner",
+                    "identityClaim": "cognito:username",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": true,
+            "primaryKeyFieldName": "user_id",
+            "sortKeyFieldNames": []
+          }
+        }
+      },
+      "enums": {},
+      "nonModels": {
+        "Portions": {
+          "name": "Portions",
+          "fields": {
+            "small": {
+              "name": "small",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "medium": {
+              "name": "medium",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "large": {
+              "name": "large",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        },
+        "Serving": {
+          "name": "Serving",
+          "fields": {
+            "default_g": {
+              "name": "default_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "unit": {
+              "name": "unit",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "portions": {
+              "name": "portions",
+              "isArray": false,
+              "type": {
+                "nonModel": "Portions"
+              },
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        },
+        "Micronutrients": {
+          "name": "Micronutrients",
+          "fields": {
+            "calcium_mg": {
+              "name": "calcium_mg",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "iron_mg": {
+              "name": "iron_mg",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "vitamin_a_ug": {
+              "name": "vitamin_a_ug",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "vitamin_c_mg": {
+              "name": "vitamin_c_mg",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        },
+        "Macros": {
+          "name": "Macros",
+          "fields": {
+            "calories": {
+              "name": "calories",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "protein_g": {
+              "name": "protein_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "carbs_g": {
+              "name": "carbs_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "fat_g": {
+              "name": "fat_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "saturated_fat_g": {
+              "name": "saturated_fat_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "polyunsaturated_fat_g": {
+              "name": "polyunsaturated_fat_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "monounsaturated_fat_g": {
+              "name": "monounsaturated_fat_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "fiber_g": {
+              "name": "fiber_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "sugar_g": {
+              "name": "sugar_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "sodium_mg": {
+              "name": "sodium_mg",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "cholesterol_mg": {
+              "name": "cholesterol_mg",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "potassium_mg": {
+              "name": "potassium_mg",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        },
+        "biometric": {
+          "name": "biometric",
+          "fields": {
+            "age": {
+              "name": "age",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "gender": {
+              "name": "gender",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "height_cm": {
+              "name": "height_cm",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "weight_kg": {
+              "name": "weight_kg",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "active_level": {
+              "name": "active_level",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        },
+        "goal": {
+          "name": "goal",
+          "fields": {
+            "daily_calories": {
+              "name": "daily_calories",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "daily_carbs_g": {
+              "name": "daily_carbs_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "daily_protein_g": {
+              "name": "daily_protein_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "daily_fat_g": {
+              "name": "daily_fat_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "target_weight_kg": {
+              "name": "target_weight_kg",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        },
+        "dietary_profile": {
+          "name": "dietary_profile",
+          "fields": {
+            "allergies": {
+              "name": "allergies",
+              "isArray": true,
+              "type": "String",
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true
+            },
+            "preferences": {
+              "name": "preferences",
+              "isArray": true,
+              "type": "String",
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true
+            }
+          }
+        },
+        "gamification": {
+          "name": "gamification",
+          "fields": {
+            "current_streak": {
+              "name": "current_streak",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "longest_streak": {
+              "name": "longest_streak",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "last_log_date": {
+              "name": "last_log_date",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "total_points": {
+              "name": "total_points",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "coach_tone": {
+              "name": "coach_tone",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        }
+      },
+      "queries": {
+        "askGemini": {
+          "name": "askGemini",
+          "isArray": false,
+          "type": "String",
+          "isRequired": false,
+          "arguments": {
+            "action": {
+              "name": "action",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "payload": {
+              "name": "payload",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false
+            }
+          }
+        },
+        "processNutrition": {
+          "name": "processNutrition",
+          "isArray": false,
+          "type": "String",
+          "isRequired": false,
+          "arguments": {
+            "payload": {
+              "name": "payload",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "version": "1.4"
+}

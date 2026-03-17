@@ -1,0 +1,2159 @@
+{
+    "schema_version": "2.0.0",
+    "last_updated": "2026-03-05",
+    "description": "Vietnamese Food Database for NutriTrack – Search-only schema. Bilingual VI/EN. Vietnamese foods only.",
+    "total_foods": 48,
+    "foods": [
+        {
+            "food_id": "pho_bo_001",
+            "name_vi": "Phở bò tái",
+            "name_en": "Beef Pho (rare)",
+            "aliases_vi": [
+                "phở",
+                "phở bò",
+                "phở tái",
+                "bò tái"
+            ],
+            "aliases_en": [
+                "pho",
+                "beef pho",
+                "beef noodle soup",
+                "vietnamese pho"
+            ],
+            "macros": {
+                "calories": 520,
+                "protein_g": 32,
+                "carbs_g": 68,
+                "fat_g": 12,
+                "saturated_fat_g": 4,
+                "polyunsaturated_fat_g": 1.0,
+                "monounsaturated_fat_g": 5.5,
+                "fiber_g": 4,
+                "sugar_g": 4,
+                "sodium_mg": 1200,
+                "cholesterol_mg": 85,
+                "potassium_mg": 480
+            },
+            "micronutrients": {
+                "calcium_mg": 45,
+                "iron_mg": 2.8,
+                "vitamin_a_ug": 30,
+                "vitamin_c_mg": 8
+            },
+            "serving": {
+                "default_g": 500,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "pho_ga_001",
+            "name_vi": "Phở gà",
+            "name_en": "Chicken Pho",
+            "aliases_vi": [
+                "phở gà"
+            ],
+            "aliases_en": [
+                "chicken pho",
+                "chicken noodle soup",
+                "vietnamese chicken pho"
+            ],
+            "macros": {
+                "calories": 450,
+                "protein_g": 28,
+                "carbs_g": 65,
+                "fat_g": 8,
+                "saturated_fat_g": 2,
+                "polyunsaturated_fat_g": 1.2,
+                "monounsaturated_fat_g": 3.5,
+                "fiber_g": 3,
+                "sugar_g": 3,
+                "sodium_mg": 1100,
+                "cholesterol_mg": 65,
+                "potassium_mg": 420
+            },
+            "micronutrients": {
+                "calcium_mg": 30,
+                "iron_mg": 1.5,
+                "vitamin_a_ug": 20,
+                "vitamin_c_mg": 5
+            },
+            "serving": {
+                "default_g": 500,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "bun_cha_001",
+            "name_vi": "Bún chả Hà Nội",
+            "name_en": "Hanoi Grilled Pork with Noodles",
+            "aliases_vi": [
+                "bún chả",
+                "bún chả hà nội"
+            ],
+            "aliases_en": [
+                "bun cha",
+                "grilled pork noodles",
+                "hanoi bun cha"
+            ],
+            "macros": {
+                "calories": 650,
+                "protein_g": 35,
+                "carbs_g": 75,
+                "fat_g": 22,
+                "saturated_fat_g": 7,
+                "polyunsaturated_fat_g": 2.5,
+                "monounsaturated_fat_g": 10,
+                "fiber_g": 4,
+                "sugar_g": 8,
+                "sodium_mg": 900,
+                "cholesterol_mg": 90,
+                "potassium_mg": 380
+            },
+            "micronutrients": {
+                "calcium_mg": 35,
+                "iron_mg": 2.2,
+                "vitamin_a_ug": 15,
+                "vitamin_c_mg": 6
+            },
+            "serving": {
+                "default_g": 450,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "bun_bo_hue_001",
+            "name_vi": "Bún bò Huế",
+            "name_en": "Hue Spicy Beef Noodle",
+            "aliases_vi": [
+                "bún bò",
+                "bún bò huế"
+            ],
+            "aliases_en": [
+                "bun bo hue",
+                "spicy beef noodle",
+                "hue noodle soup"
+            ],
+            "macros": {
+                "calories": 580,
+                "protein_g": 38,
+                "carbs_g": 55,
+                "fat_g": 22,
+                "saturated_fat_g": 8,
+                "polyunsaturated_fat_g": 2.0,
+                "monounsaturated_fat_g": 10,
+                "fiber_g": 3,
+                "sugar_g": 5,
+                "sodium_mg": 1400,
+                "cholesterol_mg": 95,
+                "potassium_mg": 460
+            },
+            "micronutrients": {
+                "calcium_mg": 40,
+                "iron_mg": 3.0,
+                "vitamin_a_ug": 25,
+                "vitamin_c_mg": 4
+            },
+            "serving": {
+                "default_g": 550,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "mi_quang_001",
+            "name_vi": "Mì Quảng",
+            "name_en": "Quang Noodles",
+            "aliases_vi": [
+                "mì quảng"
+            ],
+            "aliases_en": [
+                "mi quang",
+                "quang noodles",
+                "turmeric noodles"
+            ],
+            "macros": {
+                "calories": 520,
+                "protein_g": 30,
+                "carbs_g": 60,
+                "fat_g": 18,
+                "saturated_fat_g": 5,
+                "polyunsaturated_fat_g": 2.5,
+                "monounsaturated_fat_g": 8,
+                "fiber_g": 4,
+                "sugar_g": 4,
+                "sodium_mg": 800,
+                "cholesterol_mg": 75,
+                "potassium_mg": 350
+            },
+            "micronutrients": {
+                "calcium_mg": 50,
+                "iron_mg": 2.5,
+                "vitamin_a_ug": 20,
+                "vitamin_c_mg": 5
+            },
+            "serving": {
+                "default_g": 400,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "hu_tieu_001",
+            "name_vi": "Hủ tiếu Nam Vang",
+            "name_en": "Phnom Penh Noodle Soup",
+            "aliases_vi": [
+                "hủ tiếu",
+                "hủ tiếu nam vang"
+            ],
+            "aliases_en": [
+                "hu tieu",
+                "hu tieu nam vang",
+                "phnom penh noodles"
+            ],
+            "macros": {
+                "calories": 480,
+                "protein_g": 28,
+                "carbs_g": 58,
+                "fat_g": 14,
+                "saturated_fat_g": 4,
+                "polyunsaturated_fat_g": 1.5,
+                "monounsaturated_fat_g": 7,
+                "fiber_g": 2,
+                "sugar_g": 3,
+                "sodium_mg": 1000,
+                "cholesterol_mg": 70,
+                "potassium_mg": 330
+            },
+            "micronutrients": {
+                "calcium_mg": 35,
+                "iron_mg": 1.8,
+                "vitamin_a_ug": 15,
+                "vitamin_c_mg": 3
+            },
+            "serving": {
+                "default_g": 500,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "com_tam_001",
+            "name_vi": "Cơm tấm sườn bì chả",
+            "name_en": "Broken Rice with Grilled Pork",
+            "aliases_vi": [
+                "cơm tấm",
+                "cơm tấm sườn bì chả"
+            ],
+            "aliases_en": [
+                "com tam",
+                "broken rice",
+                "broken rice pork chop"
+            ],
+            "macros": {
+                "calories": 780,
+                "protein_g": 42,
+                "carbs_g": 85,
+                "fat_g": 28,
+                "saturated_fat_g": 10,
+                "polyunsaturated_fat_g": 3.0,
+                "monounsaturated_fat_g": 13,
+                "fiber_g": 3,
+                "sugar_g": 6,
+                "sodium_mg": 950,
+                "cholesterol_mg": 120,
+                "potassium_mg": 420
+            },
+            "micronutrients": {
+                "calcium_mg": 40,
+                "iron_mg": 3.0,
+                "vitamin_a_ug": 20,
+                "vitamin_c_mg": 4
+            },
+            "serving": {
+                "default_g": 450,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "com_ga_001",
+            "name_vi": "Cơm gà Hội An",
+            "name_en": "Hoi An Chicken Rice",
+            "aliases_vi": [
+                "cơm gà",
+                "cơm gà hội an"
+            ],
+            "aliases_en": [
+                "com ga",
+                "chicken rice",
+                "hoi an chicken rice"
+            ],
+            "macros": {
+                "calories": 620,
+                "protein_g": 35,
+                "carbs_g": 72,
+                "fat_g": 18,
+                "saturated_fat_g": 5,
+                "polyunsaturated_fat_g": 3.5,
+                "monounsaturated_fat_g": 8,
+                "fiber_g": 2,
+                "sugar_g": 3,
+                "sodium_mg": 750,
+                "cholesterol_mg": 85,
+                "potassium_mg": 380
+            },
+            "micronutrients": {
+                "calcium_mg": 30,
+                "iron_mg": 1.5,
+                "vitamin_a_ug": 65,
+                "vitamin_c_mg": 3
+            },
+            "serving": {
+                "default_g": 400,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "com_rang_001",
+            "name_vi": "Cơm chiên dương châu",
+            "name_en": "Yangzhou Fried Rice",
+            "aliases_vi": [
+                "cơm chiên",
+                "cơm rang",
+                "cơm chiên dương châu"
+            ],
+            "aliases_en": [
+                "fried rice",
+                "com chien",
+                "yangzhou fried rice"
+            ],
+            "macros": {
+                "calories": 550,
+                "protein_g": 18,
+                "carbs_g": 70,
+                "fat_g": 22,
+                "saturated_fat_g": 4,
+                "polyunsaturated_fat_g": 5.0,
+                "monounsaturated_fat_g": 10,
+                "fiber_g": 3,
+                "sugar_g": 4,
+                "sodium_mg": 850,
+                "cholesterol_mg": 90,
+                "potassium_mg": 250
+            },
+            "micronutrients": {
+                "calcium_mg": 35,
+                "iron_mg": 1.8,
+                "vitamin_a_ug": 60,
+                "vitamin_c_mg": 5
+            },
+            "serving": {
+                "default_g": 350,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "xoi_001",
+            "name_vi": "Xôi xéo",
+            "name_en": "Sticky Rice with Mung Bean",
+            "aliases_vi": [
+                "xôi",
+                "xôi xéo"
+            ],
+            "aliases_en": [
+                "sticky rice",
+                "xoi xeo",
+                "mung bean sticky rice"
+            ],
+            "macros": {
+                "calories": 380,
+                "protein_g": 10,
+                "carbs_g": 65,
+                "fat_g": 10,
+                "saturated_fat_g": 2,
+                "polyunsaturated_fat_g": 2.0,
+                "monounsaturated_fat_g": 4,
+                "fiber_g": 4,
+                "sugar_g": 2,
+                "sodium_mg": 200,
+                "cholesterol_mg": 5,
+                "potassium_mg": 180
+            },
+            "micronutrients": {
+                "calcium_mg": 25,
+                "iron_mg": 1.0,
+                "vitamin_a_ug": 5,
+                "vitamin_c_mg": 1
+            },
+            "serving": {
+                "default_g": 200,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "banh_mi_001",
+            "name_vi": "Bánh mì thịt",
+            "name_en": "Vietnamese Baguette with Meat",
+            "aliases_vi": [
+                "bánh mì",
+                "bánh mì thịt"
+            ],
+            "aliases_en": [
+                "banh mi",
+                "vietnamese sandwich",
+                "vietnamese baguette"
+            ],
+            "macros": {
+                "calories": 450,
+                "protein_g": 22,
+                "carbs_g": 52,
+                "fat_g": 18,
+                "saturated_fat_g": 5,
+                "polyunsaturated_fat_g": 2.5,
+                "monounsaturated_fat_g": 8,
+                "fiber_g": 3,
+                "sugar_g": 5,
+                "sodium_mg": 980,
+                "cholesterol_mg": 55,
+                "potassium_mg": 250
+            },
+            "micronutrients": {
+                "calcium_mg": 45,
+                "iron_mg": 2.5,
+                "vitamin_a_ug": 10,
+                "vitamin_c_mg": 3
+            },
+            "serving": {
+                "default_g": 250,
+                "unit": "piece",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "banh_mi_op_la_001",
+            "name_vi": "Bánh mì ốp la",
+            "name_en": "Baguette with Fried Eggs",
+            "aliases_vi": [
+                "bánh mì ốp la",
+                "bánh mì trứng"
+            ],
+            "aliases_en": [
+                "banh mi op la",
+                "bread with fried egg",
+                "egg banh mi"
+            ],
+            "macros": {
+                "calories": 420,
+                "protein_g": 18,
+                "carbs_g": 48,
+                "fat_g": 18,
+                "saturated_fat_g": 5,
+                "polyunsaturated_fat_g": 2.5,
+                "monounsaturated_fat_g": 8,
+                "fiber_g": 2,
+                "sugar_g": 3,
+                "sodium_mg": 750,
+                "cholesterol_mg": 220,
+                "potassium_mg": 220
+            },
+            "micronutrients": {
+                "calcium_mg": 55,
+                "iron_mg": 2.0,
+                "vitamin_a_ug": 90,
+                "vitamin_c_mg": 2
+            },
+            "serving": {
+                "default_g": 220,
+                "unit": "piece",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "goi_cuon_001",
+            "name_vi": "Gỏi cuốn",
+            "name_en": "Fresh Spring Rolls",
+            "aliases_vi": [
+                "gỏi cuốn"
+            ],
+            "aliases_en": [
+                "goi cuon",
+                "fresh spring rolls",
+                "summer rolls",
+                "vietnamese rice paper rolls"
+            ],
+            "macros": {
+                "calories": 150,
+                "protein_g": 8,
+                "carbs_g": 22,
+                "fat_g": 3,
+                "saturated_fat_g": 0.5,
+                "polyunsaturated_fat_g": 0.8,
+                "monounsaturated_fat_g": 1.2,
+                "fiber_g": 2,
+                "sugar_g": 2,
+                "sodium_mg": 450,
+                "cholesterol_mg": 40,
+                "potassium_mg": 220
+            },
+            "micronutrients": {
+                "calcium_mg": 45,
+                "iron_mg": 1.2,
+                "vitamin_a_ug": 50,
+                "vitamin_c_mg": 8
+            },
+            "serving": {
+                "default_g": 120,
+                "unit": "piece",
+                "portions": {
+                    "1pc": 0.5,
+                    "2pc": 1.0,
+                    "4pc": 2.0
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "cha_gio_001",
+            "name_vi": "Chả giò",
+            "name_en": "Fried Spring Rolls",
+            "aliases_vi": [
+                "chả giò",
+                "nem rán"
+            ],
+            "aliases_en": [
+                "cha gio",
+                "fried spring rolls",
+                "egg rolls",
+                "nem ran"
+            ],
+            "macros": {
+                "calories": 280,
+                "protein_g": 10,
+                "carbs_g": 25,
+                "fat_g": 16,
+                "saturated_fat_g": 5,
+                "polyunsaturated_fat_g": 4.0,
+                "monounsaturated_fat_g": 6,
+                "fiber_g": 2,
+                "sugar_g": 3,
+                "sodium_mg": 520,
+                "cholesterol_mg": 45,
+                "potassium_mg": 180
+            },
+            "micronutrients": {
+                "calcium_mg": 25,
+                "iron_mg": 1.5,
+                "vitamin_a_ug": 10,
+                "vitamin_c_mg": 2
+            },
+            "serving": {
+                "default_g": 100,
+                "unit": "piece",
+                "portions": {
+                    "2pc": 0.5,
+                    "4pc": 1.0,
+                    "6pc": 1.5
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "banh_xeo_001",
+            "name_vi": "Bánh xèo",
+            "name_en": "Vietnamese Crispy Pancake",
+            "aliases_vi": [
+                "bánh xèo"
+            ],
+            "aliases_en": [
+                "banh xeo",
+                "crispy pancake",
+                "vietnamese sizzling pancake"
+            ],
+            "macros": {
+                "calories": 380,
+                "protein_g": 15,
+                "carbs_g": 35,
+                "fat_g": 20,
+                "saturated_fat_g": 6,
+                "polyunsaturated_fat_g": 4.0,
+                "monounsaturated_fat_g": 8,
+                "fiber_g": 3,
+                "sugar_g": 4,
+                "sodium_mg": 650,
+                "cholesterol_mg": 65,
+                "potassium_mg": 280
+            },
+            "micronutrients": {
+                "calcium_mg": 50,
+                "iron_mg": 2.0,
+                "vitamin_a_ug": 20,
+                "vitamin_c_mg": 10
+            },
+            "serving": {
+                "default_g": 200,
+                "unit": "piece",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "banh_cuon_001",
+            "name_vi": "Bánh cuốn",
+            "name_en": "Steamed Rice Rolls",
+            "aliases_vi": [
+                "bánh cuốn"
+            ],
+            "aliases_en": [
+                "banh cuon",
+                "steamed rice rolls",
+                "vietnamese steamed rolls"
+            ],
+            "macros": {
+                "calories": 320,
+                "protein_g": 14,
+                "carbs_g": 42,
+                "fat_g": 10,
+                "saturated_fat_g": 3,
+                "polyunsaturated_fat_g": 1.5,
+                "monounsaturated_fat_g": 4,
+                "fiber_g": 2,
+                "sugar_g": 3,
+                "sodium_mg": 680,
+                "cholesterol_mg": 50,
+                "potassium_mg": 200
+            },
+            "micronutrients": {
+                "calcium_mg": 40,
+                "iron_mg": 1.5,
+                "vitamin_a_ug": 10,
+                "vitamin_c_mg": 2
+            },
+            "serving": {
+                "default_g": 250,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "banh_beo_001",
+            "name_vi": "Bánh bèo",
+            "name_en": "Water Fern Cake",
+            "aliases_vi": [
+                "bánh bèo"
+            ],
+            "aliases_en": [
+                "banh beo",
+                "water fern cake",
+                "hue rice cakes"
+            ],
+            "macros": {
+                "calories": 250,
+                "protein_g": 8,
+                "carbs_g": 38,
+                "fat_g": 8,
+                "saturated_fat_g": 2,
+                "polyunsaturated_fat_g": 1.0,
+                "monounsaturated_fat_g": 4,
+                "fiber_g": 1,
+                "sugar_g": 2,
+                "sodium_mg": 480,
+                "cholesterol_mg": 35,
+                "potassium_mg": 180
+            },
+            "micronutrients": {
+                "calcium_mg": 35,
+                "iron_mg": 0.8,
+                "vitamin_a_ug": 5,
+                "vitamin_c_mg": 1
+            },
+            "serving": {
+                "default_g": 200,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "banh_khot_001",
+            "name_vi": "Bánh khọt",
+            "name_en": "Mini Savory Pancakes",
+            "aliases_vi": [
+                "bánh khọt"
+            ],
+            "aliases_en": [
+                "banh khot",
+                "mini shrimp pancakes",
+                "savory rice pancakes"
+            ],
+            "macros": {
+                "calories": 300,
+                "protein_g": 12,
+                "carbs_g": 32,
+                "fat_g": 14,
+                "saturated_fat_g": 4,
+                "polyunsaturated_fat_g": 2.5,
+                "monounsaturated_fat_g": 6,
+                "fiber_g": 2,
+                "sugar_g": 3,
+                "sodium_mg": 550,
+                "cholesterol_mg": 55,
+                "potassium_mg": 200
+            },
+            "micronutrients": {
+                "calcium_mg": 40,
+                "iron_mg": 1.2,
+                "vitamin_a_ug": 8,
+                "vitamin_c_mg": 2
+            },
+            "serving": {
+                "default_g": 180,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "thit_kho_001",
+            "name_vi": "Thịt kho trứng",
+            "name_en": "Caramelized Pork with Eggs",
+            "aliases_vi": [
+                "thịt kho",
+                "thịt kho trứng"
+            ],
+            "aliases_en": [
+                "thit kho",
+                "caramelized pork",
+                "braised pork with eggs"
+            ],
+            "macros": {
+                "calories": 450,
+                "protein_g": 35,
+                "carbs_g": 12,
+                "fat_g": 30,
+                "saturated_fat_g": 11,
+                "polyunsaturated_fat_g": 2.5,
+                "monounsaturated_fat_g": 14,
+                "fiber_g": 0,
+                "sugar_g": 8,
+                "sodium_mg": 1100,
+                "cholesterol_mg": 195,
+                "potassium_mg": 380
+            },
+            "micronutrients": {
+                "calcium_mg": 30,
+                "iron_mg": 2.5,
+                "vitamin_a_ug": 25,
+                "vitamin_c_mg": 1
+            },
+            "serving": {
+                "default_g": 200,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "ca_kho_001",
+            "name_vi": "Cá kho tộ",
+            "name_en": "Caramelized Fish in Clay Pot",
+            "aliases_vi": [
+                "cá kho",
+                "cá kho tộ"
+            ],
+            "aliases_en": [
+                "ca kho to",
+                "braised fish",
+                "clay pot fish",
+                "caramelized fish"
+            ],
+            "macros": {
+                "calories": 320,
+                "protein_g": 35,
+                "carbs_g": 8,
+                "fat_g": 16,
+                "saturated_fat_g": 4,
+                "polyunsaturated_fat_g": 3.5,
+                "monounsaturated_fat_g": 7,
+                "fiber_g": 0,
+                "sugar_g": 6,
+                "sodium_mg": 950,
+                "cholesterol_mg": 100,
+                "potassium_mg": 420
+            },
+            "micronutrients": {
+                "calcium_mg": 80,
+                "iron_mg": 3.0,
+                "vitamin_a_ug": 15,
+                "vitamin_c_mg": 1
+            },
+            "serving": {
+                "default_g": 180,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "ga_nuong_001",
+            "name_vi": "Gà nướng mật ong",
+            "name_en": "Honey Roasted Chicken",
+            "aliases_vi": [
+                "gà nướng",
+                "gà nướng mật ong"
+            ],
+            "aliases_en": [
+                "grilled chicken",
+                "honey chicken",
+                "roasted chicken"
+            ],
+            "macros": {
+                "calories": 380,
+                "protein_g": 40,
+                "carbs_g": 15,
+                "fat_g": 18,
+                "saturated_fat_g": 5,
+                "polyunsaturated_fat_g": 3.5,
+                "monounsaturated_fat_g": 7,
+                "fiber_g": 0,
+                "sugar_g": 12,
+                "sodium_mg": 720,
+                "cholesterol_mg": 110,
+                "potassium_mg": 450
+            },
+            "micronutrients": {
+                "calcium_mg": 20,
+                "iron_mg": 1.5,
+                "vitamin_a_ug": 30,
+                "vitamin_c_mg": 2
+            },
+            "serving": {
+                "default_g": 200,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "suon_nuong_001",
+            "name_vi": "Sườn nướng",
+            "name_en": "Grilled Pork Ribs",
+            "aliases_vi": [
+                "sườn nướng"
+            ],
+            "aliases_en": [
+                "grilled pork ribs",
+                "bbq pork ribs"
+            ],
+            "macros": {
+                "calories": 420,
+                "protein_g": 32,
+                "carbs_g": 10,
+                "fat_g": 28,
+                "saturated_fat_g": 10,
+                "polyunsaturated_fat_g": 3.0,
+                "monounsaturated_fat_g": 13,
+                "fiber_g": 0,
+                "sugar_g": 6,
+                "sodium_mg": 850,
+                "cholesterol_mg": 95,
+                "potassium_mg": 360
+            },
+            "micronutrients": {
+                "calcium_mg": 25,
+                "iron_mg": 2.0,
+                "vitamin_a_ug": 5,
+                "vitamin_c_mg": 1
+            },
+            "serving": {
+                "default_g": 180,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "thit_nuong_001",
+            "name_vi": "Thịt nướng lá lốt",
+            "name_en": "Grilled Beef in Betel Leaf",
+            "aliases_vi": [
+                "bò lá lốt",
+                "thịt nướng lá lốt"
+            ],
+            "aliases_en": [
+                "bo la lot",
+                "beef betel leaf",
+                "grilled beef in betel leaf"
+            ],
+            "macros": {
+                "calories": 280,
+                "protein_g": 22,
+                "carbs_g": 5,
+                "fat_g": 20,
+                "saturated_fat_g": 8,
+                "polyunsaturated_fat_g": 2.0,
+                "monounsaturated_fat_g": 8,
+                "fiber_g": 1,
+                "sugar_g": 2,
+                "sodium_mg": 650,
+                "cholesterol_mg": 75,
+                "potassium_mg": 280
+            },
+            "micronutrients": {
+                "calcium_mg": 20,
+                "iron_mg": 2.5,
+                "vitamin_a_ug": 10,
+                "vitamin_c_mg": 3
+            },
+            "serving": {
+                "default_g": 120,
+                "unit": "piece",
+                "portions": {
+                    "3pc": 0.5,
+                    "6pc": 1.0,
+                    "9pc": 1.5
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "canh_chua_001",
+            "name_vi": "Canh chua cá",
+            "name_en": "Sour Fish Soup",
+            "aliases_vi": [
+                "canh chua",
+                "canh chua cá"
+            ],
+            "aliases_en": [
+                "canh chua",
+                "sour fish soup",
+                "vietnamese sour soup",
+                "tamarind soup"
+            ],
+            "macros": {
+                "calories": 180,
+                "protein_g": 18,
+                "carbs_g": 12,
+                "fat_g": 6,
+                "saturated_fat_g": 1.5,
+                "polyunsaturated_fat_g": 1.5,
+                "monounsaturated_fat_g": 2.5,
+                "fiber_g": 3,
+                "sugar_g": 5,
+                "sodium_mg": 780,
+                "cholesterol_mg": 55,
+                "potassium_mg": 520
+            },
+            "micronutrients": {
+                "calcium_mg": 60,
+                "iron_mg": 2.0,
+                "vitamin_a_ug": 80,
+                "vitamin_c_mg": 20
+            },
+            "serving": {
+                "default_g": 350,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "sup_cua_001",
+            "name_vi": "Súp cua",
+            "name_en": "Crab Soup",
+            "aliases_vi": [
+                "súp cua"
+            ],
+            "aliases_en": [
+                "sup cua",
+                "crab soup",
+                "crab egg drop soup"
+            ],
+            "macros": {
+                "calories": 220,
+                "protein_g": 15,
+                "carbs_g": 18,
+                "fat_g": 10,
+                "saturated_fat_g": 3,
+                "polyunsaturated_fat_g": 1.5,
+                "monounsaturated_fat_g": 5,
+                "fiber_g": 1,
+                "sugar_g": 2,
+                "sodium_mg": 850,
+                "cholesterol_mg": 80,
+                "potassium_mg": 280
+            },
+            "micronutrients": {
+                "calcium_mg": 55,
+                "iron_mg": 1.5,
+                "vitamin_a_ug": 30,
+                "vitamin_c_mg": 3
+            },
+            "serving": {
+                "default_g": 300,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "canh_rau_001",
+            "name_vi": "Canh rau muống",
+            "name_en": "Water Spinach Soup",
+            "aliases_vi": [
+                "canh rau",
+                "canh rau muống"
+            ],
+            "aliases_en": [
+                "canh rau muong",
+                "water spinach soup",
+                "vegetable soup"
+            ],
+            "macros": {
+                "calories": 80,
+                "protein_g": 4,
+                "carbs_g": 8,
+                "fat_g": 4,
+                "saturated_fat_g": 0.5,
+                "polyunsaturated_fat_g": 1.5,
+                "monounsaturated_fat_g": 1.5,
+                "fiber_g": 3,
+                "sugar_g": 2,
+                "sodium_mg": 600,
+                "cholesterol_mg": 10,
+                "potassium_mg": 350
+            },
+            "micronutrients": {
+                "calcium_mg": 80,
+                "iron_mg": 1.5,
+                "vitamin_a_ug": 180,
+                "vitamin_c_mg": 25
+            },
+            "serving": {
+                "default_g": 300,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "rau_xao_001",
+            "name_vi": "Rau xào thập cẩm",
+            "name_en": "Mixed Stir-fried Vegetables",
+            "aliases_vi": [
+                "rau xào",
+                "rau xào thập cẩm"
+            ],
+            "aliases_en": [
+                "rau xao",
+                "stir-fried vegetables",
+                "mixed vegetables"
+            ],
+            "macros": {
+                "calories": 120,
+                "protein_g": 5,
+                "carbs_g": 12,
+                "fat_g": 6,
+                "saturated_fat_g": 1,
+                "polyunsaturated_fat_g": 2.5,
+                "monounsaturated_fat_g": 2.0,
+                "fiber_g": 4,
+                "sugar_g": 4,
+                "sodium_mg": 450,
+                "cholesterol_mg": 0,
+                "potassium_mg": 380
+            },
+            "micronutrients": {
+                "calcium_mg": 60,
+                "iron_mg": 1.2,
+                "vitamin_a_ug": 220,
+                "vitamin_c_mg": 30
+            },
+            "serving": {
+                "default_g": 200,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "ca_phe_sua_001",
+            "name_vi": "Cà phê sữa đá",
+            "name_en": "Vietnamese Iced Coffee",
+            "aliases_vi": [
+                "cà phê sữa đá",
+                "cà phê",
+                "cà phê sữa"
+            ],
+            "aliases_en": [
+                "ca phe sua da",
+                "vietnamese iced coffee",
+                "iced coffee condensed milk"
+            ],
+            "macros": {
+                "calories": 180,
+                "protein_g": 2,
+                "carbs_g": 28,
+                "fat_g": 6,
+                "saturated_fat_g": 4,
+                "polyunsaturated_fat_g": 0.2,
+                "monounsaturated_fat_g": 1.5,
+                "fiber_g": 0,
+                "sugar_g": 25,
+                "sodium_mg": 50,
+                "cholesterol_mg": 20,
+                "potassium_mg": 180
+            },
+            "micronutrients": {
+                "calcium_mg": 110,
+                "iron_mg": 0.2,
+                "vitamin_a_ug": 30,
+                "vitamin_c_mg": 1
+            },
+            "serving": {
+                "default_g": 250,
+                "unit": "cup",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "tra_da_001",
+            "name_vi": "Trà đá",
+            "name_en": "Iced Tea",
+            "aliases_vi": [
+                "trà đá",
+                "trà"
+            ],
+            "aliases_en": [
+                "tra da",
+                "iced tea",
+                "vietnamese iced tea"
+            ],
+            "macros": {
+                "calories": 0,
+                "protein_g": 0,
+                "carbs_g": 0,
+                "fat_g": 0,
+                "saturated_fat_g": 0,
+                "polyunsaturated_fat_g": 0,
+                "monounsaturated_fat_g": 0,
+                "fiber_g": 0,
+                "sugar_g": 0,
+                "sodium_mg": 5,
+                "cholesterol_mg": 0,
+                "potassium_mg": 50
+            },
+            "micronutrients": {
+                "calcium_mg": 2,
+                "iron_mg": 0.1,
+                "vitamin_a_ug": null,
+                "vitamin_c_mg": null
+            },
+            "serving": {
+                "default_g": 300,
+                "unit": "cup",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "nuoc_mia_001",
+            "name_vi": "Nước mía",
+            "name_en": "Sugarcane Juice",
+            "aliases_vi": [
+                "nước mía"
+            ],
+            "aliases_en": [
+                "nuoc mia",
+                "sugarcane juice"
+            ],
+            "macros": {
+                "calories": 180,
+                "protein_g": 0,
+                "carbs_g": 45,
+                "fat_g": 0,
+                "saturated_fat_g": 0,
+                "polyunsaturated_fat_g": 0,
+                "monounsaturated_fat_g": 0,
+                "fiber_g": 0,
+                "sugar_g": 42,
+                "sodium_mg": 20,
+                "cholesterol_mg": 0,
+                "potassium_mg": 180
+            },
+            "micronutrients": {
+                "calcium_mg": 10,
+                "iron_mg": 0.3,
+                "vitamin_a_ug": null,
+                "vitamin_c_mg": 2
+            },
+            "serving": {
+                "default_g": 350,
+                "unit": "cup",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "sinh_to_001",
+            "name_vi": "Sinh tố bơ",
+            "name_en": "Avocado Smoothie",
+            "aliases_vi": [
+                "sinh tố bơ",
+                "sinh tố"
+            ],
+            "aliases_en": [
+                "sinh to bo",
+                "avocado smoothie",
+                "avocado shake"
+            ],
+            "macros": {
+                "calories": 350,
+                "protein_g": 5,
+                "carbs_g": 35,
+                "fat_g": 22,
+                "saturated_fat_g": 3,
+                "polyunsaturated_fat_g": 2.5,
+                "monounsaturated_fat_g": 14,
+                "fiber_g": 7,
+                "sugar_g": 25,
+                "sodium_mg": 40,
+                "cholesterol_mg": 10,
+                "potassium_mg": 520
+            },
+            "micronutrients": {
+                "calcium_mg": 20,
+                "iron_mg": 0.8,
+                "vitamin_a_ug": 15,
+                "vitamin_c_mg": 10
+            },
+            "serving": {
+                "default_g": 350,
+                "unit": "cup",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "che_001",
+            "name_vi": "Chè thập cẩm",
+            "name_en": "Mixed Sweet Soup",
+            "aliases_vi": [
+                "chè",
+                "chè thập cẩm"
+            ],
+            "aliases_en": [
+                "che",
+                "sweet soup",
+                "mixed sweet soup",
+                "vietnamese dessert soup"
+            ],
+            "macros": {
+                "calories": 280,
+                "protein_g": 6,
+                "carbs_g": 55,
+                "fat_g": 4,
+                "saturated_fat_g": 1,
+                "polyunsaturated_fat_g": 0.5,
+                "monounsaturated_fat_g": 1.5,
+                "fiber_g": 3,
+                "sugar_g": 35,
+                "sodium_mg": 80,
+                "cholesterol_mg": 5,
+                "potassium_mg": 220
+            },
+            "micronutrients": {
+                "calcium_mg": 40,
+                "iron_mg": 1.5,
+                "vitamin_a_ug": 5,
+                "vitamin_c_mg": 2
+            },
+            "serving": {
+                "default_g": 300,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "banh_flan_001",
+            "name_vi": "Bánh flan",
+            "name_en": "Crème Caramel",
+            "aliases_vi": [
+                "bánh flan"
+            ],
+            "aliases_en": [
+                "banh flan",
+                "flan",
+                "creme caramel",
+                "custard pudding"
+            ],
+            "macros": {
+                "calories": 220,
+                "protein_g": 6,
+                "carbs_g": 28,
+                "fat_g": 10,
+                "saturated_fat_g": 5,
+                "polyunsaturated_fat_g": 0.5,
+                "monounsaturated_fat_g": 3,
+                "fiber_g": 0,
+                "sugar_g": 25,
+                "sodium_mg": 120,
+                "cholesterol_mg": 110,
+                "potassium_mg": 160
+            },
+            "micronutrients": {
+                "calcium_mg": 85,
+                "iron_mg": 0.5,
+                "vitamin_a_ug": 70,
+                "vitamin_c_mg": 1
+            },
+            "serving": {
+                "default_g": 120,
+                "unit": "piece",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "bun_rieu_001",
+            "name_vi": "Bún riêu cua",
+            "name_en": "Crab Noodle Soup",
+            "aliases_vi": [
+                "bún riêu",
+                "bún riêu cua"
+            ],
+            "aliases_en": [
+                "bun rieu",
+                "bun rieu cua",
+                "crab paste noodle soup",
+                "crab noodle soup"
+            ],
+            "macros": {
+                "calories": 420,
+                "protein_g": 22,
+                "carbs_g": 55,
+                "fat_g": 14,
+                "saturated_fat_g": 4,
+                "polyunsaturated_fat_g": 2.0,
+                "monounsaturated_fat_g": 7,
+                "fiber_g": 3,
+                "sugar_g": 4,
+                "sodium_mg": 1050,
+                "cholesterol_mg": 60,
+                "potassium_mg": 380
+            },
+            "micronutrients": {
+                "calcium_mg": 50,
+                "iron_mg": 2.5,
+                "vitamin_a_ug": 25,
+                "vitamin_c_mg": 6
+            },
+            "serving": {
+                "default_g": 500,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "bun_thit_nuong_001",
+            "name_vi": "Bún thịt nướng",
+            "name_en": "Grilled Pork with Noodles",
+            "aliases_vi": [
+                "bún thịt nướng"
+            ],
+            "aliases_en": [
+                "bun thit nuong",
+                "grilled pork vermicelli",
+                "cold noodle pork"
+            ],
+            "macros": {
+                "calories": 550,
+                "protein_g": 30,
+                "carbs_g": 65,
+                "fat_g": 18,
+                "saturated_fat_g": 5,
+                "polyunsaturated_fat_g": 2.5,
+                "monounsaturated_fat_g": 9,
+                "fiber_g": 4,
+                "sugar_g": 6,
+                "sodium_mg": 800,
+                "cholesterol_mg": 65,
+                "potassium_mg": 360
+            },
+            "micronutrients": {
+                "calcium_mg": 40,
+                "iron_mg": 2.2,
+                "vitamin_a_ug": 20,
+                "vitamin_c_mg": 8
+            },
+            "serving": {
+                "default_g": 400,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "cao_lau_001",
+            "name_vi": "Cao lầu",
+            "name_en": "Hoi An Noodles",
+            "aliases_vi": [
+                "cao lầu"
+            ],
+            "aliases_en": [
+                "cao lau",
+                "hoi an noodles",
+                "thick noodle hoi an"
+            ],
+            "macros": {
+                "calories": 480,
+                "protein_g": 25,
+                "carbs_g": 58,
+                "fat_g": 16,
+                "saturated_fat_g": 5,
+                "polyunsaturated_fat_g": 2.0,
+                "monounsaturated_fat_g": 8,
+                "fiber_g": 3,
+                "sugar_g": 4,
+                "sodium_mg": 850,
+                "cholesterol_mg": 70,
+                "potassium_mg": 320
+            },
+            "micronutrients": {
+                "calcium_mg": 35,
+                "iron_mg": 2.0,
+                "vitamin_a_ug": 15,
+                "vitamin_c_mg": 5
+            },
+            "serving": {
+                "default_g": 350,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "banh_canh_001",
+            "name_vi": "Bánh canh cua",
+            "name_en": "Crab Thick Noodle Soup",
+            "aliases_vi": [
+                "bánh canh",
+                "bánh canh cua"
+            ],
+            "aliases_en": [
+                "banh canh",
+                "thick noodle soup",
+                "crab thick noodles"
+            ],
+            "macros": {
+                "calories": 450,
+                "protein_g": 20,
+                "carbs_g": 60,
+                "fat_g": 14,
+                "saturated_fat_g": 4,
+                "polyunsaturated_fat_g": 1.5,
+                "monounsaturated_fat_g": 7,
+                "fiber_g": 2,
+                "sugar_g": 3,
+                "sodium_mg": 950,
+                "cholesterol_mg": 55,
+                "potassium_mg": 300
+            },
+            "micronutrients": {
+                "calcium_mg": 60,
+                "iron_mg": 1.5,
+                "vitamin_a_ug": 10,
+                "vitamin_c_mg": 3
+            },
+            "serving": {
+                "default_g": 450,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "bot_chien_001",
+            "name_vi": "Bột chiên",
+            "name_en": "Fried Rice Flour Cake",
+            "aliases_vi": [
+                "bột chiên"
+            ],
+            "aliases_en": [
+                "bot chien",
+                "fried rice flour cake",
+                "pan fried rice cake"
+            ],
+            "macros": {
+                "calories": 380,
+                "protein_g": 12,
+                "carbs_g": 42,
+                "fat_g": 18,
+                "saturated_fat_g": 5,
+                "polyunsaturated_fat_g": 4.0,
+                "monounsaturated_fat_g": 8,
+                "fiber_g": 1,
+                "sugar_g": 3,
+                "sodium_mg": 650,
+                "cholesterol_mg": 90,
+                "potassium_mg": 220
+            },
+            "micronutrients": {
+                "calcium_mg": 35,
+                "iron_mg": 1.5,
+                "vitamin_a_ug": 55,
+                "vitamin_c_mg": 2
+            },
+            "serving": {
+                "default_g": 250,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "banh_trang_tron_001",
+            "name_vi": "Bánh tráng trộn",
+            "name_en": "Mixed Rice Paper Salad",
+            "aliases_vi": [
+                "bánh tráng trộn"
+            ],
+            "aliases_en": [
+                "banh trang tron",
+                "rice paper salad",
+                "mixed rice paper"
+            ],
+            "macros": {
+                "calories": 250,
+                "protein_g": 8,
+                "carbs_g": 35,
+                "fat_g": 10,
+                "saturated_fat_g": 3,
+                "polyunsaturated_fat_g": 2.0,
+                "monounsaturated_fat_g": 4,
+                "fiber_g": 3,
+                "sugar_g": 5,
+                "sodium_mg": 780,
+                "cholesterol_mg": 55,
+                "potassium_mg": 200
+            },
+            "micronutrients": {
+                "calcium_mg": 40,
+                "iron_mg": 1.8,
+                "vitamin_a_ug": 20,
+                "vitamin_c_mg": 5
+            },
+            "serving": {
+                "default_g": 200,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "com_chay_001",
+            "name_vi": "Cơm cháy chà bông",
+            "name_en": "Crispy Rice with Pork Floss",
+            "aliases_vi": [
+                "cơm cháy",
+                "cơm cháy chà bông"
+            ],
+            "aliases_en": [
+                "com chay",
+                "crispy rice",
+                "pork floss rice"
+            ],
+            "macros": {
+                "calories": 320,
+                "protein_g": 10,
+                "carbs_g": 45,
+                "fat_g": 12,
+                "saturated_fat_g": 4,
+                "polyunsaturated_fat_g": 1.5,
+                "monounsaturated_fat_g": 6,
+                "fiber_g": 1,
+                "sugar_g": 3,
+                "sodium_mg": 520,
+                "cholesterol_mg": 30,
+                "potassium_mg": 200
+            },
+            "micronutrients": {
+                "calcium_mg": 25,
+                "iron_mg": 1.2,
+                "vitamin_a_ug": 5,
+                "vitamin_c_mg": 1
+            },
+            "serving": {
+                "default_g": 150,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "lau_thai_001",
+            "name_vi": "Lẩu Thái",
+            "name_en": "Thai Hot Pot",
+            "aliases_vi": [
+                "lẩu",
+                "lẩu thái"
+            ],
+            "aliases_en": [
+                "lau thai",
+                "thai hot pot",
+                "spicy seafood hot pot"
+            ],
+            "macros": {
+                "calories": 650,
+                "protein_g": 45,
+                "carbs_g": 35,
+                "fat_g": 38,
+                "saturated_fat_g": 12,
+                "polyunsaturated_fat_g": 5.0,
+                "monounsaturated_fat_g": 18,
+                "fiber_g": 5,
+                "sugar_g": 6,
+                "sodium_mg": 1800,
+                "cholesterol_mg": 150,
+                "potassium_mg": 580
+            },
+            "micronutrients": {
+                "calcium_mg": 80,
+                "iron_mg": 4.0,
+                "vitamin_a_ug": 80,
+                "vitamin_c_mg": 20
+            },
+            "serving": {
+                "default_g": 600,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "bo_la_lot_001",
+            "name_vi": "Bò nướng lá lốt",
+            "name_en": "Grilled Beef in Betel Leaf",
+            "aliases_vi": [
+                "bò nướng lá lốt",
+                "bò lá lốt"
+            ],
+            "aliases_en": [
+                "bo nuong la lot",
+                "betel leaf beef",
+                "grilled beef betel"
+            ],
+            "macros": {
+                "calories": 280,
+                "protein_g": 22,
+                "carbs_g": 5,
+                "fat_g": 20,
+                "saturated_fat_g": 8,
+                "polyunsaturated_fat_g": 2.0,
+                "monounsaturated_fat_g": 8,
+                "fiber_g": 1,
+                "sugar_g": 2,
+                "sodium_mg": 650,
+                "cholesterol_mg": 75,
+                "potassium_mg": 280
+            },
+            "micronutrients": {
+                "calcium_mg": 20,
+                "iron_mg": 2.5,
+                "vitamin_a_ug": 10,
+                "vitamin_c_mg": 3
+            },
+            "serving": {
+                "default_g": 120,
+                "unit": "piece",
+                "portions": {
+                    "3pc": 0.5,
+                    "6pc": 1.0,
+                    "9pc": 1.5
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "com_suon_001",
+            "name_vi": "Cơm sườn",
+            "name_en": "Rice with Grilled Pork Chop",
+            "aliases_vi": [
+                "cơm sườn"
+            ],
+            "aliases_en": [
+                "com suon",
+                "rice pork chop",
+                "grilled pork rice"
+            ],
+            "macros": {
+                "calories": 650,
+                "protein_g": 35,
+                "carbs_g": 75,
+                "fat_g": 22,
+                "saturated_fat_g": 7,
+                "polyunsaturated_fat_g": 2.5,
+                "monounsaturated_fat_g": 11,
+                "fiber_g": 2,
+                "sugar_g": 5,
+                "sodium_mg": 800,
+                "cholesterol_mg": 90,
+                "potassium_mg": 380
+            },
+            "micronutrients": {
+                "calcium_mg": 30,
+                "iron_mg": 2.0,
+                "vitamin_a_ug": 10,
+                "vitamin_c_mg": 2
+            },
+            "serving": {
+                "default_g": 400,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Estimated"
+        },
+        {
+            "food_id": "cha_ca_la_vong_001",
+            "name_vi": "Chả cá Lã Vọng",
+            "name_en": "Hanoi Turmeric Fish",
+            "aliases_vi": [
+                "chả cá",
+                "chả cá lã vọng"
+            ],
+            "aliases_en": [
+                "cha ca la vong",
+                "hanoi turmeric fish",
+                "dill fish"
+            ],
+            "macros": {
+                "calories": 380,
+                "protein_g": 32,
+                "carbs_g": 8,
+                "fat_g": 25,
+                "saturated_fat_g": 6,
+                "polyunsaturated_fat_g": 6.0,
+                "monounsaturated_fat_g": 11,
+                "fiber_g": 2,
+                "sugar_g": 2,
+                "sodium_mg": 720,
+                "cholesterol_mg": 95,
+                "potassium_mg": 520
+            },
+            "micronutrients": {
+                "calcium_mg": 50,
+                "iron_mg": 2.0,
+                "vitamin_a_ug": 20,
+                "vitamin_c_mg": 5
+            },
+            "serving": {
+                "default_g": 250,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "pho_cuon_001",
+            "name_vi": "Phở cuốn",
+            "name_en": "Pho Rolls",
+            "aliases_vi": [
+                "phở cuốn"
+            ],
+            "aliases_en": [
+                "pho cuon",
+                "pho rolls",
+                "beef pho rolls"
+            ],
+            "macros": {
+                "calories": 220,
+                "protein_g": 15,
+                "carbs_g": 28,
+                "fat_g": 6,
+                "saturated_fat_g": 1.5,
+                "polyunsaturated_fat_g": 0.8,
+                "monounsaturated_fat_g": 2.5,
+                "fiber_g": 2,
+                "sugar_g": 2,
+                "sodium_mg": 480,
+                "cholesterol_mg": 40,
+                "potassium_mg": 240
+            },
+            "micronutrients": {
+                "calcium_mg": 30,
+                "iron_mg": 1.5,
+                "vitamin_a_ug": 25,
+                "vitamin_c_mg": 5
+            },
+            "serving": {
+                "default_g": 180,
+                "unit": "piece",
+                "portions": {
+                    "2pc": 0.5,
+                    "4pc": 1.0,
+                    "6pc": 1.5
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "nem_nuong_001",
+            "name_vi": "Nem nướng Nha Trang",
+            "name_en": "Nha Trang Grilled Pork Sausage",
+            "aliases_vi": [
+                "nem nướng",
+                "nem nướng nha trang"
+            ],
+            "aliases_en": [
+                "nem nuong",
+                "grilled pork sausage",
+                "nha trang grilled nem"
+            ],
+            "macros": {
+                "calories": 350,
+                "protein_g": 20,
+                "carbs_g": 25,
+                "fat_g": 20,
+                "saturated_fat_g": 6,
+                "polyunsaturated_fat_g": 2.5,
+                "monounsaturated_fat_g": 10,
+                "fiber_g": 3,
+                "sugar_g": 4,
+                "sodium_mg": 720,
+                "cholesterol_mg": 65,
+                "potassium_mg": 280
+            },
+            "micronutrients": {
+                "calcium_mg": 30,
+                "iron_mg": 1.8,
+                "vitamin_a_ug": 10,
+                "vitamin_c_mg": 6
+            },
+            "serving": {
+                "default_g": 200,
+                "unit": "plate",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "banh_cong_001",
+            "name_vi": "Bánh cống",
+            "name_en": "Mekong Shrimp Fritters",
+            "aliases_vi": [
+                "bánh cống"
+            ],
+            "aliases_en": [
+                "banh cong",
+                "shrimp fritters",
+                "mekong shrimp fritters"
+            ],
+            "macros": {
+                "calories": 280,
+                "protein_g": 10,
+                "carbs_g": 30,
+                "fat_g": 14,
+                "saturated_fat_g": 4,
+                "polyunsaturated_fat_g": 3.0,
+                "monounsaturated_fat_g": 6,
+                "fiber_g": 2,
+                "sugar_g": 2,
+                "sodium_mg": 480,
+                "cholesterol_mg": 45,
+                "potassium_mg": 220
+            },
+            "micronutrients": {
+                "calcium_mg": 40,
+                "iron_mg": 1.2,
+                "vitamin_a_ug": 10,
+                "vitamin_c_mg": 5
+            },
+            "serving": {
+                "default_g": 150,
+                "unit": "piece",
+                "portions": {
+                    "2pc": 0.5,
+                    "4pc": 1.0,
+                    "6pc": 1.5
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        },
+        {
+            "food_id": "com_hen_001",
+            "name_vi": "Cơm hến",
+            "name_en": "Hue Mussel Rice",
+            "aliases_vi": [
+                "cơm hến"
+            ],
+            "aliases_en": [
+                "com hen",
+                "mussel rice",
+                "hue mussel rice"
+            ],
+            "macros": {
+                "calories": 380,
+                "protein_g": 18,
+                "carbs_g": 55,
+                "fat_g": 10,
+                "saturated_fat_g": 2,
+                "polyunsaturated_fat_g": 1.5,
+                "monounsaturated_fat_g": 5,
+                "fiber_g": 3,
+                "sugar_g": 3,
+                "sodium_mg": 850,
+                "cholesterol_mg": 50,
+                "potassium_mg": 320
+            },
+            "micronutrients": {
+                "calcium_mg": 55,
+                "iron_mg": 3.5,
+                "vitamin_a_ug": 30,
+                "vitamin_c_mg": 8
+            },
+            "serving": {
+                "default_g": 300,
+                "unit": "bowl",
+                "portions": {
+                    "small": 0.7,
+                    "medium": 1.0,
+                    "large": 1.3
+                }
+            },
+            "verified": true,
+            "source": "Vietnam Nutrition Institute"
+        }
+    ]
+}
