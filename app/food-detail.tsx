@@ -132,6 +132,12 @@ export default function FoodDetailScreen() {
     const selectedPortionUnit = portionUnits.find((unit) => unit.value === portionUnit) || portionUnits[0];
     const baseAmount = baseServing ? baseServing.amount : 1;
     const nutritionMultiplier = (portionCount * selectedPortionUnit.toBase) / baseAmount;
+    const scaledCalories = Math.round(foodData.calories * nutritionMultiplier);
+    const scaledProtein = Math.round(foodData.protein * nutritionMultiplier);
+    const scaledCarbs = Math.round(foodData.carbs * nutritionMultiplier);
+    const scaledFat = Math.round(foodData.fat * nutritionMultiplier);
+
+    const ingredientItems = foodData.ingredients || [];
 
     React.useEffect(() => {
         if (!portionUnits.some((unit) => unit.value === portionUnit)) {
@@ -248,68 +254,99 @@ export default function FoodDetailScreen() {
                     </View>
                 </View>
 
-                {/* Nutrition Info Card */}
-                <View style={styles.nutritionSection}>
-                    <View style={styles.nutritionHeader}>
-                        <View>
-                            <Text style={styles.totalEnergyLabel}>{t('foodDetail.totalEnergy')}</Text>
-                            <View style={styles.calorieRow}>
-                                <Text style={styles.calorieValueLarge}>{Math.round(foodData.calories * nutritionMultiplier)}</Text>
-                                <Text style={styles.calorieUnit}>kcal</Text>
-                            </View>
-                        </View>
-                        <View style={styles.macrosColumn}>
-                            <View style={styles.macroRowCompact}>
-                                <Text style={styles.macroLabel}>{t('foodDetail.protein')}</Text>
-                                <View style={styles.macroBar}>
-                                    <View style={[styles.macroBarFill, { width: '60%', backgroundColor: '#FF6B6B' }]} />
-                                </View>
-                                <Text style={styles.macroValue}>{Math.round(foodData.protein * nutritionMultiplier)}g</Text>
-                            </View>
-                            <View style={styles.macroRowCompact}>
-                                <Text style={styles.macroLabel}>{t('foodDetail.carbs')}</Text>
-                                <View style={styles.macroBar}>
-                                    <View style={[styles.macroBarFill, { width: '80%', backgroundColor: '#FFA500' }]} />
-                                </View>
-                                <Text style={styles.macroValue}>{Math.round(foodData.carbs * nutritionMultiplier)}g</Text>
-                            </View>
-                            <View style={styles.macroRowCompact}>
-                                <Text style={styles.macroLabel}>{t('foodDetail.fat')}</Text>
-                                <View style={styles.macroBar}>
-                                    <View style={[styles.macroBarFill, { width: '40%', backgroundColor: '#FFD700' }]} />
-                                </View>
-                                <Text style={styles.macroValue}>{Math.round(foodData.fat * nutritionMultiplier)}g</Text>
-                            </View>
-                        </View>
-                    </View>
-                </View>
-
                 {/* Portion Size */}
                 <View style={styles.portionSection}>
                     <View style={styles.portionHeader}>
                         <Text style={styles.portionTitle}>{t('foodDetail.portion')}</Text>
                     </View>
                     <View style={styles.portionControls}>
-                        <TouchableOpacity
-                            style={styles.portionButton}
-                            onPress={() => setPortionCount(Math.max(1, portionCount - 1))}
-                        >
-                            <Text style={styles.portionButtonText}>−</Text>
-                        </TouchableOpacity>
                         <View style={styles.portionDisplay}>
-                            <Text style={styles.portionCount}>{portionCount}</Text>
-                            <TouchableOpacity style={styles.portionUnitSelector} onPress={() => setShowUnitModal(true)}>
-                                <Text style={styles.portionUnit}>{t(selectedPortionUnit.labelKey)}</Text>
-                                <Ionicons name="chevron-down" size={16} color="#666" />
+                            <TouchableOpacity
+                                style={styles.portionButton}
+                                onPress={() => setPortionCount(Math.max(1, portionCount - 1))}
+                            >
+                                <Text style={styles.portionButtonText}>−</Text>
+                            </TouchableOpacity>
+                            <View style={styles.portionCountBox}>
+                                <Text style={styles.portionCount}>{portionCount}</Text>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.portionButtonAdd}
+                                onPress={() => setPortionCount(portionCount + 1)}
+                            >
+                                <Text style={styles.portionButtonAddText}>+</Text>
                             </TouchableOpacity>
                         </View>
                         <TouchableOpacity
-                            style={styles.portionButtonAdd}
-                            onPress={() => setPortionCount(portionCount + 1)}
+                            style={styles.portionUnitSelector}
+                            onPress={() => setShowUnitModal(true)}
                         >
-                            <Text style={styles.portionButtonAddText}>+</Text>
+                            <Text style={styles.portionUnit} numberOfLines={1}>{t(selectedPortionUnit.labelKey)}</Text>
+                            <Ionicons name="chevron-down" size={16} color="#666" />
                         </TouchableOpacity>
                     </View>
+                </View>
+
+                {/* Macro Summary Grid */}
+                <View style={styles.macroGridSection}>
+                    <View style={styles.macroGrid}>
+                        <TouchableOpacity style={styles.macroCard} activeOpacity={0.85} onPress={() => router.push('/edit-calories')}>
+                            <Text style={styles.macroCardLabel}>Calories</Text>
+                            <Text style={[styles.macroCardValue, styles.macroCardCalories]}>{scaledCalories}<Text style={styles.macroCardUnit}> kcal</Text></Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.macroCard} activeOpacity={0.85} onPress={() => router.push('/edit-protein')}>
+                            <Text style={styles.macroCardLabel}>{t('foodDetail.protein')}</Text>
+                            <Text style={styles.macroCardValue}>{scaledProtein}<Text style={styles.macroCardUnit}> g</Text></Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.macroCard} activeOpacity={0.85} onPress={() => router.push('/edit-carbs')}>
+                            <Text style={styles.macroCardLabel}>{t('foodDetail.carbs')}</Text>
+                            <Text style={styles.macroCardValue}>{scaledCarbs}<Text style={styles.macroCardUnit}> g</Text></Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.macroCard} activeOpacity={0.85} onPress={() => router.push('/edit-fat')}>
+                            <Text style={styles.macroCardLabel}>{t('foodDetail.fat')}</Text>
+                            <Text style={styles.macroCardValue}>{scaledFat}<Text style={styles.macroCardUnit}> g</Text></Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Detailed Ingredient Breakdown */}
+                <View style={styles.macroDetailSection}>
+                    <View style={styles.ingredientsHeader}>
+                        <Text style={styles.macroDetailTitle}>Chi tiết thành phần</Text>
+                        <TouchableOpacity style={styles.editButton} onPress={handleEditIngredients}>
+                            <Ionicons name="create-outline" size={18} color="#666" />
+                            <Text style={styles.editButtonText}>{t('foodDetail.edit')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {ingredientItems.length > 0 ? (
+                        ingredientItems.map((ingredient, index) => {
+                            const isStringIngredient = typeof ingredient === 'string';
+                            const ingredientName = isStringIngredient ? ingredient : ingredient.name;
+                            const ingredientAmount = isStringIngredient
+                                ? ''
+                                : ingredient.estimated_g
+                                    ? `${ingredient.estimated_g} g`
+                                    : ingredient.amount || '';
+                            const ingredientKcal = !isStringIngredient && ingredient.calories !== undefined
+                                ? `${Math.round(ingredient.calories)} kcal`
+                                : '';
+
+                            return (
+                                <View key={`${ingredientName}-${index}`} style={styles.macroDetailRow}>
+                                    <View style={[
+                                        styles.ingredientCheckbox,
+                                        !isStringIngredient && ingredient.source === 'database' && styles.ingredientCheckboxDB,
+                                        !isStringIngredient && ingredient.source === 'ai_estimated' && styles.ingredientCheckboxAI,
+                                    ]} />
+                                    <Text style={styles.macroDetailLabel}>{ingredientName}</Text>
+                                    {!!ingredientAmount && <Text style={styles.macroDetailSub}>{ingredientAmount}</Text>}
+                                    {!!ingredientKcal && <Text style={styles.macroDetailSub}>{ingredientKcal}</Text>}
+                                </View>
+                            );
+                        })
+                    ) : (
+                        <Text style={styles.macroDetailHint}>Chưa có dữ liệu thành phần chi tiết cho món này.</Text>
+                    )}
                 </View>
 
                 {/* AI Suggestion */}
@@ -342,50 +379,6 @@ export default function FoodDetailScreen() {
                                 </Text>
                             </View>
                         )}
-                    </View>
-                )}
-
-                {/* Ingredients */}
-                {foodData.ingredients && foodData.ingredients.length > 0 && (
-                    <View style={styles.ingredientsSection}>
-                        <View style={styles.ingredientsHeader}>
-                            <Text style={styles.ingredientsTitle}>{t('foodDetail.ingredients')}</Text>
-                            <TouchableOpacity style={styles.editButton} onPress={handleEditIngredients}>
-                                <Ionicons name="create-outline" size={18} color="#666" />
-                                <Text style={styles.editButtonText}>{t('foodDetail.edit')}</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.ingredientsList}>
-                            {foodData.ingredients.map((ingredient, index) => (
-                                <View key={index} style={styles.ingredientRow}>
-                                    <View style={styles.ingredientLeft}>
-                                        <View style={[
-                                            styles.ingredientCheckbox,
-                                            ingredient.source === 'database' && styles.ingredientCheckboxDB,
-                                            ingredient.source === 'ai_estimated' && styles.ingredientCheckboxAI,
-                                        ]} />
-                                        <View>
-                                            <Text style={styles.ingredientName}>
-                                                {typeof ingredient === 'string' ? ingredient : ingredient.name}
-                                            </Text>
-                                            {ingredient.calories !== undefined && (
-                                                <Text style={styles.ingredientCalories}>
-                                                    {Math.round(ingredient.calories)} kcal
-                                                    {ingredient.source === 'database' ? ' ✓' : ' ~'}
-                                                </Text>
-                                            )}
-                                        </View>
-                                    </View>
-                                    <Text style={styles.ingredientAmount}>
-                                        {typeof ingredient === 'string'
-                                            ? ''
-                                            : ingredient.estimated_g
-                                                ? `${ingredient.estimated_g} g`
-                                                : ingredient.amount || ''}
-                                    </Text>
-                                </View>
-                            ))}
-                        </View>
                     </View>
                 )}
 
@@ -626,60 +619,164 @@ const styles = StyleSheet.create({
     portionSection: {
         backgroundColor: '#FFFFFF',
         marginTop: 12,
-        padding: 24,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
     },
     portionHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 10,
     },
     portionTitle: {
-        fontSize: 18,
+        fontSize: 12,
         fontWeight: '700',
-        color: '#000',
+        color: '#6B7280',
+        textTransform: 'uppercase',
+        letterSpacing: 0.8,
     },
     portionControls: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: 16,
+        gap: 10,
     },
     portionButton: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#F5F5F5',
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        backgroundColor: '#F3F4F6',
         justifyContent: 'center',
         alignItems: 'center',
     },
     portionButtonText: {
-        fontSize: 28,
+        fontSize: 22,
         color: '#666',
-        fontWeight: '300',
+        fontWeight: '500',
     },
     portionDisplay: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
-        backgroundColor: '#F5F5F5',
-        paddingHorizontal: 24,
-        paddingVertical: 12,
-        borderRadius: 16,
+        flex: 1,
+        height: 56,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 8,
+        gap: 8,
+    },
+    portionCountBox: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     portionCount: {
-        fontSize: 32,
+        fontSize: 20,
         fontWeight: '700',
-        color: '#000',
+        color: '#111827',
     },
     portionUnitSelector: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        justifyContent: 'space-between',
+        width: '34%',
+        height: 56,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 12,
     },
     portionUnit: {
-        fontSize: 16,
+        fontSize: 14,
         color: '#666',
+        fontWeight: '600',
+        flex: 1,
+    },
+    macroGridSection: {
+        backgroundColor: '#FFFFFF',
+        marginTop: 12,
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+    },
+    macroGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+    },
+    macroCard: {
+        width: '48.5%',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        borderRadius: 16,
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 14,
+        paddingVertical: 14,
+    },
+    macroCardLabel: {
+        fontSize: 13,
+        color: '#64748B',
+        marginBottom: 8,
+        fontWeight: '500',
+    },
+    macroCardValue: {
+        fontSize: 40,
+        color: '#0F172A',
+        fontWeight: '800',
+        lineHeight: 42,
+    },
+    macroCardCalories: {
+        color: '#10B981',
+    },
+    macroCardUnit: {
+        fontSize: 17,
+        fontWeight: '500',
+        color: '#334155',
+    },
+    macroDetailSection: {
+        backgroundColor: '#FFFFFF',
+        marginTop: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+    },
+    macroDetailTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#0F172A',
+        marginBottom: 12,
+    },
+    macroDetailRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 10,
+        gap: 8,
+    },
+    macroDetailDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
+    macroDetailLabel: {
+        flex: 1,
+        fontSize: 14,
+        color: '#0F172A',
+        fontWeight: '600',
+    },
+    macroDetailSub: {
+        fontSize: 13,
+        color: '#64748B',
+        minWidth: 62,
+        textAlign: 'right',
+    },
+    macroDetailPercent: {
+        fontSize: 13,
+        color: '#0F172A',
+        fontWeight: '700',
+        minWidth: 38,
+        textAlign: 'right',
+    },
+    macroDetailHint: {
+        marginTop: 4,
+        fontSize: 12,
+        color: '#94A3B8',
+        lineHeight: 18,
     },
     unitList: {
         gap: 10,
@@ -709,17 +806,17 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     portionButtonAdd: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#000',
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        backgroundColor: '#F3F4F6',
         justifyContent: 'center',
         alignItems: 'center',
     },
     portionButtonAddText: {
-        fontSize: 28,
-        color: '#FFF',
-        fontWeight: '300',
+        fontSize: 22,
+        color: '#666',
+        fontWeight: '500',
     },
     aiSuggestion: {
         backgroundColor: '#F0F4FF',

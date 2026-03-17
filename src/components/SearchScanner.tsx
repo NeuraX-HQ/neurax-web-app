@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { Colors, Shadows } from '../constants/colors';
 import { searchFoodNutrition, NutritionInfo } from '../services/geminiService';
 import { useAppLanguage } from '../i18n/LanguageProvider';
+import { mockRecipes } from '../data/mockData';
 
 interface SearchScannerProps {
     visible: boolean;
@@ -22,7 +23,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
     const { t } = useAppLanguage();
     const [query, setQuery] = useState('');
     const [searching, setSearching] = useState(false);
-    const [recent, setRecent] = useState<string[]>(['Phở Bò', 'Cơm Tấm', 'Ức Gà Nướng']);
+    const [recent, setRecent] = useState<string[]>(ALL_FOODS.map((item) => item.name));
     const [activeTab, setActiveTab] = useState<'recent' | 'popular' | 'myfoods'>('recent');
 
     const handleSearch = useCallback(async (foodName: string) => {
@@ -36,7 +37,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
                 // Thêm vào lịch sử tìm kiếm
                 setRecent(prev => {
                     const updated = [foodName.trim(), ...prev.filter(r => r !== foodName.trim())];
-                    return updated.slice(0, 5);
+                    return updated.slice(0, 20);
                 });
 
                 onClose();
@@ -113,7 +114,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
         </TouchableOpacity>
     );
 
-    const mergedSuggestions: FoodTemplateItem[] = [...POPULAR_FOODS, ...MY_FOODS];
+    const mergedSuggestions: FoodTemplateItem[] = ALL_FOODS;
     const filteredSuggestions = mergedSuggestions.filter((item) =>
         item.name.toLowerCase().includes(query.trim().toLowerCase())
     );
@@ -257,19 +258,30 @@ type FoodTemplateItem = {
     fat: number;
 };
 
-const POPULAR_FOODS: FoodTemplateItem[] = [
-    { name: 'Phở Bò', emoji: '🍜', kcal: 350, serving: `1 ${DEFAULT_PORTION_UNIT}`, protein: 22, carbs: 45, fat: 10 },
-    { name: 'Bún Chả', emoji: '🍲', kcal: 450, serving: `1 ${DEFAULT_PORTION_UNIT}`, protein: 25, carbs: 60, fat: 15 },
-    { name: 'Cơm Tấm', emoji: '🍚', kcal: 520, serving: '1 đĩa', protein: 30, carbs: 75, fat: 20 },
-    { name: 'Gỏi Cuốn', emoji: '🥗', kcal: 180, serving: '2 cuốn', protein: 10, carbs: 28, fat: 4 },
-    { name: 'Bánh Mì', emoji: '🥖', kcal: 310, serving: '1 ổ', protein: 15, carbs: 48, fat: 12 },
-];
+const parseProteinInGrams = (proteinLabel: string): number => {
+    const parsed = parseInt(proteinLabel.replace(/[^\d]/g, ''), 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+};
 
-const MY_FOODS: FoodTemplateItem[] = [
-    { name: 'Ức Gà Áp Chảo', emoji: '🍗', kcal: 240, serving: '150g', protein: 35, carbs: 2, fat: 9 },
-    { name: 'Yến Mạch Sữa Chua', emoji: '🥣', kcal: 290, serving: '1 tô', protein: 14, carbs: 42, fat: 8 },
-    { name: 'Salad Cá Ngừ', emoji: '🥬', kcal: 260, serving: '1 tô', protein: 24, carbs: 14, fat: 12 },
-];
+const mapRecipeToFoodTemplateItem = (recipe: typeof mockRecipes[number]): FoodTemplateItem => {
+    const protein = parseProteinInGrams(recipe.protein);
+    const fat = Math.max(Math.round((recipe.calories * 0.25) / 9), 1);
+    const carbs = Math.max(Math.round((recipe.calories - protein * 4 - fat * 9) / 4), 0);
+
+    return {
+        name: recipe.name,
+        emoji: recipe.emoji || '🍽️',
+        kcal: recipe.calories,
+        serving: `1 ${DEFAULT_PORTION_UNIT}`,
+        protein,
+        carbs,
+        fat,
+    };
+};
+
+const ALL_FOODS: FoodTemplateItem[] = mockRecipes.slice(0, 20).map(mapRecipeToFoodTemplateItem);
+const POPULAR_FOODS: FoodTemplateItem[] = ALL_FOODS.slice(0, 10);
+const MY_FOODS: FoodTemplateItem[] = ALL_FOODS.slice(10);
 
 const searchStyles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F8FAFC' },

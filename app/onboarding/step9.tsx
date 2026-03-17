@@ -28,7 +28,7 @@ export default function Step9() {
 
     const handleStart = async () => {
         await saveOnboardingData({ completed: true });
-        router.replace('/(tabs)/home');
+        router.replace('/login');
     };
 
     if (!data) return null;

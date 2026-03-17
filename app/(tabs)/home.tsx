@@ -114,6 +114,7 @@ export default function HomeScreen() {
 
     const swipeableRefs = useRef(new Map<string, any>());
     const openMealIdRef = useRef<string | null>(null);
+    const swipeOpenedAtRef = useRef(0);
 
     const closeOpenRow = () => {
         if (openMealIdRef.current) {
@@ -337,53 +338,37 @@ export default function HomeScreen() {
         return displayedMeals.filter(meal => meal.type === type);
     };
 
-    const confirmDelete = (mealId: string, mealName: string) => {
-        Alert.alert(
-            t('home.deleteMealTitle'),
-            t('home.deleteMealMessage', { mealName }),
-            [
-                { text: t('common.cancel'), style: 'cancel' },
-                { text: t('home.delete'), style: 'destructive', onPress: () => removeMeal(mealId) },
-            ]
-        );
-    };
-
-    const renderRightActions = (mealId: string, mealName: string) => {
+    const renderRightActions = (mealId: string) => {
         return (
             <GHTouchableOpacity
                 style={[styles.deleteAction, { height: '100%' }]}
-                onPress={() => confirmDelete(mealId, mealName)}
+                onPress={() => {
+                    removeMeal(mealId);
+                    const ref = swipeableRefs.current.get(mealId);
+                    if (ref) ref.close();
+                    if (openMealIdRef.current === mealId) {
+                        openMealIdRef.current = null;
+                    }
+                }}
             >
-                <Ionicons name="trash-outline" size={24} color="#FFF" />
+                <Text style={styles.deleteActionText}>Delete</Text>
             </GHTouchableOpacity>
         );
     };
 
-    const renderMealCard = (meal: Meal) => (
-        <Swipeable 
-            key={meal.id}
-            ref={(ref) => {
-                if (ref) swipeableRefs.current.set(meal.id, ref);
-                else swipeableRefs.current.delete(meal.id);
-            }}
-            onSwipeableWillOpen={() => {
-                if (openMealIdRef.current && openMealIdRef.current !== meal.id) {
-                    const prevRef = swipeableRefs.current.get(openMealIdRef.current);
-                    if (prevRef) prevRef.close();
+    const renderMealPressable = (meal: Meal) => (
+        <TouchableOpacity
+            style={[styles.mealCard, Shadows.small, { marginHorizontal: 0, marginBottom: 0 }]}
+            onPress={() => {
+                // Ignore accidental tap generated right after a swipe release on web.
+                if (Date.now() - swipeOpenedAtRef.current < 300) {
+                    return;
                 }
-                openMealIdRef.current = meal.id;
-            }}
-            onSwipeableWillClose={() => {
-                if (openMealIdRef.current === meal.id) {
-                    openMealIdRef.current = null;
+                if (openMealIdRef.current) {
+                    return;
                 }
-            }}
-            renderRightActions={() => renderRightActions(meal.id, meal.name)}
-            containerStyle={{ marginHorizontal: 16, marginBottom: 8 }}
-        >
-            <TouchableOpacity
-                style={[styles.mealCard, Shadows.small, { marginHorizontal: 0, marginBottom: 0 }]}
-                onPress={withAutoClose(() => router.push({
+
+                router.push({
                     pathname: '/food-detail',
                     params: {
                         foodData: JSON.stringify({
@@ -398,33 +383,77 @@ export default function HomeScreen() {
                         source: 'meal',
                         mealId: meal.id,
                     }
-                }))}
-            >
-                <View style={styles.mealImage}>
-                    {meal.image && meal.image.startsWith('file://') ? (
-                        <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
-                    ) : (
-                        <Text style={styles.mealEmoji}>{meal.image || '🍽️'}</Text>
-                    )}
-                </View>
-                <View style={styles.mealInfo}>
-                    <Text style={styles.mealName}>{meal.name}</Text>
-                    <Text style={styles.mealTime}>{meal.time}</Text>
-                </View>
-                <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
-            </TouchableOpacity>
-        </Swipeable>
+                });
+            }}
+        >
+            <View style={styles.mealImage}>
+                {meal.image && meal.image.startsWith('file://') ? (
+                    <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
+                ) : (
+                    <Text style={styles.mealEmoji}>{meal.image || '🍽️'}</Text>
+                )}
+            </View>
+            <View style={styles.mealInfo}>
+                <Text style={styles.mealName}>{meal.name}</Text>
+                <Text style={styles.mealTime}>{meal.time}</Text>
+            </View>
+            <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
+        </TouchableOpacity>
     );
+
+    const renderMealCard = (meal: Meal) => {
+        const canQuickDelete = meal.date >= todayIso;
+
+        if (!canQuickDelete) {
+            return (
+                <View key={meal.id} style={{ marginHorizontal: 16, marginBottom: 8 }}>
+                    {renderMealPressable(meal)}
+                </View>
+            );
+        }
+
+        return (
+        <Swipeable 
+            key={meal.id}
+            rightThreshold={10}
+            overshootRight={false}
+            ref={(ref) => {
+                if (ref) swipeableRefs.current.set(meal.id, ref);
+                else swipeableRefs.current.delete(meal.id);
+            }}
+            onSwipeableOpen={(direction) => {
+                if (direction === 'right') {
+                    openMealIdRef.current = meal.id;
+                    swipeOpenedAtRef.current = Date.now();
+                }
+            }}
+            onSwipeableWillOpen={() => {
+                if (openMealIdRef.current && openMealIdRef.current !== meal.id) {
+                    const prevRef = swipeableRefs.current.get(openMealIdRef.current);
+                    if (prevRef) prevRef.close();
+                }
+                openMealIdRef.current = meal.id;
+            }}
+            onSwipeableWillClose={() => {
+                if (openMealIdRef.current === meal.id) {
+                    openMealIdRef.current = null;
+                }
+            }}
+            renderRightActions={() => renderRightActions(meal.id)}
+            containerStyle={{ marginHorizontal: 16, marginBottom: 8 }}
+        >
+            {renderMealPressable(meal)}
+        </Swipeable>
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>
             <ScrollView
                 showsVerticalScrollIndicator={false}
-                onScrollBeginDrag={closeOpenRow}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
-                <TouchableWithoutFeedback onPress={closeOpenRow}>
-                    <View style={{ flex: 1 }}>
+                <View style={{ flex: 1 }}>
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.headerLeft}>
@@ -677,8 +706,7 @@ export default function HomeScreen() {
                 )}
 
                 <View style={{ height: 90 }} />
-                    </View>
-                </TouchableWithoutFeedback>
+                </View>
             </ScrollView>
 
             {/* Add Meal Method Popup */}
@@ -1224,9 +1252,14 @@ const styles = StyleSheet.create({
         backgroundColor: '#FF3B30',
         justifyContent: 'center',
         alignItems: 'center',
-        width: 70,
+        width: 92,
         borderRadius: 14,
         marginLeft: 8,
+    },
+    deleteActionText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '700',
     },
     mealCard: {
         backgroundColor: '#FFFFFF',
