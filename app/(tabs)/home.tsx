@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, TouchableWithoutFeedback, Modal, FlatList, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, TouchableWithoutFeedback, Modal, FlatList, Animated, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Swipeable, TouchableOpacity as GHTouchableOpacity } from 'react-native-gesture-handler';
 import { Colors, Shadows } from '../../src/constants/colors';
@@ -50,13 +50,23 @@ const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(
 
 export default function HomeScreen() {
     const router = useRouter();
+    const { width: windowWidth } = useWindowDimensions();
+    const flatListRef = useRef<FlatList>(null);
+
     const { t, language } = useAppLanguage();
     const locale = language === 'vi' ? 'vi-VN' : 'en-US';
     const weekdayLabels = WEEKDAY_LABELS_BY_LANG[language];
     const todayIso = toIsoDate(new Date());
 
+    useFocusEffect(
+        useCallback(() => {
+            // Only scroll to current week, but don't force select today
+            // so the user stays on the date they were just logging for.
+            flatListRef.current?.scrollToIndex({ index: 2, animated: true });
+        }, [])
+    );
+
     const [refreshing, setRefreshing] = useState(false);
-    const [selectedDateStr, setSelectedDateStr] = useState(todayIso);
     const [gender, setGender] = useState<string>('');
     const [dailyCalorieTarget, setDailyCalorieTarget] = useState(1800);
     const [showCaloriesEaten, setShowCaloriesEaten] = useState(false);
@@ -65,24 +75,47 @@ export default function HomeScreen() {
     const userEmail = useAuthStore((state) => state.email);
 
     // Meal store
-    const { meals, loadMeals, getMealsByDate, removeMeal } = useMealStore();
+    const { meals, loadMeals, getMealsByDate, removeMeal, selectedDateStr: storeSelectedDateStr } = useMealStore();
+    const selectedDateStr = storeSelectedDateStr || todayIso;
+    const setSelectedDateStr = (date: string) => useMealStore.setState({ selectedDateStr: date });
+    const hasAnyMeals = meals && meals.length > 0;
     const displayedMeals = getMealsByDate(selectedDateStr);
     const usedMealDates = useMemo(() => new Set(meals.map((meal) => meal.date)), [meals]);
     const currentStreak = useMemo(() => getCurrentStreak(usedMealDates, todayIso), [usedMealDates, todayIso]);
 
+    const { caloriesByDate, earliestLogDate } = useMemo(() => {
+        const map: Record<string, number> = {};
+        let minDate = todayIso;
+        for (const meal of meals) {
+            map[meal.date] = (map[meal.date] ?? 0) + meal.calories;
+            if (meal.date < minDate) {
+                minDate = meal.date;
+            }
+        }
+        return { caloriesByDate: map, earliestLogDate: minDate };
+    }, [meals, todayIso]);
+
     const dateStrip = useMemo(() => {
-        const center = new Date();
-        const daysBefore = 180;
-        const daysAfter = 180;
-        return Array.from({ length: daysBefore + daysAfter + 1 }, (_, i) => {
-            const d = new Date(center);
-            d.setDate(center.getDate() + i - daysBefore);
-            return {
-                iso: toIsoDate(d),
-                weekdayIndex: (d.getDay() + 6) % 7,
-                day: d.getDate(),
-            };
-        });
+        const today = new Date();
+        const dayOfWeek = (today.getDay() + 6) % 7; 
+        const currentMonday = new Date(today);
+        currentMonday.setDate(today.getDate() - dayOfWeek);
+
+        const weeks = [];
+        for (let weekOffset = -2; weekOffset <= 2; weekOffset++) {
+            const week = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(currentMonday);
+                d.setDate(currentMonday.getDate() + (weekOffset * 7) + i);
+                week.push({
+                    iso: toIsoDate(d),
+                    weekdayIndex: i,
+                    day: d.getDate(),
+                });
+            }
+            weeks.push(week);
+        }
+        return weeks;
     }, []);
 
     const selectedDate = useMemo(() => fromIsoDate(selectedDateStr), [selectedDateStr]);
@@ -150,14 +183,6 @@ export default function HomeScreen() {
         { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 }
     );
 
-    const caloriesByDate = useMemo(() => {
-        const map: Record<string, number> = {};
-        for (const meal of meals) {
-            map[meal.date] = (map[meal.date] ?? 0) + meal.calories;
-        }
-        return map;
-    }, [meals]);
-
     const calorieWindow = useMemo(() => {
         const dailyTarget = Math.max(0, Math.round(dailyCalorieTarget));
         const mealDates = Object.keys(caloriesByDate);
@@ -172,7 +197,7 @@ export default function HomeScreen() {
             };
         }
 
-        const startDate = mealDates.reduce((min, d) => (d < min ? d : min), selectedDateStr);
+        const startDate = earliestLogDate;
 
         let carryOver = 0;
         let cursor = startDate;
@@ -402,7 +427,7 @@ export default function HomeScreen() {
     );
 
     const renderMealCard = (meal: Meal) => {
-        const canQuickDelete = meal.date >= todayIso;
+        const canQuickDelete = true;
 
         if (!canQuickDelete) {
             return (
@@ -497,39 +522,64 @@ export default function HomeScreen() {
 
                 {/* Sliding Date Strip */}
                 <FlatList
+                    ref={flatListRef}
                     data={dateStrip}
-                    keyExtractor={(item) => item.iso}
+                    keyExtractor={(week) => week[0].iso}
                     horizontal
+                    pagingEnabled
                     showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.weekRow}
-                    initialScrollIndex={Math.max(0, dateStrip.findIndex((d) => d.iso === selectedDateStr) - 3)}
-                    getItemLayout={(_, index) => ({ length: 56, offset: 56 * index, index })}
-                    renderItem={({ item }) => {
-                        const isSelected = item.iso === selectedDateStr;
-                        const isPast = item.iso < todayIso;
-                        const isToday = item.iso === todayIso;
-                        const showUsedPastRing = isPast && usedMealDates.has(item.iso);
+                    contentContainerStyle={{ paddingVertical: 8 }}
+                    initialScrollIndex={2}
+                    getItemLayout={(_, index) => ({ length: windowWidth, offset: windowWidth * index, index })}
+                    renderItem={({ item: week }: { item: { iso: string; weekdayIndex: number; day: number }[] }) => (
+                        <View style={[styles.weekContainer, { width: windowWidth }]}>
+                            {week.map(item => {
+                                const isSelected = item.iso === selectedDateStr;
+                                const isPast = item.iso < todayIso;
+                                const isToday = item.iso === todayIso;
+                                const isAfterOrOnStart = item.iso >= earliestLogDate;
+                                
+                                let ringStyle = {};
+                                if (isPast && isAfterOrOnStart) {
+                                    const eaten = caloriesByDate[item.iso];
+                                    if (eaten === undefined) {
+                                        ringStyle = styles.dayRingDashed;
+                                    } else {
+                                        const excess = eaten - dailyCalorieTarget;
+                                        if (excess <= 100) {
+                                            ringStyle = styles.dayRingGreen;
+                                        } else if (excess <= 200) {
+                                            ringStyle = styles.dayRingYellow;
+                                        } else {
+                                            ringStyle = styles.dayRingRed;
+                                        }
+                                    }
+                                }
 
-                        return (
-                            <View style={[styles.dayRingWrapper, showUsedPastRing && styles.dayRingWrapperActive]}>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.dayItem,
-                                        isSelected && styles.dayItemSelected,
-                                        !isSelected && isToday && styles.dayItemToday,
-                                    ]}
-                                    onPress={withAutoClose(() => setSelectedDateStr(item.iso))}
-                                >
-                                    <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
-                                        {weekdayLabels[item.weekdayIndex]}
-                                    </Text>
-                                    <Text style={[styles.dayDate, isSelected && styles.dayDateSelected]}>
-                                        {item.day}
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-                        );
-                    }}
+                                return (
+                                    <View key={item.iso} style={styles.dayContainer}>
+                                        <View style={[styles.dayRingWrapper, ringStyle]}>
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.dayItem,
+                                                    isSelected && styles.dayItemSelected,
+                                                    !isSelected && isToday && styles.dayItemToday,
+                                                ]}
+                                                onPress={withAutoClose(() => setSelectedDateStr(item.iso))}
+                                            >
+                                                <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
+                                                    {weekdayLabels[item.weekdayIndex]}
+                                                </Text>
+                                                <Text style={[styles.dayDate, isSelected && styles.dayDateSelected]}>
+                                                    {item.day}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    )}
                 />
 
                 {/* Calorie Card */}
@@ -927,9 +977,9 @@ export default function HomeScreen() {
                 </TouchableWithoutFeedback>
             </Modal>
 
-            <VoiceModal visible={voiceVisible} onClose={() => setVoiceVisible(false)} />
-            <CameraScannerWithLoading visible={cameraVisible} onClose={() => setCameraVisible(false)} />
-            <SearchScanner visible={searchVisible} onClose={() => setSearchVisible(false)} />
+            <VoiceModal visible={voiceVisible} onClose={() => setVoiceVisible(false)} dateStr={selectedDateStr} />
+            <CameraScannerWithLoading visible={cameraVisible} onClose={() => setCameraVisible(false)} dateStr={selectedDateStr} />
+            <SearchScanner visible={searchVisible} onClose={() => setSearchVisible(false)} dateStr={selectedDateStr} />
         </SafeAreaView>
     );
 }
@@ -1133,9 +1183,14 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
     },
     streakText: { fontSize: 12, color: Colors.streak, fontWeight: '600' },
-    weekRow: {
-        paddingHorizontal: 10,
-        paddingVertical: 8,
+    weekContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-evenly',
+        alignItems: 'center',
+    },
+    dayContainer: {
+        flex: 1,
+        alignItems: 'center',
     },
     dayItem: {
         alignItems: 'center',
@@ -1145,13 +1200,23 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     dayRingWrapper: {
-        marginHorizontal: 5,
         borderRadius: 14,
         padding: 2,
-    },
-    dayRingWrapperActive: {
         borderWidth: 1.5,
-        borderColor: Colors.primary,
+        borderColor: 'transparent',
+    },
+    dayRingDashed: {
+        borderColor: '#9CA3AF',
+        borderStyle: 'dashed',
+    },
+    dayRingGreen: {
+        borderColor: '#10B981',
+    },
+    dayRingYellow: {
+        borderColor: '#F59E0B',
+    },
+    dayRingRed: {
+        borderColor: '#EF4444',
     },
     dayItemToday: {
         borderWidth: 1,
