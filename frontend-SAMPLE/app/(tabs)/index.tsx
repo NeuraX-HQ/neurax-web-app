@@ -187,24 +187,30 @@ export default function HomeScreen() {
         />
 
         {/* Meal Sections */}
-        <MealSection
-          title="Breakfast"
-          icon="🌅"
-          meals={mealsByType.breakfast}
-          onAddMeal={() => { }}
-        />
-        <MealSection
-          title="Lunch"
-          icon="☀️"
-          meals={mealsByType.lunch}
-          onAddMeal={() => { }}
-        />
-        <MealSection
-          title="Dinner"
-          icon="🌙"
-          meals={mealsByType.dinner}
-          onAddMeal={() => { }}
-        />
+        {mealsByType.breakfast.length > 0 && (
+          <MealSection
+            title="Breakfast"
+            icon="🌅"
+            meals={mealsByType.breakfast}
+            onAddMeal={() => { }}
+          />
+        )}
+        {mealsByType.lunch.length > 0 && (
+          <MealSection
+            title="Lunch"
+            icon="☀️"
+            meals={mealsByType.lunch}
+            onAddMeal={() => { }}
+          />
+        )}
+        {mealsByType.dinner.length > 0 && (
+          <MealSection
+            title="Dinner"
+            icon="🌙"
+            meals={mealsByType.dinner}
+            onAddMeal={() => { }}
+          />
+        )}
 
         {/* Active Challenges Preview */}
         {challenges.length > 0 && (
