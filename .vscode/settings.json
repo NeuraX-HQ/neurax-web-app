@@ -1,0 +1,12 @@
+{
+  "tailwindCSS.experimental.configFile": null,
+  "tailwindCSS.includeLanguages": {
+    "typescript": "javascript",
+    "typescriptreact": "javascript"
+  },
+  "tailwindCSS.exclude": [
+    "**/frontend-SAMPLE/**",
+    "**/node_modules/**",
+    "**/.git/**"
+]
+}

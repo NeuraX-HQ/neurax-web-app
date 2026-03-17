@@ -1,0 +1,362 @@
+[
+  {
+    "food_id": "F_VN_001",
+    "name_vi": "Phở Bò (Chỉ tính nước dùng và bánh phở)",
+    "name_en": "Beef Pho (Broth and Noodles only)",
+    "aliases_vi": ["phở bò", "tô phở", "bát phở"],
+    "aliases_en": ["beef noodle soup"],
+    "verified": true,
+    "source": "Vien Dinh Duong VN",
+    "serving": {
+      "default_g": 500,
+      "unit": "tô lớn",
+      "portions": {
+        "small": 350,
+        "medium": 500,
+        "large": 700
+      }
+    },
+    "macros": {
+      "calories": 450,
+      "protein_g": 25.5,
+      "carbs_g": 55.0,
+      "fat_g": 12.0,
+      "saturated_fat_g": 4.5,
+      "sugar_g": 3.0,
+      "fiber_g": 2.5,
+      "sodium_mg": 1200,
+      "cholesterol_mg": 55,
+      "potassium_mg": 350
+    },
+    "micronutrients": {
+      "calcium_mg": 85,
+      "iron_mg": 3.2,
+      "vitamin_a_ug": 45,
+      "vitamin_c_mg": 5.0
+    }
+  },
+  {
+    "food_id": "I_VN_001",
+    "name_vi": "Cơm trắng (gạo tẻ)",
+    "name_en": "White Rice (Cooked)",
+    "aliases_vi": ["cơm", "gạo trắng luộc", "bát cơm"],
+    "aliases_en": ["cooked white rice", "steamed rice"],
+    "verified": true,
+    "source": "USDA / VDD",
+    "serving": {
+      "default_g": 100,
+      "unit": "g",
+      "portions": {
+        "small": 50,
+        "medium": 100,
+        "large": 200
+      }
+    },
+    "macros": {
+      "calories": 130,
+      "protein_g": 2.7,
+      "carbs_g": 28.0,
+      "fat_g": 0.3,
+      "saturated_fat_g": 0.1,
+      "sugar_g": 0.1,
+      "fiber_g": 0.4,
+      "sodium_mg": 1,
+      "cholesterol_mg": 0,
+      "potassium_mg": 35
+    },
+    "micronutrients": {
+      "calcium_mg": 10,
+      "iron_mg": 0.2,
+      "vitamin_a_ug": 0,
+      "vitamin_c_mg": 0
+    }
+  },
+  {
+    "food_id": "I_VN_002",
+    "name_vi": "Thịt lợn nạc (Heo nạc dăm, sống)",
+    "name_en": "Lean Pork (Raw)",
+    "aliases_vi": ["thịt heo", "thịt lợn", "heo nạc"],
+    "aliases_en": ["raw pork"],
+    "verified": true,
+    "source": "Vien Dinh Duong VN",
+    "serving": {
+      "default_g": 100,
+      "unit": "g",
+      "portions": {
+        "small": 50,
+        "medium": 100,
+        "large": 200
+      }
+    },
+    "macros": {
+      "calories": 143,
+      "protein_g": 21.0,
+      "carbs_g": 0.0,
+      "fat_g": 6.5,
+      "saturated_fat_g": 2.3,
+      "sugar_g": 0.0,
+      "fiber_g": 0.0,
+      "sodium_mg": 57,
+      "cholesterol_mg": 65,
+      "potassium_mg": 423
+    },
+    "micronutrients": {
+      "calcium_mg": 14,
+      "iron_mg": 0.9,
+      "vitamin_a_ug": 2,
+      "vitamin_c_mg": 0.7
+    }
+  },
+  {
+    "food_id": "I_VN_003",
+    "name_vi": "Trứng gà ta (luộc)",
+    "name_en": "Boiled Chicken Egg",
+    "aliases_vi": ["trứng luộc", "hột gà", "trứng gà"],
+    "aliases_en": ["boiled egg", "chicken egg"],
+    "verified": true,
+    "source": "USDA",
+    "serving": {
+      "default_g": 50,
+      "unit": "quả cỡ vừa",
+      "portions": {
+        "small": 40,
+        "medium": 50,
+        "large": 65
+      }
+    },
+    "macros": {
+      "calories": 78,
+      "protein_g": 6.3,
+      "carbs_g": 0.6,
+      "fat_g": 5.3,
+      "saturated_fat_g": 1.6,
+      "sugar_g": 0.6,
+      "fiber_g": 0.0,
+      "sodium_mg": 62,
+      "cholesterol_mg": 212,
+      "potassium_mg": 63
+    },
+    "micronutrients": {
+      "calcium_mg": 25,
+      "iron_mg": 0.6,
+      "vitamin_a_ug": 80,
+      "vitamin_c_mg": 0.0
+    }
+  },
+  {
+    "food_id": "I_VN_004",
+    "name_vi": "Ức gà (không da, sống)",
+    "name_en": "Chicken Breast (Boneless, Skinless, Raw)",
+    "aliases_vi": ["thịt ức gà", "lườn gà"],
+    "aliases_en": ["raw chicken breast"],
+    "verified": true,
+    "source": "USDA",
+    "serving": {
+      "default_g": 100,
+      "unit": "g",
+      "portions": {
+        "small": 50,
+        "medium": 100,
+        "large": 200
+      }
+    },
+    "macros": {
+      "calories": 165,
+      "protein_g": 31.0,
+      "carbs_g": 0.0,
+      "fat_g": 3.6,
+      "saturated_fat_g": 1.0,
+      "sugar_g": 0.0,
+      "fiber_g": 0.0,
+      "sodium_mg": 74,
+      "cholesterol_mg": 85,
+      "potassium_mg": 256
+    },
+    "micronutrients": {
+      "calcium_mg": 15,
+      "iron_mg": 1.0,
+      "vitamin_a_ug": 6,
+      "vitamin_c_mg": 1.2
+    }
+  },
+  {
+    "food_id": "F_VN_002",
+    "name_vi": "Bánh Mì Thịt Phổ Thông",
+    "name_en": "Plain Vietnamese Meat Baguette (Banh Mi)",
+    "aliases_vi": ["bánh mì heo quay", "bánh mì chả", "ổ bánh mì"],
+    "aliases_en": ["banh mi sandwich"],
+    "verified": true,
+    "source": "Vien Dinh Duong VN",
+    "serving": {
+      "default_g": 200,
+      "unit": "ổ",
+      "portions": {
+        "small": 150,
+        "medium": 200,
+        "large": 300
+      }
+    },
+    "macros": {
+      "calories": 520,
+      "protein_g": 18.0,
+      "carbs_g": 52.0,
+      "fat_g": 26.0,
+      "saturated_fat_g": 8.5,
+      "sugar_g": 6.0,
+      "fiber_g": 3.5,
+      "sodium_mg": 850,
+      "cholesterol_mg": 45,
+      "potassium_mg": 210
+    },
+    "micronutrients": {
+      "calcium_mg": 110,
+      "iron_mg": 2.5,
+      "vitamin_a_ug": 30,
+      "vitamin_c_mg": 4.5
+    }
+  },
+  {
+    "food_id": "I_VN_005",
+    "name_vi": "Đậu phụ (đậu hũ trắng)",
+    "name_en": "Tofu (Firm)",
+    "aliases_vi": ["đậu khuôn", "đậu hũ mịn", "tofu"],
+    "aliases_en": ["firm tofu", "bean curd"],
+    "verified": true,
+    "source": "USDA",
+    "serving": {
+      "default_g": 100,
+      "unit": "g",
+      "portions": {
+        "small": 50,
+        "medium": 100,
+        "large": 150
+      }
+    },
+    "macros": {
+      "calories": 144,
+      "protein_g": 15.8,
+      "carbs_g": 2.8,
+      "fat_g": 8.7,
+      "saturated_fat_g": 1.3,
+      "sugar_g": 0.0,
+      "fiber_g": 2.3,
+      "sodium_mg": 7,
+      "cholesterol_mg": 0,
+      "potassium_mg": 121
+    },
+    "micronutrients": {
+      "calcium_mg": 683,
+      "iron_mg": 5.4,
+      "vitamin_a_ug": 0,
+      "vitamin_c_mg": 0.0
+    }
+  },
+  {
+    "food_id": "I_VN_006",
+    "name_vi": "Rau muống (luộc/chưa xào)",
+    "name_en": "Water Spinach (Morning Glory, Boiled)",
+    "aliases_vi": ["rau muống", "rau muống luộc"],
+    "aliases_en": ["morning glory", "water spinach", "kang kong"],
+    "verified": true,
+    "source": "Vien Dinh Duong VN",
+    "serving": {
+      "default_g": 100,
+      "unit": "g",
+      "portions": {
+        "small": 50,
+        "medium": 100,
+        "large": 200
+      }
+    },
+    "macros": {
+      "calories": 19,
+      "protein_g": 2.6,
+      "carbs_g": 3.1,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.0,
+      "sugar_g": 0.0,
+      "fiber_g": 2.1,
+      "sodium_mg": 113,
+      "cholesterol_mg": 0,
+      "potassium_mg": 312
+    },
+    "micronutrients": {
+      "calcium_mg": 77,
+      "iron_mg": 1.7,
+      "vitamin_a_ug": 315,
+      "vitamin_c_mg": 55.0
+    }
+  },
+  {
+    "food_id": "I_VN_007",
+    "name_vi": "Cà chua (sống)",
+    "name_en": "Tomato (Raw)",
+    "aliases_vi": ["quả cà chua"],
+    "aliases_en": ["raw tomato"],
+    "verified": true,
+    "source": "USDA",
+    "serving": {
+      "default_g": 100,
+      "unit": "g",
+      "portions": {
+        "small": 50,
+        "medium": 100,
+        "large": 150
+      }
+    },
+    "macros": {
+      "calories": 18,
+      "protein_g": 0.9,
+      "carbs_g": 3.9,
+      "fat_g": 0.2,
+      "saturated_fat_g": 0.0,
+      "sugar_g": 2.6,
+      "fiber_g": 1.2,
+      "sodium_mg": 5,
+      "cholesterol_mg": 0,
+      "potassium_mg": 237
+    },
+    "micronutrients": {
+      "calcium_mg": 10,
+      "iron_mg": 0.3,
+      "vitamin_a_ug": 42,
+      "vitamin_c_mg": 13.7
+    }
+  },
+  {
+    "food_id": "I_VN_008",
+    "name_vi": "Thịt bò nạc (Sống)",
+    "name_en": "Lean Beef (Raw)",
+    "aliases_vi": ["thịt bò", "bò thăn"],
+    "aliases_en": ["raw beef", "beef steak"],
+    "verified": true,
+    "source": "USDA",
+    "serving": {
+      "default_g": 100,
+      "unit": "g",
+      "portions": {
+        "small": 50,
+        "medium": 100,
+        "large": 200
+      }
+    },
+    "macros": {
+      "calories": 250,
+      "protein_g": 26.0,
+      "carbs_g": 0.0,
+      "fat_g": 15.0,
+      "saturated_fat_g": 6.0,
+      "sugar_g": 0.0,
+      "fiber_g": 0.0,
+      "sodium_mg": 72,
+      "cholesterol_mg": 90,
+      "potassium_mg": 318
+    },
+    "micronutrients": {
+      "calcium_mg": 18,
+      "iron_mg": 2.6,
+      "vitamin_a_ug": 0,
+      "vitamin_c_mg": 0.0
+    }
+  }
+]
