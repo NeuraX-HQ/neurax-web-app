@@ -93,6 +93,7 @@ export default function HomeScreen() {
             <Text style={styles.greetingSubtitle}>Let's keep the momentum going.</Text>
           </View>
           <View style={styles.headerRight}>
+            {/* Đã xoá icon cài đặt UI, giữ lại notification và avatar */}
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={24} color={Colors.textDark} />
               <View style={styles.notificationBadge} />

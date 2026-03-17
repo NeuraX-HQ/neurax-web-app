@@ -35,6 +35,13 @@ export function CalorieGauge({
     const progressAngle = startAngle + totalArc * progress;
     const valueText = String(displayValue ?? current);
     const labelText = label ?? t('calorieGauge.label');
+    // If valueText is in the form "450/1800", split it
+    let mainValue = valueText;
+    let maxValue = '';
+    if (typeof valueText === 'string' && valueText.includes('/')) {
+        [mainValue, maxValue] = valueText.split('/');
+        maxValue = '/' + maxValue;
+    }
     const isCompactValue = valueText.length >= 8;
 
     const polarToCartesian = (angle: number) => {
@@ -85,7 +92,14 @@ export function CalorieGauge({
             {/* Center content */}
             <View style={styles.center}>
                 <Text style={styles.fireEmoji}>🔥</Text>
-                <Text style={[styles.value, isCompactValue && styles.valueCompact]}>{valueText}</Text>
+                {maxValue ? (
+                    <Text style={[styles.value, isCompactValue && styles.valueCompact]}> 
+                        {mainValue}
+                        <Text style={styles.valueMax}>{maxValue}</Text>
+                    </Text>
+                ) : (
+                    <Text style={[styles.value, isCompactValue && styles.valueCompact]}>{valueText}</Text>
+                )}
                 <Text style={styles.label}>{labelText}</Text>
             </View>
         </View>
@@ -107,4 +121,5 @@ const styles = StyleSheet.create({
     value: { fontSize: 22, fontWeight: '800', color: Colors.primary },
     valueCompact: { fontSize: 18 },
     label: { fontSize: 7, color: '#999', letterSpacing: 1.5, fontWeight: '600' },
+    valueMax: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
 });
