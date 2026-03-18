@@ -179,9 +179,11 @@ export default function TabsLayout() {
 
             {/* Overlay backdrop */}
             {menuOpen && (
-                <Animated.View style={[StyleSheet.absoluteFill, styles.overlay, { opacity: overlayOpacity }]} pointerEvents="auto">
-                    <Pressable style={StyleSheet.absoluteFill} onPress={closeMenu} />
-                </Animated.View>
+                <View style={[StyleSheet.absoluteFill, { zIndex: 10 }]}>
+                    <Animated.View style={[StyleSheet.absoluteFill, styles.overlay, { opacity: overlayOpacity }]} pointerEvents="auto">
+                        <Pressable style={StyleSheet.absoluteFill} onPress={closeMenu} />
+                    </Animated.View>
+                </View>
             )}
 
             {/* Floating right column: AI + Menu + FAB */}
@@ -204,9 +206,15 @@ export default function TabsLayout() {
                                     <BlurView intensity={75} tint="light" style={StyleSheet.absoluteFill} />
                                     <Text style={styles.menuLabelText}>{opt.label}</Text>
                                 </View>
-                                <TouchableOpacity style={styles.menuIconBtn} onPress={() => handleOption(opt.id)} activeOpacity={0.8}>
-                                    <BlurView intensity={75} tint="light" style={StyleSheet.absoluteFill} />
-                                    <Ionicons name={opt.icon} size={24} color="#1B2838" />
+                                <TouchableOpacity 
+                                    style={styles.menuIconBtn} 
+                                    onPress={() => handleOption(opt.id)} 
+                                    activeOpacity={0.7}
+                                >
+                                    <View style={StyleSheet.absoluteFill}>
+                                        <BlurView intensity={75} tint="light" style={StyleSheet.absoluteFill} />
+                                    </View>
+                                    <Ionicons name={opt.icon} size={24} color="#1B2838" style={{ zIndex: 1 }} />
                                 </TouchableOpacity>
                             </Animated.View>
                         ))}
@@ -249,8 +257,9 @@ const styles = StyleSheet.create({
         right: 16,
         bottom: BOTTOM_INSET,
         alignItems: 'flex-end',
-        zIndex: 20,
+        zIndex: 9999, // Ensure it's above everything on iOS
         gap: 10,
+        width: 200, // Give it a fixed width to ensure touch area is stable
     },
     // AI bubble resting
     aiBubbleResting: {
