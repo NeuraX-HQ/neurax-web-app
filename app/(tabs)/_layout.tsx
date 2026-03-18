@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, Platform,
-    Pressable, Animated,
+    Pressable, Animated, PanResponder,
+    type GestureResponderEvent, type PanResponderGestureState,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Tabs, useRouter } from 'expo-router';
@@ -21,42 +22,239 @@ const INACTIVE_COLOR = '#A0AEC0';
 // ─── Custom Tab Bar ──────────────────────────────────────────────────────────
 function CustomTabBar({ state, navigation }: BottomTabBarProps) {
     const { t } = useAppLanguage();
+    const [barWidth, setBarWidth] = useState(0);
 
     const tabs = [
-        { name: 'home', label: t('tabs.home'), icon: (f: boolean) => <HomeIcon size={22} color={f ? ACTIVE_COLOR : INACTIVE_COLOR} /> },
-        { name: 'battle', label: t('tabs.battle'), icon: (f: boolean) => <BattleIcon size={22} color={f ? ACTIVE_COLOR : INACTIVE_COLOR} /> },
+        { name: 'home',    label: t('tabs.home'),    icon: (f: boolean) => <HomeIcon    size={22} color={f ? ACTIVE_COLOR : INACTIVE_COLOR} /> },
+        { name: 'battle',  label: t('tabs.battle'),  icon: (f: boolean) => <BattleIcon  size={22} color={f ? ACTIVE_COLOR : INACTIVE_COLOR} /> },
         { name: 'kitchen', label: t('tabs.kitchen'), icon: (f: boolean) => <KitchenIcon size={22} color={f ? ACTIVE_COLOR : INACTIVE_COLOR} /> },
         {
             name: 'progress',
-            label: 'Tiến Trình',
-            icon: (f: boolean) => (
-                <Ionicons name={f ? 'bar-chart' : 'bar-chart-outline'} size={22} color={f ? ACTIVE_COLOR : INACTIVE_COLOR} />
-            ),
+            label: 'Progress',
+            icon: (f: boolean) => <Ionicons name={f ? 'bar-chart' : 'bar-chart-outline'} size={22} color={f ? ACTIVE_COLOR : INACTIVE_COLOR} />,
         },
     ];
 
+    // Map route index → visual index (skips hidden routes like 'add')
+    const visualIndex = Math.max(0, tabs.findIndex(t => t.name === (state.routes[state.index]?.name ?? '')));
+
+    // ─── Animated values (stable across renders) ───────────────────────
+    // Refs to avoid stale closures in PanResponder
+    const stateRef = useRef(state);
+    stateRef.current = state;
+    const navRef = useRef(navigation);
+    navRef.current = navigation;
+
+    const PILL_PAD = 5;
+    const tabWidthRef   = useRef(0);     // mutable, always up-to-date
+    const pillCurrentX  = useRef(0);     // current pixel X of pill left edge
+    const dragStartX    = useRef(0);     // pillCurrentX at the moment of grant
+    const isDragging    = useRef(false);
+    const prevVisual    = useRef(visualIndex);
+
+    const pillPixelX  = useRef(new Animated.Value(0)).current;
+    const pillStretch = useRef(new Animated.Value(1)).current;
+    const pillScale   = useRef(new Animated.Value(1)).current;  // "ball pops" on touch
+
+    const tabWidth = barWidth > 0 ? barWidth / tabs.length : 0;
+    tabWidthRef.current = tabWidth;
+
+    // Pixel position for a given visual index
+    const indexToPx = (i: number) => i * tabWidthRef.current + PILL_PAD;
+
+    // ─── Spring snap to tab ────────────────────────────────────────────
+    const snapToTab = React.useCallback((toIdx: number) => {
+        const tw     = tabWidthRef.current;
+        if (tw === 0) return;
+        const target = toIdx * tw + PILL_PAD;
+        const dist   = Math.abs(pillCurrentX.current - target) / tw;
+        const peak   = 1.15 + 0.2 * Math.min(dist, 2);
+
+        Animated.timing(pillStretch, { toValue: peak, duration: 100, useNativeDriver: true }).start(() => {
+            Animated.parallel([
+                Animated.spring(pillPixelX, {
+                    toValue: target,
+                    useNativeDriver: true,
+                    damping: 26, stiffness: 220, mass: 0.8,
+                }),
+                Animated.spring(pillStretch, {
+                    toValue: 1,
+                    useNativeDriver: true,
+                    damping: 18, stiffness: 240,
+                }),
+                Animated.spring(pillScale, {
+                    toValue: 1,
+                    useNativeDriver: true,
+                    damping: 18, stiffness: 260,
+                }),
+            ]).start(() => { pillCurrentX.current = target; });
+        });
+    }, []);
+
+    // Sync pill when tab changes via tap
+    React.useEffect(() => {
+        if (tabWidth === 0) return;
+        const prev = prevVisual.current;
+        prevVisual.current = visualIndex;
+        if (!isDragging.current) {
+            pillCurrentX.current = indexToPx(prev);
+            snapToTab(visualIndex);
+        }
+    }, [visualIndex, tabWidth]);
+
+    // Init pill position when bar width first becomes known
+    React.useEffect(() => {
+        if (tabWidth > 0) {
+            const px = indexToPx(visualIndex);
+            pillPixelX.setValue(px);
+            pillCurrentX.current = px;
+        }
+    }, [tabWidth]);
+
+    // ─── PanResponder ─────────────────────────────────────────────────
+    // Recreate whenever tabWidth changes (fixes stale closure bug)
+    const pan = React.useMemo(() => PanResponder.create({
+        // Capture phase: parent steals touch when finger slides horizontally,
+        // even if a child TouchableOpacity already received onStart.
+        onStartShouldSetPanResponder:        () => false,
+        onStartShouldSetPanResponderCapture: () => false,
+        onMoveShouldSetPanResponder: (_: GestureResponderEvent, gs: PanResponderGestureState) =>
+            Math.abs(gs.dx) > 5 && Math.abs(gs.dx) > Math.abs(gs.dy),
+        onMoveShouldSetPanResponderCapture: (_: GestureResponderEvent, gs: PanResponderGestureState) =>
+            Math.abs(gs.dx) > 5 && Math.abs(gs.dx) > Math.abs(gs.dy),
+        onPanResponderGrant: () => {
+            isDragging.current = true;
+            dragStartX.current = pillCurrentX.current;  // snapshot current position
+            // Drop becomes noticeably taller/rounder (scaleY = 1.6) and slightly wider (scaleX=1.15)
+            Animated.parallel([
+                Animated.spring(pillScale,   { toValue: 1.60, useNativeDriver: true, damping: 12, stiffness: 260 }),
+                Animated.spring(pillStretch, { toValue: 1.15, useNativeDriver: true, damping: 14, stiffness: 280 }),
+            ]).start();
+        },
+        onPanResponderMove: (_: GestureResponderEvent, gs: PanResponderGestureState) => {
+            const tw = tabWidthRef.current;
+            if (tw === 0) return;
+            const rawX    = dragStartX.current + gs.dx;
+            const minX    = PILL_PAD;
+            const maxX    = tw * (tabs.length - 1) + PILL_PAD;
+            const clamped = Math.max(minX, Math.min(maxX, rawX));
+            pillPixelX.setValue(clamped);
+            pillCurrentX.current = clamped;
+            // Horizontal base stretch (1.15) + Gooey morphing stretch
+            const frac = Math.abs(gs.dx) / tw;
+            pillStretch.setValue(1.15 + 0.20 * Math.min(frac, 2));
+        },
+        onPanResponderRelease: (_: GestureResponderEvent, gs: PanResponderGestureState) => {
+            isDragging.current = false;
+            const tw = tabWidthRef.current;
+            if (tw === 0) return;
+
+            const releasedX = dragStartX.current + gs.dx;
+            const targetIdx = Math.max(0, Math.min(tabs.length - 1,
+                Math.round((releasedX - PILL_PAD) / tw)
+            ));
+
+            prevVisual.current = targetIdx;
+            snapToTab(targetIdx);
+
+            const targetName = tabs[targetIdx]?.name;
+            if (targetName) {
+                const routeIdx = stateRef.current.routes.findIndex(r => r.name === targetName);
+                if (routeIdx !== -1 && stateRef.current.index !== routeIdx) {
+                    navRef.current.navigate(targetName);
+                }
+            }
+        },
+        onPanResponderTerminate: (_: GestureResponderEvent, gs: PanResponderGestureState) => {
+            // iOS system gestures (like swiping from the left edge) quickly cancel the current touch.
+            // On terminate, we should behave exactly like a release so the pill doesn't stay stuck without navigating!
+            isDragging.current = false;
+            const tw = tabWidthRef.current;
+            if (tw === 0) return;
+
+            const releasedX = dragStartX.current + gs.dx;
+            const targetIdx = Math.max(0, Math.min(tabs.length - 1,
+                Math.round((releasedX - PILL_PAD) / tw)
+            ));
+
+            prevVisual.current = targetIdx;
+            snapToTab(targetIdx);
+
+            const targetName = tabs[targetIdx]?.name;
+            if (targetName) {
+                const routeIdx = stateRef.current.routes.findIndex(r => r.name === targetName);
+                if (routeIdx !== -1 && stateRef.current.index !== routeIdx) {
+                    navRef.current.navigate(targetName);
+                }
+            }
+        },
+    }), [tabWidth]);  // ← recreated when tabWidth changes, no stale closures
+
     return (
         <View style={tabBarStyles.wrapper} pointerEvents="box-none">
-            <View style={tabBarStyles.pill} pointerEvents="auto">
-                <BlurView intensity={85} tint="light" style={StyleSheet.absoluteFill} />
-                {tabs.map((tab) => {
+            <View
+                style={tabBarStyles.pill}
+                pointerEvents="auto"
+                onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
+                {...pan.panHandlers}
+            >
+                {/* Glassmorphism backdrop */}
+                <BlurView intensity={Platform.OS === 'ios' ? 55 : 90} tint="light" style={StyleSheet.absoluteFill} />
+
+                {/* Liquid Glass indicator — grab & drag me */}
+                {tabWidth > 0 && (
+                    <Animated.View
+                        style={[
+                            tabBarStyles.indicator,
+                            {
+                                width: tabWidth - PILL_PAD * 2,
+                                transform: [
+                                    { translateX: pillPixelX },
+                                    { scaleY: pillScale },     // huge vertical height expansion
+                                    { scaleX: pillStretch },   // morph horizontal stretch
+                                ],
+                            },
+                        ]}
+                        pointerEvents="none"
+                    >
+                        <View style={tabBarStyles.chromaticCyan} />
+                        <View style={tabBarStyles.chromaticPurple} />
+                        <View style={tabBarStyles.shine} />
+                    </Animated.View>
+                )}
+
+                {/* Tab Buttons — magnify under the glass */}
+                {tabs.map((tab, idx) => {
                     const routeIndex = state.routes.findIndex(r => r.name === tab.name);
-                    const focused = state.index === routeIndex;
+                    const focused    = state.index === routeIndex;
+
+                    // Guard: only interpolate once we have real dimensions
+                    const scale = tabWidth > 0
+                        ? pillPixelX.interpolate({
+                            inputRange: [
+                                idx * tabWidth - tabWidth + PILL_PAD,
+                                idx * tabWidth + PILL_PAD,
+                                idx * tabWidth + tabWidth + PILL_PAD,
+                                idx * tabWidth + tabWidth * 2 + PILL_PAD,
+                            ],
+                            outputRange: [1, 1.18, 1.18, 1],
+                            extrapolate: 'clamp',
+                        })
+                        : new Animated.Value(1);
+
                     return (
                         <TouchableOpacity
                             key={tab.name}
                             style={tabBarStyles.tabBtn}
-                            onPress={() => {
-                                if (routeIndex !== -1 && !focused) {
-                                    navigation.navigate(tab.name);
-                                }
-                            }}
-                            activeOpacity={0.7}
+                            onPress={() => { if (routeIndex !== -1 && !focused) navigation.navigate(tab.name); }}
+                            activeOpacity={0.75}
                         >
-                            {tab.icon(focused)}
-                            <Text style={[tabBarStyles.label, focused && tabBarStyles.labelActive]} allowFontScaling={false}>
-                                {tab.label}
-                            </Text>
+                            <Animated.View style={{ alignItems: 'center', transform: [{ scale }] }}>
+                                {tab.icon(focused)}
+                                <Text style={[tabBarStyles.label, focused && tabBarStyles.labelActive]} allowFontScaling={false}>
+                                    {tab.label}
+                                </Text>
+                            </Animated.View>
                         </TouchableOpacity>
                     );
                 })}
@@ -70,20 +268,64 @@ const tabBarStyles = StyleSheet.create({
         position: 'absolute',
         bottom: BOTTOM_INSET,
         left: 16,
-        right: 84, // leave space for FAB column
+        right: 84,
         height: NAV_HEIGHT,
+        zIndex: 1000,
     },
     pill: {
         flex: 1,
         flexDirection: 'row',
         borderRadius: 32,
         overflow: 'hidden',
-        backgroundColor: 'rgba(255,255,255,0.55)',
+        // Ultra-thin glass: on iOS the BlurView behind does the heavy lifting
+        backgroundColor: Platform.OS === 'ios' ? 'rgba(255,255,255,0.15)' : 'rgba(245,245,247,0.80)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.55)',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.10,
+        shadowOpacity: 0.08,
         shadowRadius: 24,
         elevation: 12,
+    },
+    // The moving indicator pill — pure water-droplet glass, no inner BlurView overflow
+    indicator: {
+        position: 'absolute',
+        top: 7,
+        bottom: 7,
+        borderRadius: 22,
+        overflow: 'visible',  // Let the glow spill out slightly, it's clipped by the pill
+        backgroundColor: 'rgba(255,255,255,0.55)',
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,255,255,0.90)',
+        // Multi-color glow (chromatic aberration look)
+        shadowColor: '#A5B4FC',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5,
+        shadowRadius: 8,
+    },
+    // Top-left cyan highlight (light refraction)
+    chromaticCyan: {
+        position: 'absolute',
+        top: 2, left: 4,
+        width: 18, height: 8,
+        borderRadius: 99,
+        backgroundColor: 'rgba(103,232,249,0.22)',
+    },
+    // Bottom-right purple highlight
+    chromaticPurple: {
+        position: 'absolute',
+        bottom: 2, right: 4,
+        width: 14, height: 6,
+        borderRadius: 99,
+        backgroundColor: 'rgba(167,139,250,0.20)',
+    },
+    // White gloss specular
+    shine: {
+        position: 'absolute',
+        top: 1, left: 10,
+        right: 10, height: 12,
+        borderRadius: 99,
+        backgroundColor: 'rgba(255,255,255,0.45)',
     },
     tabBtn: {
         flex: 1,
@@ -91,6 +333,7 @@ const tabBarStyles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 3,
+        zIndex: 1,
     },
     label: {
         fontSize: 9,
@@ -206,9 +449,9 @@ export default function TabsLayout() {
                                     <BlurView intensity={75} tint="light" style={StyleSheet.absoluteFill} />
                                     <Text style={styles.menuLabelText}>{opt.label}</Text>
                                 </View>
-                                <TouchableOpacity 
-                                    style={styles.menuIconBtn} 
-                                    onPress={() => handleOption(opt.id)} 
+                                <TouchableOpacity
+                                    style={styles.menuIconBtn}
+                                    onPress={() => handleOption(opt.id)}
                                     activeOpacity={0.7}
                                 >
                                     <View style={StyleSheet.absoluteFill}>
