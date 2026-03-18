@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -7,6 +7,7 @@ import { Colors, Shadows } from '../src/constants/colors';
 import { useMealStore } from '../src/store/mealStore';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 import { FlameLevel, getCurrentStreak, getDaysSinceLastActive, getFlameLevel, getNextStreakTarget, toLocalIsoDate } from '../src/utils/streak';
+import { StreakFlameCard } from '../src/components/StreakFlameCard';
 
 type BadgeItem = {
     key: string;
@@ -90,8 +91,6 @@ export default function AchievementsScreen() {
     const router = useRouter();
     const { t } = useAppLanguage();
     const { meals } = useMealStore();
-    const scaleAnim = useRef(new Animated.Value(1)).current;
-    const glowAnim = useRef(new Animated.Value(0.6)).current;
     const [devStreakBoost, setDevStreakBoost] = useState(0);
 
     const todayIso = toLocalIsoDate(new Date());
@@ -105,40 +104,6 @@ export default function AchievementsScreen() {
     const nextTarget = useMemo(() => getNextStreakTarget(effectiveStreak), [effectiveStreak]);
     const unlockedCount = BADGES.filter((badge) => effectiveStreak >= badge.threshold).length;
     const flame = FLAME_CONFIG[effectiveFlameLevel];
-
-    useEffect(() => {
-        const pulse = Animated.loop(
-            Animated.sequence([
-                Animated.parallel([
-                    Animated.timing(scaleAnim, {
-                        toValue: flame.pulseScale,
-                        duration: flame.pulseDuration,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(glowAnim, {
-                        toValue: 1,
-                        duration: flame.pulseDuration,
-                        useNativeDriver: true,
-                    }),
-                ]),
-                Animated.parallel([
-                    Animated.timing(scaleAnim, {
-                        toValue: 1,
-                        duration: flame.pulseDuration,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(glowAnim, {
-                        toValue: 0.65,
-                        duration: flame.pulseDuration,
-                        useNativeDriver: true,
-                    }),
-                ]),
-            ])
-        );
-
-        pulse.start();
-        return () => pulse.stop();
-    }, [flame.pulseDuration, flame.pulseScale, glowAnim, scaleAnim]);
 
     const missInfo =
         daysSinceLastActive && daysSinceLastActive > 0
@@ -158,64 +123,11 @@ export default function AchievementsScreen() {
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
                 <View style={styles.flameCard}>
-                    <View style={[styles.flameWrap, { width: flame.wrapperSize, height: flame.wrapperSize }]}>
-                        <Animated.View
-                            style={[
-                                styles.flameOuterGlow,
-                                {
-                                    width: flame.outerGlowSize,
-                                    height: flame.outerGlowSize,
-                                    backgroundColor: flame.outerGlowColor,
-                                    opacity: glowAnim,
-                                    transform: [{ scale: scaleAnim }],
-                                },
-                            ]}
-                        />
-
-                        {flame.midGlowSize > 0 ? (
-                            <Animated.View
-                                style={[
-                                    styles.flameMidGlow,
-                                    {
-                                        width: flame.midGlowSize,
-                                        height: flame.midGlowSize,
-                                        backgroundColor: flame.midGlowColor,
-                                        opacity: glowAnim,
-                                        transform: [{ scale: scaleAnim }],
-                                    },
-                                ]}
-                            />
-                        ) : null}
-
-                        {effectiveFlameLevel === 'high' ? (
-                            <Animated.View
-                                style={[
-                                    styles.flameHighRing,
-                                    {
-                                        width: flame.wrapperSize,
-                                        height: flame.wrapperSize,
-                                        opacity: glowAnim,
-                                        transform: [{ scale: scaleAnim }],
-                                    },
-                                ]}
-                            />
-                        ) : null}
-
-                        <Animated.View style={[styles.flameBody, { transform: [{ scale: scaleAnim }] }]}>
-                            <Ionicons name="flame" size={flame.iconSize} color={flame.coreColor} />
-                            <Ionicons
-                                name="flame"
-                                size={Math.round(flame.iconSize * 0.68)}
-                                color={flame.innerColor}
-                                style={styles.flameInnerIcon}
-                            />
-                        </Animated.View>
-
-                        <View style={styles.flameValueOverlay}>
-                            <Text style={[styles.flameCount, { fontSize: flame.countSize }]}>{effectiveStreak}</Text>
-                            <Text style={styles.flameDays}>{t('achievements.days')}</Text>
-                        </View>
-                    </View>
+                    <StreakFlameCard
+                        streak={effectiveStreak}
+                        flameLevel={effectiveFlameLevel}
+                        dayLabel={t('achievements.days')}
+                    />
 
                     <Text style={styles.flameLevelText}>{t(flame.labelKey)}</Text>
                     <Text style={styles.flameHint}>{displayMissInfo}</Text>
