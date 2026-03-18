@@ -68,7 +68,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         if (tw === 0) return;
         const target = toIdx * tw + PILL_PAD;
         const dist   = Math.abs(pillCurrentX.current - target) / tw;
-        const peak   = 1.15 + 0.2 * Math.min(dist, 2);
+        const peak   = 1 + 0.2 * Math.min(dist, 2);
 
         Animated.timing(pillStretch, { toValue: peak, duration: 100, useNativeDriver: true }).start(() => {
             Animated.parallel([
@@ -125,10 +125,10 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         onPanResponderGrant: () => {
             isDragging.current = true;
             dragStartX.current = pillCurrentX.current;  // snapshot current position
-            // Drop becomes noticeably taller/rounder (scaleY = 1.6) and slightly wider (scaleX=1.15)
+            // Ball pops up uniformly when grabbed (magnifying bubble effect)
             Animated.parallel([
-                Animated.spring(pillScale,   { toValue: 1.60, useNativeDriver: true, damping: 12, stiffness: 260 }),
-                Animated.spring(pillStretch, { toValue: 1.15, useNativeDriver: true, damping: 14, stiffness: 280 }),
+                Animated.spring(pillScale,   { toValue: 1.35, useNativeDriver: true, damping: 14, stiffness: 280 }),
+                Animated.spring(pillStretch, { toValue: 1, useNativeDriver: true, damping: 14, stiffness: 280 }),
             ]).start();
         },
         onPanResponderMove: (_: GestureResponderEvent, gs: PanResponderGestureState) => {
@@ -140,9 +140,9 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             const clamped = Math.max(minX, Math.min(maxX, rawX));
             pillPixelX.setValue(clamped);
             pillCurrentX.current = clamped;
-            // Horizontal base stretch (1.15) + Gooey morphing stretch
+            // Gooey stretch in direction of movement
             const frac = Math.abs(gs.dx) / tw;
-            pillStretch.setValue(1.15 + 0.20 * Math.min(frac, 2));
+            pillStretch.setValue(1 + 0.15 * Math.min(frac, 2));
         },
         onPanResponderRelease: (_: GestureResponderEvent, gs: PanResponderGestureState) => {
             isDragging.current = false;
@@ -210,8 +210,8 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
                                 width: tabWidth - PILL_PAD * 2,
                                 transform: [
                                     { translateX: pillPixelX },
-                                    { scaleY: pillScale },     // huge vertical height expansion
-                                    { scaleX: pillStretch },   // morph horizontal stretch
+                                    { scale: pillScale },      // uniform pop when grabbed
+                                    { scaleX: pillStretch },   // additional morph stretch when moving
                                 ],
                             },
                         ]}
