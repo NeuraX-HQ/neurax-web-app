@@ -33,16 +33,18 @@ export default function RecipeCookingScreen() {
     const [stepIndex, setStepIndex] = useState(0);
     const currentStep = recipe?.steps[stepIndex];
     const [remainingSec, setRemainingSec] = useState(currentStep?.durationSec || 0);
-    const [isPaused, setIsPaused] = useState(false);
+    const [isStarted, setIsStarted] = useState(false);
+    const [isPaused, setIsPaused] = useState(true);
     const [elapsedSec, setElapsedSec] = useState(0);
 
     useEffect(() => {
         setRemainingSec(currentStep?.durationSec || 0);
-        setIsPaused(false);
+        setIsStarted(false);
+        setIsPaused(true);
     }, [stepIndex, currentStep?.durationSec]);
 
     useEffect(() => {
-        if (isPaused) return;
+        if (!isStarted || isPaused) return;
         const timer = setInterval(() => {
             setRemainingSec((prev) => {
                 if (prev > 0) {
@@ -53,7 +55,7 @@ export default function RecipeCookingScreen() {
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [isPaused]);
+    }, [isStarted, isPaused]);
 
     if (!recipe || !currentStep) {
         return (
@@ -109,6 +111,15 @@ export default function RecipeCookingScreen() {
         });
     };
 
+    const handleStartTimer = () => {
+        setIsStarted(true);
+        setIsPaused(false);
+    };
+
+    const adjustTime = (amount: number) => {
+        setRemainingSec((prev) => Math.max(0, prev + amount));
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -144,15 +155,37 @@ export default function RecipeCookingScreen() {
                     </View>
                     <View style={styles.timerMain}>
                         <Text style={styles.timerLabel}>{t('recipeCooking.remaining')}</Text>
-                        <Text style={styles.timerValue}>{formatTimer(remainingSec)}</Text>
+                        <View style={styles.timerValueRow}>
+                            {!isStarted && (
+                                <TouchableOpacity style={styles.adjustBtn} onPress={() => adjustTime(-30)}>
+                                    <Ionicons name="remove" size={16} color={Colors.textSecondary} />
+                                </TouchableOpacity>
+                            )}
+                            <Text style={styles.timerValue}>{formatTimer(remainingSec)}</Text>
+                            {!isStarted && (
+                                <TouchableOpacity style={styles.adjustBtn} onPress={() => adjustTime(30)}>
+                                    <Ionicons name="add" size={16} color={Colors.textSecondary} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
                     </View>
+                    
                     <View style={styles.timerActions}>
-                        <TouchableOpacity style={styles.timerActionBtn} onPress={togglePause}>
-                            <Ionicons name={isPaused ? 'play' : 'pause'} size={16} color={Colors.textSecondary} />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.timerActionBtn} onPress={fastForward}>
-                            <Ionicons name="play-forward" size={16} color={Colors.textSecondary} />
-                        </TouchableOpacity>
+                        {!isStarted ? (
+                            <TouchableOpacity style={styles.startTimerBtn} onPress={handleStartTimer}>
+                                <Text style={styles.startTimerBtnText}>{t('recipeCooking.startTimer')}</Text>
+                                <Ionicons name="play" size={16} color="#FFF" />
+                            </TouchableOpacity>
+                        ) : (
+                            <>
+                                <TouchableOpacity style={styles.timerActionBtn} onPress={togglePause}>
+                                    <Ionicons name={isPaused ? 'play' : 'pause'} size={16} color={Colors.textSecondary} />
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.timerActionBtn} onPress={fastForward}>
+                                    <Ionicons name="play-forward" size={16} color={Colors.textSecondary} />
+                                </TouchableOpacity>
+                            </>
+                        )}
                     </View>
                 </View>
             </View>
@@ -245,18 +278,41 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     timerLabel: { fontSize: 10, color: Colors.textSecondary, textTransform: 'uppercase', fontWeight: '700' },
-    timerValue: { marginTop: 2, fontSize: 24, fontWeight: '800', color: Colors.text },
-    timerMain: { minWidth: 130 },
+    timerValueRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 },
+    timerValue: { fontSize: 24, fontWeight: '800', color: Colors.text },
+    timerMain: { flex: 1 },
+    adjustBtn: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     timerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 8 },
     timerActionBtn: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         borderWidth: 1,
         borderColor: '#D4DBE3',
         backgroundColor: '#F7FAFC',
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    startTimerBtn: {
+        backgroundColor: Colors.accent,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 20,
+        gap: 6,
+    },
+    startTimerBtnText: {
+        color: '#FFF',
+        fontWeight: '700',
+        fontSize: 14,
     },
     content: { paddingHorizontal: 16, paddingTop: 16, gap: 12 },
     stepTitle: { fontSize: 25, fontWeight: '800', color: Colors.text, lineHeight: 32 },
