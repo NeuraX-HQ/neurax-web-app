@@ -107,6 +107,8 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'recipeCooking.prev': 'Trở lại',
         'recipeCooking.next': 'Tiếp theo',
         'recipeCooking.complete': 'Hoàn thành',
+        'recipeCooking.startTimer': 'Bắt đầu',
+        'recipeCooking.adjustTime': 'Chỉnh thời gian',
 
         'recipeComplete.notFound': 'Không tìm thấy dữ liệu tổng kết',
         'recipeComplete.backKitchen': 'Ve Kitchen',
@@ -701,6 +703,8 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'recipeCooking.prev': 'Back',
         'recipeCooking.next': 'Next',
         'recipeCooking.complete': 'Finish',
+        'recipeCooking.startTimer': 'Start',
+        'recipeCooking.adjustTime': 'Adjust time',
 
         'recipeComplete.notFound': 'Summary data not found',
         'recipeComplete.backKitchen': 'Back to Kitchen',

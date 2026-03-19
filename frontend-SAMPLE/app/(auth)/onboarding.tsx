@@ -251,7 +251,7 @@ export default function OnboardingScreen() {
             case 3:
                 return (
                     <View style={styles.stepContent}>
-                        <Text style={styles.stepTitle}>🍽️ Sở thích ăn uống</Text>
+                        <Text style={styles.stepTitle}>Sở thích ăn uống</Text>
 
                         <Text style={styles.sectionLabel}>Activity level:</Text>
                         {ACTIVITY_LEVELS.map((level) => (

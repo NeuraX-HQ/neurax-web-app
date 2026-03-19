@@ -51,7 +51,7 @@ const MealSection = memo(function MealSection({
             {/* Content */}
             {isExpanded && (
                 <View style={styles.content}>
-                    {meals.length > 0 ? (
+                    {meals.length > 0 && (
                         meals.map(meal => (
                             <MealCard
                                 key={meal.id}
@@ -59,11 +59,6 @@ const MealSection = memo(function MealSection({
                                 onPress={() => onMealPress?.(meal)}
                             />
                         ))
-                    ) : (
-                        <View style={styles.emptyState}>
-                            <Text style={styles.emptyIcon}>🍽️</Text>
-                            <Text style={styles.emptyText}>Chưa log {title.toLowerCase()}</Text>
-                        </View>
                     )}
 
                     {/* Add meal button */}

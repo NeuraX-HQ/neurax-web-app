@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d59f2",
+                        "background-light": "#f5f6f8",
+                        "background-dark": "#101622",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+                },
+            },
+        }
+    </script>
+<title>Trend Progress</title>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
+<div class="relative flex min-h-screen w-full flex-col max-w-md mx-auto bg-white dark:bg-background-dark shadow-2xl overflow-x-hidden">
+<!-- Header -->
+<div class="flex items-center p-4 pt-6 justify-between">
+<div class="text-slate-900 dark:text-slate-100 flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+<span class="material-symbols-outlined">arrow_back</span>
+</div>
+<h2 class="text-xl font-bold leading-tight tracking-tight flex-1 text-center pr-10">Trend Progress</h2>
+</div>
+<!-- Streak Hero Section -->
+<div class="p-4">
+<div class="flex items-center justify-between gap-4 rounded-xl bg-slate-900 p-6 shadow-xl">
+<div class="flex flex-col gap-1">
+<p class="text-slate-400 text-sm font-medium uppercase tracking-wider">Current Streak</p>
+<p class="text-white text-3xl font-bold">14 Days Streak</p>
+<p class="text-primary font-medium text-sm">Keep up the great work!</p>
+</div>
+<div class="flex items-center justify-center bg-red-500/10 p-3 rounded-full">
+<span class="material-symbols-outlined text-red-500 !text-5xl" style="font-variation-settings: 'FILL' 1">local_fire_department</span>
+</div>
+</div>
+</div>
+<!-- Weekly Chart Section -->
+<div class="px-4 py-4">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold">Weekly Calories</h3>
+<div class="flex items-center gap-1 text-red-500 font-bold bg-red-50 px-2 py-0.5 rounded text-xs">
+<span class="material-symbols-outlined text-sm">trending_up</span>
+<span>+5% vs last week</span>
+</div>
+</div>
+<div class="bg-slate-50 dark:bg-slate-900/50 p-6 rounded-xl border border-slate-100 dark:border-slate-800">
+<div class="flex justify-between items-end mb-2">
+<div>
+<p class="text-slate-500 text-xs font-bold uppercase">Daily Average</p>
+<p class="text-2xl font-bold">1,850 <span class="text-sm font-normal text-slate-500 uppercase tracking-tighter">kcal</span></p>
+</div>
+<div class="flex items-center gap-1 text-red-500 font-bold">
+<span class="material-symbols-outlined text-sm">trending_down</span>
+<span class="text-sm">-5%</span>
+</div>
+</div>
+<div class="grid h-40 grid-flow-col gap-3 items-end justify-items-center mt-6">
+<!-- Bars -->
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="relative w-full bg-slate-200 dark:bg-slate-800 rounded-t-sm h-32 overflow-hidden">
+<div class="absolute bottom-0 w-full bg-primary" style="height: 85%;"></div>
+</div>
+<p class="text-slate-500 text-[10px] font-bold uppercase">Mon</p>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="relative w-full bg-slate-200 dark:bg-slate-800 rounded-t-sm h-32 overflow-hidden">
+<div class="absolute bottom-0 w-full bg-primary" style="height: 60%;"></div>
+</div>
+<p class="text-slate-500 text-[10px] font-bold uppercase">Tue</p>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="relative w-full bg-slate-200 dark:bg-slate-800 rounded-t-sm h-32 overflow-hidden">
+<div class="absolute bottom-0 w-full bg-red-400" style="height: 95%;"></div>
+</div>
+<p class="text-slate-500 text-[10px] font-bold uppercase">Wed</p>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="relative w-full bg-slate-200 dark:bg-slate-800 rounded-t-sm h-32 overflow-hidden">
+<div class="absolute bottom-0 w-full bg-primary" style="height: 70%;"></div>
+</div>
+<p class="text-slate-500 text-[10px] font-bold uppercase">Thu</p>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="relative w-full bg-slate-200 dark:bg-slate-800 rounded-t-sm h-32 overflow-hidden">
+<div class="absolute bottom-0 w-full bg-primary" style="height: 80%;"></div>
+</div>
+<p class="text-slate-500 text-[10px] font-bold uppercase">Fri</p>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="relative w-full bg-slate-200 dark:bg-slate-800 rounded-t-sm h-32 overflow-hidden">
+<div class="absolute bottom-0 w-full bg-primary" style="height: 40%;"></div>
+</div>
+<p class="text-slate-500 text-[10px] font-bold uppercase">Sat</p>
+</div>
+<div class="flex flex-col items-center gap-2 w-full">
+<div class="relative w-full bg-slate-200 dark:bg-slate-800 rounded-t-sm h-32 overflow-hidden">
+<div class="absolute bottom-0 w-full bg-primary" style="height: 55%;"></div>
+</div>
+<p class="text-slate-500 text-[10px] font-bold uppercase">Sun</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Monthly Monthly Trend Line -->
+<div class="px-4 py-2">
+<h3 class="text-lg font-bold mb-4">Monthly Average Trend</h3>
+<div class="h-32 w-full bg-slate-50 dark:bg-slate-900/50 rounded-xl relative overflow-hidden border border-slate-100 dark:border-slate-800 flex items-center justify-center">
+<svg class="absolute inset-0 w-full h-full p-4" preserveaspectratio="none" viewbox="0 0 400 100">
+<path d="M0,80 Q50,70 100,85 T200,40 T300,50 T400,20" fill="none" stroke="#0d59f2" stroke-linecap="round" stroke-width="3"></path>
+<path d="M0,80 Q50,70 100,85 T200,40 T300,50 T400,20 V100 H0 Z" fill="url(#grad1)" opacity="0.1"></path>
+<defs>
+<lineargradient id="grad1" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#0d59f2;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#0d59f2;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<div class="z-10 bg-white/80 dark:bg-slate-800/80 backdrop-blur px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                    Avg: 1,920 kcal
+                </div>
+</div>
+</div>
+<!-- Macro Breakdown -->
+<div class="px-4 py-4">
+<h3 class="text-lg font-bold mb-4">Macro Breakdown</h3>
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+<div class="flex justify-between text-xs font-bold uppercase text-slate-500 mb-2">
+<span>Protein (30%)</span>
+<span>Carbs (50%)</span>
+<span>Fat (20%)</span>
+</div>
+<!-- Stacked Bar -->
+<div class="h-4 w-full flex rounded-full overflow-hidden mb-4">
+<div class="h-full bg-blue-500" style="width: 30%"></div>
+<div class="h-full bg-emerald-500" style="width: 50%"></div>
+<div class="h-full bg-amber-500" style="width: 20%"></div>
+</div>
+<!-- Comparison -->
+<div class="flex justify-between items-center text-xs">
+<div class="flex items-center gap-2">
+<div class="size-2 rounded-full bg-slate-300"></div>
+<span class="text-slate-500">Target</span>
+</div>
+<div class="h-1 flex-1 mx-4 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+<div class="h-full bg-slate-300" style="width: 100%"></div>
+</div>
+<span class="font-bold">2,000 kcal</span>
+</div>
+</div>
+</div>
+<!-- Goal Hit Rate & Hydration -->
+<div class="px-4 py-2 grid grid-cols-2 gap-4">
+<!-- Goal Hit Rate -->
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+<p class="text-slate-500 text-[10px] font-bold uppercase mb-1">Goal Hit Rate</p>
+<div class="flex items-baseline gap-1">
+<p class="text-2xl font-bold">5/7</p>
+<p class="text-xs text-slate-400 font-medium">days</p>
+</div>
+<div class="flex gap-1 mt-2">
+<div class="size-2 rounded-full bg-green-500"></div>
+<div class="size-2 rounded-full bg-green-500"></div>
+<div class="size-2 rounded-full bg-red-500"></div>
+<div class="size-2 rounded-full bg-green-500"></div>
+<div class="size-2 rounded-full bg-green-500"></div>
+<div class="size-2 rounded-full bg-green-500"></div>
+<div class="size-2 rounded-full bg-red-500"></div>
+</div>
+</div>
+<!-- Hydration -->
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+<p class="text-slate-500 text-[10px] font-bold uppercase mb-1">Avg Hydration</p>
+<div class="flex items-baseline gap-1">
+<p class="text-2xl font-bold">2,450</p>
+<p class="text-xs text-slate-400 font-medium">ml</p>
+</div>
+<div class="flex items-center gap-1 mt-2 text-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1">water_drop</span>
+<span class="text-[10px] font-bold">+12% vs avg</span>
+</div>
+</div>
+</div>
+<!-- Meal Time Heatmap -->
+<div class="px-4 py-4">
+<h3 class="text-lg font-bold mb-4">Meal Insights</h3>
+<div class="grid grid-cols-2 gap-3">
+<div class="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+<div class="flex justify-between items-start mb-1">
+<span class="text-[10px] font-bold text-slate-500 uppercase">Breakfast</span>
+<span class="text-[10px] font-bold text-primary">22% cal</span>
+</div>
+<p class="text-sm font-bold">7 Logs / week</p>
+</div>
+<div class="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+<div class="flex justify-between items-start mb-1">
+<span class="text-[10px] font-bold text-slate-500 uppercase">Lunch</span>
+<span class="text-[10px] font-bold text-primary">35% cal</span>
+</div>
+<p class="text-sm font-bold">7 Logs / week</p>
+</div>
+<div class="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+<div class="flex justify-between items-start mb-1">
+<span class="text-[10px] font-bold text-slate-500 uppercase">Dinner</span>
+<span class="text-[10px] font-bold text-primary">30% cal</span>
+</div>
+<p class="text-sm font-bold">6 Logs / week</p>
+</div>
+<div class="bg-slate-50 dark:bg-slate-900/40 p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+<div class="flex justify-between items-start mb-1">
+<span class="text-[10px] font-bold text-slate-500 uppercase">Snacks</span>
+<span class="text-[10px] font-bold text-primary">13% cal</span>
+</div>
+<p class="text-sm font-bold">12 Logs / week</p>
+</div>
+</div>
+</div>
+<!-- Streak Calendar (GitHub Style) -->
+<div class="px-4 py-4">
+<h3 class="text-lg font-bold mb-4">Activity (30 Days)</h3>
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-x-auto">
+<div class="flex gap-1.5 min-w-max">
+<!-- 5 weeks of 7 days columns -->
+<div class="grid grid-rows-7 gap-1.5">
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-200 dark:bg-slate-700 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+</div>
+<div class="grid grid-rows-7 gap-1.5">
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-200 dark:bg-slate-700 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-200 dark:bg-slate-700 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+</div>
+<div class="grid grid-rows-7 gap-1.5">
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+</div>
+<div class="grid grid-rows-7 gap-1.5">
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-200 dark:bg-slate-700 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+</div>
+<div class="grid grid-rows-7 gap-1.5">
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+<div class="size-3.5 bg-green-500 rounded-sm"></div>
+</div>
+</div>
+<div class="flex justify-between items-center mt-3 text-[10px] text-slate-400 font-bold uppercase">
+<span>Oct 12</span>
+<div class="flex items-center gap-2">
+<span>Less</span>
+<div class="flex gap-1">
+<div class="size-2 bg-green-200 dark:bg-slate-700 rounded-sm"></div>
+<div class="size-2 bg-green-400 rounded-sm"></div>
+<div class="size-2 bg-green-600 rounded-sm"></div>
+</div>
+<span>More</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Insights Grid (Legacy maintained but simplified) -->
+<div class="px-4 py-4">
+<h3 class="text-lg font-bold mb-4">Quick Stats</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+<p class="text-slate-500 text-xs font-bold uppercase mb-1">Weekly Total</p>
+<p class="text-xl font-bold">12,950</p>
+<p class="text-[10px] text-slate-400">kcal total tracked</p>
+</div>
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+<p class="text-slate-500 text-xs font-bold uppercase mb-1">Consistency</p>
+<p class="text-xl font-bold text-green-500">94%</p>
+<p class="text-[10px] text-slate-400">Score vs Target</p>
+</div>
+</div>
+</div>
+<!-- Action Button -->
+<div class="p-4 mb-24">
+<button class="w-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 py-4 rounded-xl font-bold text-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+<span>View Detailed Report</span>
+<span class="material-symbols-outlined">analytics</span>
+</button>
+</div>
+<!-- Bottom Navigation Bar -->
+<div class="fixed bottom-0 left-0 right-0 max-w-md mx-auto flex gap-2 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-background-dark px-4 pb-6 pt-2 z-50">
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">home</span>
+<p class="text-xs font-medium leading-normal">Home</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-primary" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1">bar_chart</span>
+<p class="text-xs font-medium leading-normal">Trends</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">add_circle</span>
+<p class="text-xs font-medium leading-normal">Log</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined">person</span>
+<p class="text-xs font-medium leading-normal">Profile</p>
+</a>
+</div>
+</div>
+</body></html>

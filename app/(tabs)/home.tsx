@@ -498,9 +498,7 @@ export default function HomeScreen() {
                         <TouchableOpacity onPress={withAutoClose(() => router.push('/notifications'))}>
                             <NotificationIcon size={20} color="#000" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={withAutoClose(() => router.push('/settings'))}>
-                            <SettingsIcon size={20} color="#000" />
-                        </TouchableOpacity>
+                        {/* Settings icon removed as requested */}
                     </View>
                 </View>
 

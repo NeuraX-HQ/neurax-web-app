@@ -93,6 +93,7 @@ export default function HomeScreen() {
             <Text style={styles.greetingSubtitle}>Let's keep the momentum going.</Text>
           </View>
           <View style={styles.headerRight}>
+            {/* Đã xoá icon cài đặt UI, giữ lại notification và avatar */}
             <Pressable style={styles.iconButton}>
               <Ionicons name="notifications-outline" size={24} color={Colors.textDark} />
               <View style={styles.notificationBadge} />
@@ -187,24 +188,30 @@ export default function HomeScreen() {
         />
 
         {/* Meal Sections */}
-        <MealSection
-          title="Breakfast"
-          icon="🌅"
-          meals={mealsByType.breakfast}
-          onAddMeal={() => { }}
-        />
-        <MealSection
-          title="Lunch"
-          icon="☀️"
-          meals={mealsByType.lunch}
-          onAddMeal={() => { }}
-        />
-        <MealSection
-          title="Dinner"
-          icon="🌙"
-          meals={mealsByType.dinner}
-          onAddMeal={() => { }}
-        />
+        {mealsByType.breakfast.length > 0 && (
+          <MealSection
+            title="Breakfast"
+            icon="🌅"
+            meals={mealsByType.breakfast}
+            onAddMeal={() => { }}
+          />
+        )}
+        {mealsByType.lunch.length > 0 && (
+          <MealSection
+            title="Lunch"
+            icon="☀️"
+            meals={mealsByType.lunch}
+            onAddMeal={() => { }}
+          />
+        )}
+        {mealsByType.dinner.length > 0 && (
+          <MealSection
+            title="Dinner"
+            icon="🌙"
+            meals={mealsByType.dinner}
+            onAddMeal={() => { }}
+          />
+        )}
 
         {/* Active Challenges Preview */}
         {challenges.length > 0 && (
