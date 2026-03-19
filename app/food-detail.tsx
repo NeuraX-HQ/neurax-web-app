@@ -79,6 +79,8 @@ export default function FoodDetailScreen() {
     const params = useLocalSearchParams();
     const insets = useSafeAreaInsets();
     const addMeal = useMealStore(state => state.addMeal);
+    const storeSelectedMealType = useMealStore(state => state.selectedMealType);
+    const setStoreMealType = useMealStore(state => state.setSelectedMealType);
 
     const mealTypes: { value: MealType; label: string; emoji: string; color: string }[] = [
         { value: 'BREAKFAST', label: t('foodDetail.mealType.breakfast'), emoji: '🌅', color: '#FFB84D' },
@@ -89,7 +91,10 @@ export default function FoodDetailScreen() {
 
     const [showMealTypeModal, setShowMealTypeModal] = useState(false);
     const [showUnitModal, setShowUnitModal] = useState(false);
-    const [selectedMealType, setSelectedMealType] = useState<MealType>('LUNCH');
+    // Pre-fill from global context (e.g. when user taps "Log Breakfast" on Home)
+    const [selectedMealType, setSelectedMealType] = useState<MealType>(
+        storeSelectedMealType ?? 'LUNCH'
+    );
     const [isAdding, setIsAdding] = useState(false);
     const [portionCount, setPortionCount] = useState(1);
     const [portionUnit, setPortionUnit] = useState('serving');
