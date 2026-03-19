@@ -1,27 +1,18 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Shadows } from '../src/constants/colors';
 import { useAuthStore } from '../src/store/authStore';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 import { AppLanguage } from '../src/i18n/translations';
+import { useSettingsStore, SettingsUnits } from '../src/store/settingsStore';
 
-const SETTINGS_PREFS_KEY = '@nutritrack_settings_preferences';
-
-type SettingsUnits = 'Metric (kg, cm)' | 'Imperial (lb, ft)';
 type PickerType = 'language' | 'units' | null;
 
-type SettingsPreferences = {
-    language: AppLanguage;
-    units: SettingsUnits;
-    darkMode: boolean;
-    pushNotif: boolean;
-    emailUpdates: boolean;
-};
+// Removed SettingsPreferences interface since it's now in store
 
-type SettingsRowProps = {
+export type SettingsRowProps = {
     icon: string;
     label: string;
     value?: string;
@@ -66,11 +57,15 @@ function SettingsRow({
 
 export default function SettingsScreen() {
     const router = useRouter();
-    const { language, setLanguage, t } = useAppLanguage();
-    const [darkMode, setDarkMode] = useState(false);
-    const [pushNotif, setPushNotif] = useState(true);
-    const [emailUpdates, setEmailUpdates] = useState(false);
-    const [units, setUnits] = useState<SettingsUnits>('Metric (kg, cm)');
+    const { language, setLanguage: setAppLanguage, t } = useAppLanguage();
+    
+    const { 
+        units, setUnits, 
+        darkMode, setDarkMode, 
+        pushNotif, setPushNotif, 
+        emailUpdates, setEmailUpdates 
+    } = useSettingsStore();
+    
     const [pickerType, setPickerType] = useState<PickerType>(null);
     
     const {
@@ -84,80 +79,29 @@ export default function SettingsScreen() {
 
     useEffect(() => {
         checkBiometricAvailability();
-        loadPreferences();
     }, []);
 
-    const loadPreferences = async () => {
-        try {
-            const stored = await AsyncStorage.getItem(SETTINGS_PREFS_KEY);
-            if (!stored) return;
-            const parsed = JSON.parse(stored) as Partial<SettingsPreferences>;
-            if (parsed.language === 'vi' || parsed.language === 'en') {
-                await setLanguage(parsed.language);
-            } else if (parsed.language === 'Vietnamese') {
-                await setLanguage('vi');
-            } else if (parsed.language === 'English') {
-                await setLanguage('en');
-            }
-            if (parsed.units === 'Metric (kg, cm)' || parsed.units === 'Imperial (lb, ft)') {
-                setUnits(parsed.units);
-            }
-            if (typeof parsed.darkMode === 'boolean') {
-                setDarkMode(parsed.darkMode);
-            }
-            if (typeof parsed.pushNotif === 'boolean') {
-                setPushNotif(parsed.pushNotif);
-            }
-            if (typeof parsed.emailUpdates === 'boolean') {
-                setEmailUpdates(parsed.emailUpdates);
-            }
-        } catch {
-            // Keep defaults if preferences cannot be loaded
-        }
-    };
-
-    const savePreferences = async (nextPrefs: SettingsPreferences) => {
-        try {
-            await AsyncStorage.setItem(SETTINGS_PREFS_KEY, JSON.stringify(nextPrefs));
-        } catch {
-            Alert.alert(t('settings.saveErrorTitle'), t('settings.saveErrorMessage'));
-        }
-    };
-
-    const buildCurrentPrefs = (overrides?: Partial<SettingsPreferences>): SettingsPreferences => ({
-        language,
-        units,
-        darkMode,
-        pushNotif,
-        emailUpdates,
-        ...overrides,
-    });
-
     const handleSelectLanguage = async (nextLanguage: AppLanguage) => {
-        await setLanguage(nextLanguage);
+        await setAppLanguage(nextLanguage);
+        useSettingsStore.getState().setLanguage(nextLanguage); // sync to store
         setPickerType(null);
-        await savePreferences(buildCurrentPrefs({ language: nextLanguage }));
     };
 
     const handleSelectUnits = async (nextUnits: SettingsUnits) => {
-        setUnits(nextUnits);
+        await setUnits(nextUnits);
         setPickerType(null);
-        await savePreferences(buildCurrentPrefs({ units: nextUnits }));
     };
 
     const handleDarkModeChange = async (value: boolean) => {
-        setDarkMode(value);
-        await savePreferences(buildCurrentPrefs({ darkMode: value }));
+        await setDarkMode(value);
     };
 
     const handlePushNotifChange = async (value: boolean) => {
-        setPushNotif(value);
-        await savePreferences(buildCurrentPrefs({ pushNotif: value }));
+        await setPushNotif(value);
     };
 
     const handleEmailUpdatesChange = async (value: boolean) => {
-        setEmailUpdates(value);
-        await savePreferences(buildCurrentPrefs({ emailUpdates: value }));
+        await setEmailUpdates(value);
     };
 
     const handleBiometricToggle = async (value: boolean) => {
@@ -198,7 +142,12 @@ export default function SettingsScreen() {
         );
     };
 
-    const settingsSections = [
+    type SettingsSection = {
+        title: string;
+        rows: (SettingsRowProps & { key: string })[];
+    };
+
+    const settingsSections: SettingsSection[] = [
         {
             title: t('settings.section.account'),
             rows: [

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../constants/colors';
+import AnimatedTransitionText from './AnimatedTransitionText';
 import { useAppLanguage } from '../i18n/LanguageProvider';
 
 interface CalorieGaugeProps {
@@ -11,6 +12,8 @@ interface CalorieGaugeProps {
     strokeWidth?: number;
     displayValue?: string | number;
     label?: string;
+    /** Override the arc and value color — e.g. pass Colors.danger when over budget */
+    accentColor?: string;
 }
 
 export function CalorieGauge({
@@ -20,8 +23,10 @@ export function CalorieGauge({
     strokeWidth = 10,
     displayValue,
     label,
+    accentColor,
 }: CalorieGaugeProps) {
     const { t } = useAppLanguage();
+    const accent = accentColor ?? Colors.primary;
     const radius = (size - strokeWidth) / 2;
     const cx = size / 2;
     const cy = size / 2;
@@ -83,7 +88,7 @@ export function CalorieGauge({
                     <Path
                         d={progressPath}
                         fill="none"
-                        stroke={Colors.primary}
+                        stroke={accent}
                         strokeWidth={strokeWidth}
                         strokeLinecap="round"
                     />
@@ -93,14 +98,17 @@ export function CalorieGauge({
             <View style={styles.center}>
                 <Text style={styles.fireEmoji}>🔥</Text>
                 {maxValue ? (
-                    <Text style={[styles.value, isCompactValue && styles.valueCompact]}> 
-                        {mainValue}
-                        <Text style={styles.valueMax}>{maxValue}</Text>
+                    <Text style={[styles.value, isCompactValue && styles.valueCompact, { color: accent }]}>
+                        <AnimatedTransitionText text={mainValue} />
+                        <Text style={[styles.valueMax, { color: accent }]}>{maxValue}</Text>
                     </Text>
                 ) : (
-                    <Text style={[styles.value, isCompactValue && styles.valueCompact]}>{valueText}</Text>
+                    <AnimatedTransitionText 
+                        text={valueText} 
+                        style={[styles.value, isCompactValue && styles.valueCompact, { color: accent }]} 
+                    />
                 )}
-                <Text style={styles.label}>{labelText}</Text>
+                <AnimatedTransitionText text={labelText} style={styles.label} direction="down" />
             </View>
         </View>
     );

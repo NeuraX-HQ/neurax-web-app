@@ -10,6 +10,7 @@ import 'react-native-get-random-values';
 import "../src/lib/amplify";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LanguageProvider, useAppLanguage } from '../src/i18n/LanguageProvider';
+import { useSettingsStore } from '../src/store/settingsStore';
 
 export default function RootLayout() {
     return (
@@ -54,6 +55,7 @@ function RootLayoutShell() {
 
     useEffect(() => {
         initializeAuth();
+        useSettingsStore.getState().loadPreferences();
     }, []);
 
     useEffect(() => {
