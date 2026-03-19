@@ -254,9 +254,7 @@ export default function HomeScreen() {
             
         const maxValue = showCaloriesEaten ? `/${max}g` : undefined;
             
-        const label = showCaloriesEaten
-            ? t('home.macroEaten')
-            : isOver ? t('home.macroOver') : t('home.macroLeft');
+        const label = t(labelName);
             
         return {
             current,
@@ -604,7 +602,11 @@ export default function HomeScreen() {
                 {/* Macro Mini-Ring Grid (Standalone Cards) */}
                     <View style={styles.macroGrid}>
                         {/* Protein */}
-                        <View style={[styles.macroGridItem, Shadows.small]}>
+                        <TouchableOpacity 
+                            style={[styles.macroGridItem, Shadows.small]} 
+                            activeOpacity={0.85} 
+                            onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
+                        >
                             <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
                                 <AnimatedTransitionText text={protein.mainValue} style={[styles.macroGridValue, protein.current > protein.max && !showCaloriesEaten ? { color: Colors.danger } : {}]} direction="down" />
                                 {protein.maxValue && <Text style={styles.macroGridValueMax}>{protein.maxValue}</Text>}
@@ -613,11 +615,12 @@ export default function HomeScreen() {
                             <View style={styles.macroRingWrap}>
                                 <Svg width={44} height={44} viewBox="0 0 52 52">
                                     <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
-                                    {protein.current > 0 && (
+                                    {(showCaloriesEaten ? protein.current : Math.max(0, protein.max - protein.current)) > 0 && (
                                         <Path
                                             d={(() => {
                                                 const r = 22; const cx = 26; const cy = 26;
-                                                const prog = Math.min(protein.current / protein.max, 1);
+                                                const circleVal = showCaloriesEaten ? protein.current : Math.max(0, protein.max - protein.current);
+                                                const prog = Math.min(circleVal / protein.max, 1);
                                                 const arc = 359.9 * prog;
                                                 const s = { x: cx, y: cy - r };
                                                 const e = { x: cx + r * Math.sin(arc * Math.PI / 180), y: cy - r * Math.cos(arc * Math.PI / 180) };
@@ -629,10 +632,14 @@ export default function HomeScreen() {
                                 </Svg>
                                 <Text style={styles.macroRingEmoji}>🥩</Text>
                             </View>
-                        </View>
+                        </TouchableOpacity>
 
                         {/* Carbs */}
-                        <View style={[styles.macroGridItem, Shadows.small]}>
+                        <TouchableOpacity 
+                            style={[styles.macroGridItem, Shadows.small]} 
+                            activeOpacity={0.85} 
+                            onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
+                        >
                             <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
                                 <AnimatedTransitionText text={carbs.mainValue} style={[styles.macroGridValue, carbs.current > carbs.max && !showCaloriesEaten ? { color: Colors.danger } : {}]} direction="down" />
                                 {carbs.maxValue && <Text style={styles.macroGridValueMax}>{carbs.maxValue}</Text>}
@@ -641,11 +648,12 @@ export default function HomeScreen() {
                             <View style={styles.macroRingWrap}>
                                 <Svg width={44} height={44} viewBox="0 0 52 52">
                                     <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
-                                    {carbs.current > 0 && (
+                                    {(showCaloriesEaten ? carbs.current : Math.max(0, carbs.max - carbs.current)) > 0 && (
                                         <Path
                                             d={(() => {
                                                 const r = 22; const cx = 26; const cy = 26;
-                                                const prog = Math.min(carbs.current / carbs.max, 1);
+                                                const circleVal = showCaloriesEaten ? carbs.current : Math.max(0, carbs.max - carbs.current);
+                                                const prog = Math.min(circleVal / carbs.max, 1);
                                                 const arc = 359.9 * prog;
                                                 const s = { x: cx, y: cy - r };
                                                 const e = { x: cx + r * Math.sin(arc * Math.PI / 180), y: cy - r * Math.cos(arc * Math.PI / 180) };
@@ -657,10 +665,14 @@ export default function HomeScreen() {
                                 </Svg>
                                 <Text style={styles.macroRingEmoji}>🍞</Text>
                             </View>
-                        </View>
+                        </TouchableOpacity>
 
                         {/* Fat */}
-                        <View style={[styles.macroGridItem, Shadows.small]}>
+                        <TouchableOpacity 
+                            style={[styles.macroGridItem, Shadows.small]} 
+                            activeOpacity={0.85} 
+                            onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
+                        >
                             <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
                                 <AnimatedTransitionText text={fat.mainValue} style={[styles.macroGridValue, fat.current > fat.max && !showCaloriesEaten ? { color: Colors.danger } : {}]} direction="down" />
                                 {fat.maxValue && <Text style={styles.macroGridValueMax}>{fat.maxValue}</Text>}
@@ -669,11 +681,12 @@ export default function HomeScreen() {
                             <View style={styles.macroRingWrap}>
                                 <Svg width={44} height={44} viewBox="0 0 52 52">
                                     <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
-                                    {fat.current > 0 && (
+                                    {(showCaloriesEaten ? fat.current : Math.max(0, fat.max - fat.current)) > 0 && (
                                         <Path
                                             d={(() => {
                                                 const r = 22; const cx = 26; const cy = 26;
-                                                const prog = Math.min(fat.current / fat.max, 1);
+                                                const circleVal = showCaloriesEaten ? fat.current : Math.max(0, fat.max - fat.current);
+                                                const prog = Math.min(circleVal / fat.max, 1);
                                                 const arc = 359.9 * prog;
                                                 const s = { x: cx, y: cy - r };
                                                 const e = { x: cx + r * Math.sin(arc * Math.PI / 180), y: cy - r * Math.cos(arc * Math.PI / 180) };
@@ -685,7 +698,7 @@ export default function HomeScreen() {
                                 </Svg>
                                 <Text style={styles.macroRingEmoji}>🥑</Text>
                             </View>
-                        </View>
+                        </TouchableOpacity>
                     </View>
 
                 {/* Quick Metrics Row: Water + Exercise side by side */}
