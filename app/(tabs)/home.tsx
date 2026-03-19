@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, TouchableWithoutFeedback, Modal, FlatList, Animated, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TouchableWithoutFeedback, Modal, FlatList, Animated, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -12,9 +12,6 @@ import { CalorieGauge } from '../../src/components/CalorieGauge';
 import { useMealStore, Meal } from '../../src/store/mealStore';
 import { getOnboardingData, getUserData } from '../../src/store/userStore';
 import { useAuthStore } from '../../src/store/authStore';
-import { VoiceModal } from '../../src/components/VoiceModal';
-import { CameraScannerWithLoading } from '../../src/components/CameraScannerWithLoading';
-import { SearchScanner } from '../../src/components/SearchScanner';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 import { getCurrentStreak } from '../../src/utils/streak';
 import Svg, { Path } from 'react-native-svg';
@@ -24,11 +21,6 @@ const WEEKDAY_LABELS_BY_LANG: Record<'vi' | 'en', string[]> = {
     vi: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'],
     en: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
 };
-const ADD_MEAL_METHODS = [
-    { id: 'voice', icon: 'mic-outline', labelKey: 'tabs.voice', descKey: 'tabs.voiceDesc' },
-    { id: 'camera', icon: 'camera-outline', labelKey: 'tabs.camera', descKey: 'tabs.cameraDesc' },
-    { id: 'search', icon: 'search-outline', labelKey: 'tabs.search', descKey: 'tabs.searchDesc' },
-] as const;
 
 const toIsoDate = (date: Date) => {
     const year = date.getFullYear();
@@ -77,9 +69,14 @@ export default function HomeScreen() {
     const userEmail = useAuthStore((state) => state.email);
 
     // Meal store
-    const { meals, loadMeals, getMealsByDate, removeMeal, selectedDateStr: storeSelectedDateStr } = useMealStore();
+    const {
+        meals, loadMeals, getMealsByDate, removeMeal,
+        selectedDateStr: storeSelectedDateStr,
+        setSelectedDateStr,
+        setSelectedMealType,
+        setAddMenuOpen,
+    } = useMealStore();
     const selectedDateStr = storeSelectedDateStr || todayIso;
-    const setSelectedDateStr = (date: string) => useMealStore.setState({ selectedDateStr: date });
     const hasAnyMeals = meals && meals.length > 0;
     const displayedMeals = getMealsByDate(selectedDateStr);
     const usedMealDates = useMemo(() => new Set(meals.map((meal) => meal.date)), [meals]);
@@ -311,12 +308,6 @@ export default function HomeScreen() {
     const [selectedDrink, setSelectedDrink] = useState('water');
     const [drinkAmount, setDrinkAmount] = useState(200);
     const drinkFillAnim = useRef(new Animated.Value(200)).current;
-    const [showAddMethod, setShowAddMethod] = useState(false);
-    const [voiceVisible, setVoiceVisible] = useState(false);
-    const [cameraVisible, setCameraVisible] = useState(false);
-    const [searchVisible, setSearchVisible] = useState(false);
-    const addMethodScale = useRef(new Animated.Value(0)).current;
-    const addMethodOpacity = useRef(new Animated.Value(0)).current;
 
     const GLASS_H = 240;
     const addWater = () => {
@@ -327,33 +318,11 @@ export default function HomeScreen() {
         setShowHydration(false);
     };
 
-    const openAddMethod = () => {
-        setShowAddMethod(true);
-        Animated.parallel([
-            Animated.spring(addMethodScale, { toValue: 1, useNativeDriver: true, damping: 18, stiffness: 280 }),
-            Animated.timing(addMethodOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
-        ]).start();
+    const openAddMenu = (mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK') => {
+        setSelectedMealType(mealType);
+        setAddMenuOpen(true);
     };
 
-    const closeAddMethod = () => {
-        Animated.parallel([
-            Animated.spring(addMethodScale, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 280 }),
-            Animated.timing(addMethodOpacity, { toValue: 0, duration: 120, useNativeDriver: true }),
-        ]).start(() => setShowAddMethod(false));
-    };
-
-    const handleSelectAddMethod = (methodId: 'voice' | 'camera' | 'search') => {
-        closeAddMethod();
-        if (methodId === 'voice') {
-            setTimeout(() => setVoiceVisible(true), 180);
-            return;
-        }
-        if (methodId === 'camera') {
-            setTimeout(() => setCameraVisible(true), 180);
-            return;
-        }
-        setTimeout(() => setSearchVisible(true), 180);
-    };
 
     useEffect(() => {
         Animated.timing(drinkFillAnim, {
@@ -781,7 +750,7 @@ export default function HomeScreen() {
                 {getMealsByType('BREAKFAST').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(openAddMethod)}
+                        onPress={withAutoClose(() => openAddMenu('BREAKFAST'))}
                     >
                         <Text style={styles.logMealText}>{t('home.logMeal.breakfast')}</Text>
                     </TouchableOpacity>
@@ -800,7 +769,7 @@ export default function HomeScreen() {
                 {getMealsByType('LUNCH').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(openAddMethod)}
+                        onPress={withAutoClose(() => openAddMenu('LUNCH'))}
                     >
                         <Text style={styles.logMealText}>{t('home.logMeal.lunch')}</Text>
                     </TouchableOpacity>
@@ -819,7 +788,7 @@ export default function HomeScreen() {
                 {getMealsByType('DINNER').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(openAddMethod)}
+                        onPress={withAutoClose(() => openAddMenu('DINNER'))}
                     >
                         <Text style={styles.logMealText}>{t('home.logMeal.dinner')}</Text>
                     </TouchableOpacity>
@@ -838,7 +807,7 @@ export default function HomeScreen() {
                 {getMealsByType('SNACK').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(openAddMethod)}
+                        onPress={withAutoClose(() => openAddMenu('SNACK'))}
                     >
                         <Text style={styles.logMealText}>{t('home.logMeal.snack')}</Text>
                     </TouchableOpacity>
@@ -848,56 +817,6 @@ export default function HomeScreen() {
                 </View>
             </ScrollView>
 
-            {/* Add Meal Method Popup */}
-            <Modal visible={showAddMethod} transparent animationType="none" onRequestClose={closeAddMethod}>
-                <TouchableWithoutFeedback onPress={closeAddMethod}>
-                    <View style={styles.addMethodBackdrop}>
-                        <TouchableWithoutFeedback>
-                            <Animated.View
-                                style={[
-                                    styles.addMethodPopup,
-                                    {
-                                        opacity: addMethodOpacity,
-                                        transform: [
-                                            { scale: addMethodScale },
-                                            {
-                                                translateY: addMethodScale.interpolate({
-                                                    inputRange: [0, 1],
-                                                    outputRange: [20, 0],
-                                                }),
-                                            },
-                                        ],
-                                    },
-                                ]}
-                            >
-                                <View style={styles.addMethodHeader}>
-                                    <Text style={styles.addMethodTitle}>{t('tabs.addFoodMethodTitle')}</Text>
-                                    <TouchableOpacity onPress={closeAddMethod} style={styles.addMethodCloseBtn}>
-                                        <Ionicons name="close" size={18} color="#666" />
-                                    </TouchableOpacity>
-                                </View>
-
-                                <View style={styles.addMethodOptionsRow}>
-                                    {ADD_MEAL_METHODS.map((opt) => (
-                                        <TouchableOpacity
-                                            key={opt.id}
-                                            style={styles.addMethodOptionCard}
-                                            onPress={() => handleSelectAddMethod(opt.id)}
-                                            activeOpacity={0.7}
-                                        >
-                                            <View style={styles.addMethodOptionIcon}>
-                                                <Ionicons name={opt.icon} size={24} color="#333" />
-                                            </View>
-                                            <Text style={styles.addMethodOptionLabel}>{t(opt.labelKey)}</Text>
-                                            <Text style={styles.addMethodOptionDesc}>{t(opt.descKey)}</Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            </Animated.View>
-                        </TouchableWithoutFeedback>
-                    </View>
-                </TouchableWithoutFeedback>
-            </Modal>
 
             {/* Hydration Modal */}
             <Modal visible={showHydration} animationType="slide" transparent={false}>
@@ -1066,9 +985,6 @@ export default function HomeScreen() {
                 </TouchableWithoutFeedback>
             </Modal>
 
-            <VoiceModal visible={voiceVisible} onClose={() => setVoiceVisible(false)} dateStr={selectedDateStr} />
-            <CameraScannerWithLoading visible={cameraVisible} onClose={() => setCameraVisible(false)} dateStr={selectedDateStr} />
-            <SearchScanner visible={searchVisible} onClose={() => setSearchVisible(false)} dateStr={selectedDateStr} />
         </SafeAreaView>
     );
 }

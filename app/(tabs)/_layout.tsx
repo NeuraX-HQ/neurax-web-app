@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, Platform,
     Pressable, Animated, PanResponder,
@@ -13,6 +13,7 @@ import { VoiceModal } from '../../src/components/VoiceModal';
 import { CameraScannerWithLoading } from '../../src/components/CameraScannerWithLoading';
 import { SearchScanner } from '../../src/components/SearchScanner';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
+import { useMealStore } from '../../src/store/mealStore';
 
 const BOTTOM_INSET = Platform.OS === 'ios' ? 30 : 14;
 const NAV_HEIGHT = 62;
@@ -350,6 +351,7 @@ const tabBarStyles = StyleSheet.create({
 export default function TabsLayout() {
     const router = useRouter();
     const { t } = useAppLanguage();
+    const { isAddMenuOpen, setAddMenuOpen, selectedMealType, setSelectedMealType } = useMealStore();
     const [menuOpen, setMenuOpen] = useState(false);
     const [directVoiceVisible, setDirectVoiceVisible] = useState(false);
     const [cameraVisible, setCameraVisible] = useState(false);
@@ -370,6 +372,15 @@ export default function TabsLayout() {
         { id: 'search', icon: 'search-outline' as const, label: t('tabs.search') },
     ] as const;
 
+    // Sync global isAddMenuOpen → open the FAB menu
+    useEffect(() => {
+        if (isAddMenuOpen && !menuOpen) {
+            openMenu();
+        } else if (!isAddMenuOpen && menuOpen) {
+            // External close (e.g. backdrop) already handled by closeMenu
+        }
+    }, [isAddMenuOpen]);
+
     const openMenu = () => {
         setMenuOpen(true);
         Animated.parallel([
@@ -389,7 +400,10 @@ export default function TabsLayout() {
             ...itemAnims.map(anim =>
                 Animated.timing(anim, { toValue: 0, duration: 160, useNativeDriver: true })
             ),
-        ]).start(() => setMenuOpen(false));
+        ]).start(() => {
+            setMenuOpen(false);
+            setAddMenuOpen(false);
+        });
     };
 
     const handleOption = (id: string) => {

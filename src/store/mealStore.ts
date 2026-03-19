@@ -23,11 +23,19 @@ interface MealState {
     isLoading: boolean;
     error: string | null;
 
+    // Shared date & context state
+    selectedDateStr: string; // YYYY-MM-DD – the date currently viewed on Home
+    selectedMealType: MealType | null; // Pre-filled meal type when opening the FAB menu from Home
+    isAddMenuOpen: boolean; // Controls the global FAB menu visibility
+
     // Shared state for food detail & edit ingredients
     currentFoodItem: any | null;
 
     // Actions
     setCurrentFoodItem: (item: any | null) => void;
+    setSelectedDateStr: (date: string) => void;
+    setSelectedMealType: (type: MealType | null) => void;
+    setAddMenuOpen: (open: boolean) => void;
     addMeal: (meal: Omit<Meal, 'id' | 'time' | 'date'>) => Promise<void>;
     removeMeal: (id: string) => Promise<void>;
     updateMeal: (id: string, updates: Partial<Meal>) => Promise<void>;
@@ -75,9 +83,15 @@ export const useMealStore = create<MealState>((set, get) => ({
     meals: [],
     isLoading: false,
     error: null,
+    selectedDateStr: getTodayDate(),
+    selectedMealType: null,
+    isAddMenuOpen: false,
     currentFoodItem: null,
 
     setCurrentFoodItem: (item) => set({ currentFoodItem: item }),
+    setSelectedDateStr: (date) => set({ selectedDateStr: date }),
+    setSelectedMealType: (type) => set({ selectedMealType: type }),
+    setAddMenuOpen: (open) => set({ isAddMenuOpen: open }),
 
     addMeal: async (mealData) => {
         try {
@@ -87,7 +101,7 @@ export const useMealStore = create<MealState>((set, get) => ({
                 ...mealData,
                 id: generateId(),
                 time: getCurrentTime(),
-                date: getTodayDate(),
+                date: get().selectedDateStr, // Use the globally selected date
             };
 
             const updatedMeals = [...get().meals, newMeal];
