@@ -73,34 +73,13 @@ export function CalorieGauge({
         : '';
 
     return (
-        <View style={[styles.container, { width: size, height: size }]}>
-            <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-                {/* Background track */}
-                <Path
-                    d={trackPath}
-                    fill="none"
-                    stroke="#E8E8E8"
-                    strokeWidth={strokeWidth}
-                    strokeLinecap="round"
-                />
-                {/* Progress arc */}
-                {progressPath ? (
-                    <Path
-                        d={progressPath}
-                        fill="none"
-                        stroke={accent}
-                        strokeWidth={strokeWidth}
-                        strokeLinecap="round"
-                    />
-                ) : null}
-            </Svg>
-            {/* Center content */}
-            <View style={styles.center}>
-                <Text style={styles.fireEmoji}>🔥</Text>
+        <View style={styles.container}>
+            {/* Left box: Text metrics */}
+            <View style={styles.textColumn}>
                 {maxValue ? (
                     <Text style={[styles.value, isCompactValue && styles.valueCompact, { color: accent }]}>
                         <AnimatedTransitionText text={mainValue} />
-                        <Text style={[styles.valueMax, { color: accent }]}>{maxValue}</Text>
+                        <Text style={[styles.valueMax, { color: '#A0A0A0' }]}>{maxValue}</Text>
                     </Text>
                 ) : (
                     <AnimatedTransitionText 
@@ -110,12 +89,52 @@ export function CalorieGauge({
                 )}
                 <AnimatedTransitionText text={labelText} style={styles.label} direction="down" />
             </View>
+
+            {/* Right box: Doughnut Chart */}
+            <View style={[styles.gaugeWrapper, { width: size, height: size }]}>
+                <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                    {/* Background track */}
+                    <Path
+                        d={trackPath}
+                        fill="none"
+                        stroke="#F0F0F0"
+                        strokeWidth={strokeWidth}
+                        strokeLinecap="round"
+                    />
+                    {/* Progress arc */}
+                    {progressPath ? (
+                        <Path
+                            d={progressPath}
+                            fill="none"
+                            stroke={accent}
+                            strokeWidth={strokeWidth}
+                            strokeLinecap="round"
+                        />
+                    ) : null}
+                </Svg>
+                {/* Center content inside Donut */}
+                <View style={styles.center}>
+                    <Text style={[styles.fireEmoji, { fontSize: size * 0.3 }]}>🔥</Text>
+                </View>
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        paddingHorizontal: 16,
+    },
+    textColumn: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+    },
+    gaugeWrapper: {
         position: 'relative',
         alignItems: 'center',
         justifyContent: 'center',
@@ -125,9 +144,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    fireEmoji: { fontSize: 14, marginBottom: 1 },
-    value: { fontSize: 22, fontWeight: '800', color: Colors.primary },
-    valueCompact: { fontSize: 18 },
-    label: { fontSize: 7, color: '#999', letterSpacing: 1.5, fontWeight: '600' },
-    valueMax: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
+    fireEmoji: { },
+    value: { fontSize: 42, fontWeight: '900', color: Colors.text, letterSpacing: -1 },
+    valueCompact: { fontSize: 34 },
+    label: { fontSize: 13, color: '#888', fontWeight: '500', marginTop: 4 },
+    valueMax: { fontSize: 18, fontWeight: '600' },
 });

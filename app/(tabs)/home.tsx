@@ -251,9 +251,11 @@ export default function HomeScreen() {
         const oAmount = Math.round(current - max);
         const lAmount = Math.round(max - current);
         
-        const value = showCaloriesEaten 
-            ? `${current}/${max}g`
+        const mainValue = showCaloriesEaten 
+            ? `${current}g`
             : isOver ? `${oAmount}g` : `${Math.max(0, lAmount)}g`;
+            
+        const maxValue = showCaloriesEaten ? `/${max}g` : undefined;
             
         const label = showCaloriesEaten
             ? t('home.macroEaten')
@@ -262,7 +264,8 @@ export default function HomeScreen() {
         return {
             current,
             max,
-            value,
+            mainValue,
+            maxValue,
             label,
             color: isOver ? Colors.danger : defaultColor
         };
@@ -609,7 +612,7 @@ export default function HomeScreen() {
                     )}
                 />
 
-                {/* Calorie Card — vertical layout: ring on top, macro mini-rings grid below */}
+                {/* Calorie Card */}
                 <View style={[styles.card, Shadows.medium]}>
                     {/* Calorie Ring */}
                     <TouchableOpacity
@@ -618,109 +621,103 @@ export default function HomeScreen() {
                         onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
                     >
                         <CalorieGauge
-                            current={caloriesEaten}
+                            current={showCaloriesEaten ? caloriesEaten : caloriesLeft}
                             max={maxCalories}
-                            size={160}
-                            strokeWidth={9}
+                            size={120}
+                            strokeWidth={14}
                             displayValue={calorieGaugeValue}
                             label={calorieGaugeLabel}
                             accentColor={calorieAccentColor}
                         />
                     </TouchableOpacity>
+                </View>
 
-                    {/* Divider */}
-                    <View style={styles.macroDivider} />
-
-                    {/* Macro Mini-Ring Grid */}
+                {/* Macro Mini-Ring Grid (Standalone Cards) */}
                     <View style={styles.macroGrid}>
                         {/* Protein */}
-                        <View style={styles.macroGridItem}>
+                        <View style={[styles.macroGridItem, Shadows.small]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
+                                <AnimatedTransitionText text={protein.mainValue} style={[styles.macroGridValue, protein.current > protein.max && !showCaloriesEaten ? { color: Colors.danger } : {}]} direction="down" />
+                                {protein.maxValue && <Text style={styles.macroGridValueMax}>{protein.maxValue}</Text>}
+                            </View>
+                            <AnimatedTransitionText text={protein.label} style={styles.macroGridLabel} />
                             <View style={styles.macroRingWrap}>
-                                <Svg width={52} height={52} viewBox="0 0 52 52">
-                                    <Path
-                                        d={`M 26 4 A 22 22 0 1 1 25.999 4`}
-                                        fill="none" stroke="#F0F0F0" strokeWidth={4} strokeLinecap="round"
-                                    />
+                                <Svg width={44} height={44} viewBox="0 0 52 52">
+                                    <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
                                     {protein.current > 0 && (
                                         <Path
                                             d={(() => {
                                                 const r = 22; const cx = 26; const cy = 26;
                                                 const prog = Math.min(protein.current / protein.max, 1);
-                                                const startA = 225; const arc = 270 * prog;
-                                                const toRad = (a: number) => ((a - 90) * Math.PI) / 180;
-                                                const s = { x: cx + r * Math.cos(toRad(startA)), y: cy + r * Math.sin(toRad(startA)) };
-                                                const e = { x: cx + r * Math.cos(toRad(startA + arc)), y: cy + r * Math.sin(toRad(startA + arc)) };
+                                                const arc = 359.9 * prog;
+                                                const s = { x: cx, y: cy - r };
+                                                const e = { x: cx + r * Math.sin(arc * Math.PI / 180), y: cy - r * Math.cos(arc * Math.PI / 180) };
                                                 return `M ${s.x} ${s.y} A ${r} ${r} 0 ${arc > 180 ? 1 : 0} 1 ${e.x} ${e.y}`;
                                             })()}
-                                            fill="none" stroke={protein.color} strokeWidth={4} strokeLinecap="round"
+                                            fill="none" stroke={protein.color} strokeWidth={5} strokeLinecap="round"
                                         />
                                     )}
                                 </Svg>
                                 <Text style={styles.macroRingEmoji}>🥩</Text>
                             </View>
-                            <AnimatedTransitionText text={protein.label} style={styles.macroGridLabel} />
-                            <AnimatedTransitionText text={protein.value} style={[styles.macroGridValue, protein.current > protein.max && !showCaloriesEaten ? { color: Colors.danger } : {}]} direction="down" />
                         </View>
 
                         {/* Carbs */}
-                        <View style={styles.macroGridItem}>
+                        <View style={[styles.macroGridItem, Shadows.small]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
+                                <AnimatedTransitionText text={carbs.mainValue} style={[styles.macroGridValue, carbs.current > carbs.max && !showCaloriesEaten ? { color: Colors.danger } : {}]} direction="down" />
+                                {carbs.maxValue && <Text style={styles.macroGridValueMax}>{carbs.maxValue}</Text>}
+                            </View>
+                            <AnimatedTransitionText text={carbs.label} style={styles.macroGridLabel} />
                             <View style={styles.macroRingWrap}>
-                                <Svg width={52} height={52} viewBox="0 0 52 52">
-                                    <Path
-                                        d={`M 26 4 A 22 22 0 1 1 25.999 4`}
-                                        fill="none" stroke="#F0F0F0" strokeWidth={4} strokeLinecap="round"
-                                    />
+                                <Svg width={44} height={44} viewBox="0 0 52 52">
+                                    <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
                                     {carbs.current > 0 && (
                                         <Path
                                             d={(() => {
                                                 const r = 22; const cx = 26; const cy = 26;
                                                 const prog = Math.min(carbs.current / carbs.max, 1);
-                                                const startA = 225; const arc = 270 * prog;
-                                                const toRad = (a: number) => ((a - 90) * Math.PI) / 180;
-                                                const s = { x: cx + r * Math.cos(toRad(startA)), y: cy + r * Math.sin(toRad(startA)) };
-                                                const e = { x: cx + r * Math.cos(toRad(startA + arc)), y: cy + r * Math.sin(toRad(startA + arc)) };
+                                                const arc = 359.9 * prog;
+                                                const s = { x: cx, y: cy - r };
+                                                const e = { x: cx + r * Math.sin(arc * Math.PI / 180), y: cy - r * Math.cos(arc * Math.PI / 180) };
                                                 return `M ${s.x} ${s.y} A ${r} ${r} 0 ${arc > 180 ? 1 : 0} 1 ${e.x} ${e.y}`;
                                             })()}
-                                            fill="none" stroke={carbs.color} strokeWidth={4} strokeLinecap="round"
+                                            fill="none" stroke={carbs.color} strokeWidth={5} strokeLinecap="round"
                                         />
                                     )}
                                 </Svg>
                                 <Text style={styles.macroRingEmoji}>🍞</Text>
                             </View>
-                            <AnimatedTransitionText text={carbs.label} style={styles.macroGridLabel} />
-                            <AnimatedTransitionText text={carbs.value} style={[styles.macroGridValue, carbs.current > carbs.max && !showCaloriesEaten ? { color: Colors.danger } : {}]} direction="down" />
                         </View>
 
                         {/* Fat */}
-                        <View style={styles.macroGridItem}>
+                        <View style={[styles.macroGridItem, Shadows.small]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
+                                <AnimatedTransitionText text={fat.mainValue} style={[styles.macroGridValue, fat.current > fat.max && !showCaloriesEaten ? { color: Colors.danger } : {}]} direction="down" />
+                                {fat.maxValue && <Text style={styles.macroGridValueMax}>{fat.maxValue}</Text>}
+                            </View>
+                            <AnimatedTransitionText text={fat.label} style={styles.macroGridLabel} />
                             <View style={styles.macroRingWrap}>
-                                <Svg width={52} height={52} viewBox="0 0 52 52">
-                                    <Path
-                                        d={`M 26 4 A 22 22 0 1 1 25.999 4`}
-                                        fill="none" stroke="#F0F0F0" strokeWidth={4} strokeLinecap="round"
-                                    />
+                                <Svg width={44} height={44} viewBox="0 0 52 52">
+                                    <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
                                     {fat.current > 0 && (
                                         <Path
                                             d={(() => {
                                                 const r = 22; const cx = 26; const cy = 26;
                                                 const prog = Math.min(fat.current / fat.max, 1);
-                                                const startA = 225; const arc = 270 * prog;
-                                                const toRad = (a: number) => ((a - 90) * Math.PI) / 180;
-                                                const s = { x: cx + r * Math.cos(toRad(startA)), y: cy + r * Math.sin(toRad(startA)) };
-                                                const e = { x: cx + r * Math.cos(toRad(startA + arc)), y: cy + r * Math.sin(toRad(startA + arc)) };
+                                                const arc = 359.9 * prog;
+                                                const s = { x: cx, y: cy - r };
+                                                const e = { x: cx + r * Math.sin(arc * Math.PI / 180), y: cy - r * Math.cos(arc * Math.PI / 180) };
                                                 return `M ${s.x} ${s.y} A ${r} ${r} 0 ${arc > 180 ? 1 : 0} 1 ${e.x} ${e.y}`;
                                             })()}
-                                            fill="none" stroke={fat.color} strokeWidth={4} strokeLinecap="round"
+                                            fill="none" stroke={fat.color} strokeWidth={5} strokeLinecap="round"
                                         />
                                     )}
                                 </Svg>
                                 <Text style={styles.macroRingEmoji}>🥑</Text>
                             </View>
-                            <AnimatedTransitionText text={fat.label} style={styles.macroGridLabel} />
-                            <AnimatedTransitionText text={fat.value} style={[styles.macroGridValue, fat.current > fat.max && !showCaloriesEaten ? { color: Colors.danger } : {}]} direction="down" />
                         </View>
                     </View>
-                </View>
 
                 {/* Quick Metrics Row: Water + Exercise side by side */}
                 <View style={styles.metricsRow}>
@@ -1610,47 +1607,51 @@ const styles = StyleSheet.create({
     // ── Redesigned Calorie Card ─────────────────────────────────────────────
     calorieRingWrapper: {
         alignItems: 'center',
-        paddingVertical: 8,
-    },
-    macroDivider: {
-        width: '100%',
-        height: 1,
-        backgroundColor: '#F0F0F0',
-        marginVertical: 8,
+        paddingVertical: 12,
     },
     macroGrid: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
-        width: '100%',
-        paddingTop: 4,
-        paddingBottom: 8,
+        justifyContent: 'space-between',
+        marginHorizontal: 16,
+        marginBottom: 16,
+        gap: 12,
     },
     macroGridItem: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        paddingVertical: 14,
+        paddingHorizontal: 10,
         alignItems: 'center',
-        gap: 4,
+        gap: 6,
     },
     macroRingWrap: {
-        width: 52,
-        height: 52,
+        width: 44,
+        height: 44,
         alignItems: 'center',
         justifyContent: 'center',
         position: 'relative',
+        marginTop: 4,
     },
     macroRingEmoji: {
         position: 'absolute',
-        fontSize: 16,
     },
     macroGridLabel: {
-        fontSize: 10,
-        fontWeight: '700',
-        color: '#999',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
-    macroGridValue: {
         fontSize: 11,
         fontWeight: '600',
+        color: '#A0A0A0',
+        textTransform: 'none',
+    },
+    macroGridValue: {
+        fontSize: 16,
+        fontWeight: '800',
         color: Colors.text,
+    },
+    macroGridValueMax: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#A0A0A0',
+        marginLeft: 2,
     },
 
     // ── Quick Metrics Row (Water + Exercise) ───────────────────────────────
