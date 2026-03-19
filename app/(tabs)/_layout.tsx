@@ -5,7 +5,7 @@ import {
     type GestureResponderEvent, type PanResponderGestureState,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs, useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { HomeIcon, BattleIcon, KitchenIcon } from '../../src/components/TabIcons';
@@ -350,6 +350,8 @@ const tabBarStyles = StyleSheet.create({
 // ─── Main Layout ─────────────────────────────────────────────────────────────
 export default function TabsLayout() {
     const router = useRouter();
+    const pathname = usePathname();
+    const isAiCoachScreen = pathname.includes('ai-coach');
     const { t } = useAppLanguage();
     const { isAddMenuOpen, setAddMenuOpen, selectedMealType, setSelectedMealType } = useMealStore();
     const [menuOpen, setMenuOpen] = useState(false);
@@ -479,7 +481,7 @@ export default function TabsLayout() {
                 )}
 
                 {/* AI Bubble resting (menu closed) */}
-                {!menuOpen && (
+                {!menuOpen && !isAiCoachScreen && (
                     <TouchableOpacity style={styles.aiBubbleResting} activeOpacity={0.85} onPress={() => router.push('/(tabs)/ai-coach')}>
                         <BlurView intensity={70} tint="light" style={styles.aiBubbleBlur}>
                             <Ionicons name="chatbubble-ellipses-outline" size={20} color="#6366F1" />

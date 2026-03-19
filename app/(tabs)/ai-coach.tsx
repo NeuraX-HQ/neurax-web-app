@@ -1,6 +1,6 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Shadows } from '../../src/constants/colors';
 import { useMealStore } from '../../src/store/mealStore';
 import { useFridgeStore } from '../../src/store/fridgeStore';
@@ -45,6 +45,7 @@ export default function AiCoachScreen() {
 
     const { getTodayStats, getTodayMeals } = useMealStore();
     const { items: fridgeItems } = useFridgeStore();
+    const insets = useSafeAreaInsets();
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -233,6 +234,8 @@ export default function AiCoachScreen() {
                         </TouchableOpacity>
                     )}
                 </View>
+                {/* Spacer to clear the bottom tab bar */}
+                <View style={{ height: Math.max(insets.bottom + 65, 80), backgroundColor: '#FFFFFF' }} />
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
