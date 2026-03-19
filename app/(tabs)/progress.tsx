@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     ScrollView,
     StyleSheet,
@@ -37,11 +37,13 @@ function getWeekDates(todayIso: string, offsetWeeks = 0): string[] {
     });
 }
 
-function get30DayDates(todayIso: string): string[] {
+function getMonthDates(todayIso: string): string[] {
     const today = new Date(todayIso);
-    return Array.from({ length: 30 }, (_, i) => {
-        const d = new Date(today);
-        d.setDate(today.getDate() - 29 + i);
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    return Array.from({ length: daysInMonth }, (_, i) => {
+        const d = new Date(year, month, i + 1);
         return toLocalIsoDate(d);
     });
 }
@@ -87,22 +89,46 @@ const macroStyles = StyleSheet.create({
 });
 
 // ── Component: Activity Calendar ──────────────────────────────────────────
-function ActivityCalendar({ dates30, activeDateSet }: { dates30: string[]; activeDateSet: Set<string> }) {
-    // arrange 30 days into columns of 7
+function ActivityCalendar({ dailyCaloriesMap, todayIso }: { dailyCaloriesMap: Record<string, number>; todayIso: string }) {
+    const [monthOffset, setMonthOffset] = useState(0);
+
+    const monthDates = useMemo(() => {
+        const d = new Date(todayIso);
+        d.setMonth(d.getMonth() + monthOffset);
+        return getMonthDates(toLocalIsoDate(d));
+    }, [todayIso, monthOffset]);
+
+    // arrange month days into columns of 3
     const CELL = 14;
     const GAP = 4;
     const cols: string[][] = [];
-    for (let i = 0; i < dates30.length; i += 7) {
-        cols.push(dates30.slice(i, i + 7));
+    for (let i = 0; i < monthDates.length; i += 2) {
+        cols.push(monthDates.slice(i, i + 2));
     }
     const getCellColor = (iso: string) => {
-        const meals = activeDateSet.has(iso);
-        return meals ? Colors.accent : '#E5E7EB';
+        const cals = dailyCaloriesMap[iso] || 0;
+        if (cals === 0) return '#E5E7EB';
+        const pct = cals / CALORIE_GOAL;
+        if (pct <= 0.33) return '#D1FAE5';
+        if (pct <= 0.66) return '#6EE7B7';
+        return Colors.accent;
     };
-    const startLabel = dates30[0]?.slice(5) ?? '';
-    const endLabel = dates30[dates30.length - 1]?.slice(5) ?? '';
+
+    const currentDate = new Date(todayIso);
+    currentDate.setMonth(currentDate.getMonth() + monthOffset);
+    const monthLabel = `Tháng ${currentDate.getMonth() + 1}, ${currentDate.getFullYear()}`;
+
     return (
         <View style={calStyles.container}>
+            <View style={calStyles.monthHeader}>
+                <TouchableOpacity onPress={() => setMonthOffset(m => m - 1)} style={calStyles.navBtn}>
+                    <Ionicons name="chevron-back" size={18} color={Colors.textSecondary} />
+                </TouchableOpacity>
+                <Text style={calStyles.monthTitle}>{monthLabel}</Text>
+                <TouchableOpacity onPress={() => setMonthOffset(m => m + 1)} style={calStyles.navBtn}>
+                    <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
+                </TouchableOpacity>
+            </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={calStyles.grid}>
                     {cols.map((col, ci) => (
@@ -121,7 +147,6 @@ function ActivityCalendar({ dates30, activeDateSet }: { dates30: string[]; activ
                 </View>
             </ScrollView>
             <View style={calStyles.legend}>
-                <Text style={calStyles.legendText}>{startLabel}</Text>
                 <View style={calStyles.legendRight}>
                     <Text style={calStyles.legendText}>Ít</Text>
                     {['#D1FAE5', '#6EE7B7', Colors.accent].map((c, i) => (
@@ -129,7 +154,6 @@ function ActivityCalendar({ dates30, activeDateSet }: { dates30: string[]; activ
                     ))}
                     <Text style={calStyles.legendText}>Nhiều</Text>
                 </View>
-                <Text style={calStyles.legendText}>{endLabel}</Text>
             </View>
         </View>
     );
@@ -137,10 +161,13 @@ function ActivityCalendar({ dates30, activeDateSet }: { dates30: string[]; activ
 
 const calStyles = StyleSheet.create({
     container: { gap: 10 },
+    monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
+    navBtn: { padding: 4 },
+    monthTitle: { fontSize: 13, fontWeight: '700', color: Colors.text },
     grid: { flexDirection: 'row', gap: 4 },
     col: { flexDirection: 'column' },
     cell: { borderRadius: 3 },
-    legend: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    legend: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' },
     legendRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     legendDot: { width: 8, height: 8, borderRadius: 2 },
     legendText: { fontSize: 9, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase' },
@@ -204,8 +231,15 @@ export default function ProgressScreen() {
         return { type, label: mealLabels[type], count, pct };
     });
 
-    // ── 30-day activity calendar ────────────────────────────────────────
-    const dates30 = useMemo(() => get30DayDates(todayIso), [todayIso]);
+    // ── Monthly activity calendar ────────────────────────────────────────
+    const dailyCaloriesMap = useMemo(() => {
+        const map: Record<string, number> = {};
+        meals.forEach(m => {
+            if (!map[m.date]) map[m.date] = 0;
+            map[m.date] += m.calories;
+        });
+        return map;
+    }, [meals]);
 
     // ── Monthly trend ───────────────────────────────────────────────────
     const svgWidth = SCREEN_W - 64;
@@ -428,8 +462,8 @@ export default function ProgressScreen() {
 
                 {/* ── 7. Activity Calendar (GitHub-style) ──────────── */}
                 <View style={[styles.card, Shadows.small]}>
-                    <Text style={styles.cardTitle}>Hoạt Động 30 Ngày</Text>
-                    <ActivityCalendar dates30={dates30} activeDateSet={activeDateSet} />
+                    <Text style={styles.cardTitle}>Hoạt Động</Text>
+                    <ActivityCalendar dailyCaloriesMap={dailyCaloriesMap} todayIso={todayIso} />
                 </View>
 
                 {/* ── 8. Quick Stats ────────────────────────────────── */}
