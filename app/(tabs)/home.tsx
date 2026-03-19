@@ -17,6 +17,8 @@ import { CameraScannerWithLoading } from '../../src/components/CameraScannerWith
 import { SearchScanner } from '../../src/components/SearchScanner';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 import { getCurrentStreak } from '../../src/utils/streak';
+import Svg, { Path } from 'react-native-svg';
+import AnimatedTransitionText from '../../src/components/AnimatedTransitionText';
 
 const WEEKDAY_LABELS_BY_LANG: Record<'vi' | 'en', string[]> = {
     vi: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'],
@@ -233,15 +235,45 @@ export default function HomeScreen() {
     const maxCalories = Math.max(1, calorieWindow.effectiveTarget);
     const caloriesEaten = Math.round(calorieWindow.eaten);
     const caloriesLeft = Math.round(calorieWindow.left);
+    const isCaloriesOver = !showCaloriesEaten && caloriesEaten > maxCalories;
+    const overAmount = Math.round(caloriesEaten - maxCalories);
     const calorieGaugeValue = showCaloriesEaten
         ? `${caloriesEaten}/${maxCalories}`
-        : `${caloriesLeft}`;
+        : isCaloriesOver ? `${overAmount}` : `${caloriesLeft}`;
     const calorieGaugeLabel = showCaloriesEaten
         ? t('home.caloriesEaten')
-        : t('home.caloriesLeft');
-    const protein = { current: Math.round(stats.totalProtein), max: 140 };
-    const carbs = { current: Math.round(stats.totalCarbs), max: 280 };
-    const fat = { current: Math.round(stats.totalFat), max: 75 };
+        : isCaloriesOver ? t('home.caloriesOver') : t('home.caloriesLeft');
+    const calorieAccentColor = isCaloriesOver ? Colors.danger : undefined;
+
+    // Macro Logic Calculation Helper
+    const getMacroStatus = (current: number, max: number, labelName: string, defaultColor: string) => {
+        const isOver = !showCaloriesEaten && current > max;
+        const oAmount = Math.round(current - max);
+        const lAmount = Math.round(max - current);
+        
+        const mainValue = showCaloriesEaten 
+            ? `${current}g`
+            : isOver ? `${oAmount}g` : `${Math.max(0, lAmount)}g`;
+            
+        const maxValue = showCaloriesEaten ? `/${max}g` : undefined;
+            
+        const label = showCaloriesEaten
+            ? t('home.macroEaten')
+            : isOver ? t('home.macroOver') : t('home.macroLeft');
+            
+        return {
+            current,
+            max,
+            mainValue,
+            maxValue,
+            label,
+            color: isOver ? Colors.danger : defaultColor
+        };
+    };
+
+    const protein = getMacroStatus(Math.round(stats.totalProtein), 140, 'home.protein', Colors.protein);
+    const carbs = getMacroStatus(Math.round(stats.totalCarbs), 280, 'home.carbs', Colors.carbs);
+    const fat = getMacroStatus(Math.round(stats.totalFat), 75, 'home.fat', Colors.fat);
     const [waterByDate, setWaterByDate] = useState<Record<string, number>>({
         [todayIso]: 800,
     });
@@ -582,94 +614,153 @@ export default function HomeScreen() {
 
                 {/* Calorie Card */}
                 <View style={[styles.card, Shadows.medium]}>
-                    <View style={styles.calorieRow}>
-                        <TouchableOpacity
-                            activeOpacity={0.85}
-                            onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
-                        >
-                            <CalorieGauge
-                                current={caloriesEaten}
-                                max={maxCalories}
-                                size={120}
-                                strokeWidth={7}
-                                displayValue={calorieGaugeValue}
-                                label={calorieGaugeLabel}
-                            />
-                        </TouchableOpacity>
-                        <View style={styles.macros}>
-                            <View style={styles.macroRow}>
-                                <Text style={styles.macroEmoji}>🥩</Text>
-                                <View style={styles.macroInfo}>
-                                    <View style={styles.macroHeader}>
-                                        <Text style={styles.macroName}>{t('home.protein')}</Text>
-                                        <Text style={styles.macroValue}>{protein.current}/{protein.max}g</Text>
-                                    </View>
-                                    <View style={styles.macroBarBg}>
-                                        <View style={[styles.macroBar, { width: `${Math.min((protein.current / protein.max) * 100, 100)}%`, backgroundColor: Colors.protein }]} />
-                                    </View>
-                                </View>
-                            </View>
-                            <View style={styles.macroRow}>
-                                <Text style={styles.macroEmoji}>🍞</Text>
-                                <View style={styles.macroInfo}>
-                                    <View style={styles.macroHeader}>
-                                        <Text style={styles.macroName}>{t('home.carbs')}</Text>
-                                        <Text style={styles.macroValue}>{carbs.current}/{carbs.max}g</Text>
-                                    </View>
-                                    <View style={styles.macroBarBg}>
-                                        <View style={[styles.macroBar, { width: `${Math.min((carbs.current / carbs.max) * 100, 100)}%`, backgroundColor: Colors.carbs }]} />
-                                    </View>
-                                </View>
-                            </View>
-                            <View style={styles.macroRow}>
-                                <Text style={styles.macroEmoji}>🧀</Text>
-                                <View style={styles.macroInfo}>
-                                    <View style={styles.macroHeader}>
-                                        <Text style={styles.macroName}>{t('home.fat')}</Text>
-                                        <Text style={styles.macroValue}>{fat.current}/{fat.max}g</Text>
-                                    </View>
-                                    <View style={styles.macroBarBg}>
-                                        <View style={[styles.macroBar, { width: `${Math.min((fat.current / fat.max) * 100, 100)}%`, backgroundColor: Colors.fat }]} />
-                                    </View>
-                                </View>
-                            </View>
-                        </View>
-                    </View>
+                    {/* Calorie Ring */}
+                    <TouchableOpacity
+                        activeOpacity={0.85}
+                        style={styles.calorieRingWrapper}
+                        onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
+                    >
+                        <CalorieGauge
+                            current={showCaloriesEaten ? caloriesEaten : caloriesLeft}
+                            max={maxCalories}
+                            size={120}
+                            strokeWidth={14}
+                            displayValue={calorieGaugeValue}
+                            label={calorieGaugeLabel}
+                            accentColor={calorieAccentColor}
+                        />
+                    </TouchableOpacity>
                 </View>
 
-                {/* Water Intake */}
-                <View style={[styles.card, Shadows.small, styles.waterCard]}>
-                    <View style={styles.waterRow}>
-                        <Text style={styles.waterIcon}>💧</Text>
-                        <View style={styles.waterInfo}>
-                            <Text style={styles.waterTitle}>{t('home.waterIntake')}</Text>
-                            <View style={styles.waterBarBg}>
-                                <View style={[styles.waterBar, { width: `${(waterCurrent / waterMax) * 100}%` }]} />
+                {/* Macro Mini-Ring Grid (Standalone Cards) */}
+                    <View style={styles.macroGrid}>
+                        {/* Protein */}
+                        <View style={[styles.macroGridItem, Shadows.small]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
+                                <AnimatedTransitionText text={protein.mainValue} style={[styles.macroGridValue, protein.current > protein.max && !showCaloriesEaten ? { color: Colors.danger } : {}]} direction="down" />
+                                {protein.maxValue && <Text style={styles.macroGridValueMax}>{protein.maxValue}</Text>}
+                            </View>
+                            <AnimatedTransitionText text={protein.label} style={styles.macroGridLabel} />
+                            <View style={styles.macroRingWrap}>
+                                <Svg width={44} height={44} viewBox="0 0 52 52">
+                                    <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
+                                    {protein.current > 0 && (
+                                        <Path
+                                            d={(() => {
+                                                const r = 22; const cx = 26; const cy = 26;
+                                                const prog = Math.min(protein.current / protein.max, 1);
+                                                const arc = 359.9 * prog;
+                                                const s = { x: cx, y: cy - r };
+                                                const e = { x: cx + r * Math.sin(arc * Math.PI / 180), y: cy - r * Math.cos(arc * Math.PI / 180) };
+                                                return `M ${s.x} ${s.y} A ${r} ${r} 0 ${arc > 180 ? 1 : 0} 1 ${e.x} ${e.y}`;
+                                            })()}
+                                            fill="none" stroke={protein.color} strokeWidth={5} strokeLinecap="round"
+                                        />
+                                    )}
+                                </Svg>
+                                <Text style={styles.macroRingEmoji}>🥩</Text>
                             </View>
                         </View>
-                        <Text style={styles.waterValue}>{waterCurrent}/{waterMax}ml</Text>
-                        <TouchableOpacity style={styles.waterAdd} onPress={withAutoClose(() => setShowHydration(true))}>
-                            <Text style={styles.waterAddText}>+</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
 
-                {/* Exercise */}
-                <TouchableOpacity
-                    style={[styles.card, Shadows.small, styles.exerciseCard]}
-                    onPress={withAutoClose(() => router.push('/exercise-library'))}
-                >
-                    <View style={styles.exerciseRow}>
-                        <Text style={styles.exerciseIcon}>🏃</Text>
-                        <View style={styles.exerciseInfo}>
-                            <Text style={styles.exerciseTitle}>{t('home.exercise')}</Text>
+                        {/* Carbs */}
+                        <View style={[styles.macroGridItem, Shadows.small]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
+                                <AnimatedTransitionText text={carbs.mainValue} style={[styles.macroGridValue, carbs.current > carbs.max && !showCaloriesEaten ? { color: Colors.danger } : {}]} direction="down" />
+                                {carbs.maxValue && <Text style={styles.macroGridValueMax}>{carbs.maxValue}</Text>}
+                            </View>
+                            <AnimatedTransitionText text={carbs.label} style={styles.macroGridLabel} />
+                            <View style={styles.macroRingWrap}>
+                                <Svg width={44} height={44} viewBox="0 0 52 52">
+                                    <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
+                                    {carbs.current > 0 && (
+                                        <Path
+                                            d={(() => {
+                                                const r = 22; const cx = 26; const cy = 26;
+                                                const prog = Math.min(carbs.current / carbs.max, 1);
+                                                const arc = 359.9 * prog;
+                                                const s = { x: cx, y: cy - r };
+                                                const e = { x: cx + r * Math.sin(arc * Math.PI / 180), y: cy - r * Math.cos(arc * Math.PI / 180) };
+                                                return `M ${s.x} ${s.y} A ${r} ${r} 0 ${arc > 180 ? 1 : 0} 1 ${e.x} ${e.y}`;
+                                            })()}
+                                            fill="none" stroke={carbs.color} strokeWidth={5} strokeLinecap="round"
+                                        />
+                                    )}
+                                </Svg>
+                                <Text style={styles.macroRingEmoji}>🍞</Text>
+                            </View>
                         </View>
-                        <Text style={styles.exerciseValue}>{exerciseMinutes} / 45 {t('home.min')}</Text>
-                        <View style={styles.exerciseArrow}>
-                            <Text style={styles.exerciseArrowText}>›</Text>
+
+                        {/* Fat */}
+                        <View style={[styles.macroGridItem, Shadows.small]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
+                                <AnimatedTransitionText text={fat.mainValue} style={[styles.macroGridValue, fat.current > fat.max && !showCaloriesEaten ? { color: Colors.danger } : {}]} direction="down" />
+                                {fat.maxValue && <Text style={styles.macroGridValueMax}>{fat.maxValue}</Text>}
+                            </View>
+                            <AnimatedTransitionText text={fat.label} style={styles.macroGridLabel} />
+                            <View style={styles.macroRingWrap}>
+                                <Svg width={44} height={44} viewBox="0 0 52 52">
+                                    <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
+                                    {fat.current > 0 && (
+                                        <Path
+                                            d={(() => {
+                                                const r = 22; const cx = 26; const cy = 26;
+                                                const prog = Math.min(fat.current / fat.max, 1);
+                                                const arc = 359.9 * prog;
+                                                const s = { x: cx, y: cy - r };
+                                                const e = { x: cx + r * Math.sin(arc * Math.PI / 180), y: cy - r * Math.cos(arc * Math.PI / 180) };
+                                                return `M ${s.x} ${s.y} A ${r} ${r} 0 ${arc > 180 ? 1 : 0} 1 ${e.x} ${e.y}`;
+                                            })()}
+                                            fill="none" stroke={fat.color} strokeWidth={5} strokeLinecap="round"
+                                        />
+                                    )}
+                                </Svg>
+                                <Text style={styles.macroRingEmoji}>🥑</Text>
+                            </View>
                         </View>
                     </View>
-                </TouchableOpacity>
+
+                {/* Quick Metrics Row: Water + Exercise side by side */}
+                <View style={styles.metricsRow}>
+                    {/* Water Card */}
+                    <View style={[styles.metricCard, Shadows.small]}>
+                        <View style={styles.metricCardHeader}>
+                            <View style={[styles.metricIconBg, { backgroundColor: '#EBF3FB' }]}>
+                                <Text style={styles.metricIconText}>💧</Text>
+                            </View>
+                            <TouchableOpacity style={styles.metricAddBtn} onPress={withAutoClose(() => setShowHydration(true))}>
+                                <Text style={styles.metricAddBtnText}>+</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.metricCardBody}>
+                            <Text style={styles.metricCardTitle} numberOfLines={1} adjustsFontSizeToFit>{t('home.waterIntake')}</Text>
+                            <Text style={styles.metricCardSubtitle}>{waterCurrent}/{waterMax}ml</Text>
+                        </View>
+                        <View style={styles.metricBarBg}>
+                            <View style={[styles.metricBar, { width: `${Math.min((waterCurrent / waterMax) * 100, 100)}%`, backgroundColor: Colors.water }]} />
+                        </View>
+                    </View>
+
+                    {/* Exercise Card */}
+                    <TouchableOpacity
+                        style={[styles.metricCard, Shadows.small]}
+                        onPress={withAutoClose(() => router.push('/exercise-library'))}
+                        activeOpacity={0.85}
+                    >
+                        <View style={styles.metricCardHeader}>
+                            <View style={[styles.metricIconBg, { backgroundColor: '#FFF3E6' }]}>
+                                <Text style={styles.metricIconText}>🏃</Text>
+                            </View>
+                            <Text style={styles.metricChevron}>›</Text>
+                        </View>
+                        <View style={styles.metricCardBody}>
+                            <Text style={styles.metricCardTitle} numberOfLines={1} adjustsFontSizeToFit>{t('home.exercise')}</Text>
+                            <Text style={styles.metricCardSubtitle}>{exerciseMinutes}/45 {t('home.min')}</Text>
+                        </View>
+                        <View style={styles.metricBarBg}>
+                            <View style={[styles.metricBar, { width: `${Math.min((exerciseMinutes / 45) * 100, 100)}%`, backgroundColor: Colors.streak }]} />
+                        </View>
+                    </TouchableOpacity>
+                </View>
 
                 {/* Today's Meals */}
                 <View style={styles.sectionHeader}>
@@ -1511,5 +1602,128 @@ const styles = StyleSheet.create({
     },
     calendarDayTextPast: {
         color: '#9CA3AF',
+    },
+
+    // ── Redesigned Calorie Card ─────────────────────────────────────────────
+    calorieRingWrapper: {
+        alignItems: 'center',
+        paddingVertical: 12,
+    },
+    macroGrid: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginHorizontal: 16,
+        marginBottom: 16,
+        gap: 12,
+    },
+    macroGridItem: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        paddingVertical: 14,
+        paddingHorizontal: 10,
+        alignItems: 'center',
+        gap: 6,
+    },
+    macroRingWrap: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        marginTop: 4,
+    },
+    macroRingEmoji: {
+        position: 'absolute',
+    },
+    macroGridLabel: {
+        fontSize: 11,
+        fontWeight: '600',
+        color: '#A0A0A0',
+        textTransform: 'none',
+    },
+    macroGridValue: {
+        fontSize: 16,
+        fontWeight: '800',
+        color: Colors.text,
+    },
+    macroGridValueMax: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#A0A0A0',
+        marginLeft: 2,
+    },
+
+    // ── Quick Metrics Row (Water + Exercise) ───────────────────────────────
+    metricsRow: {
+        flexDirection: 'row',
+        gap: 12,
+        marginHorizontal: 16,
+        marginBottom: 16,
+    },
+    metricCard: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 14,
+        gap: 10,
+    },
+    metricCardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    metricIconBg: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    metricIconText: {
+        fontSize: 20,
+    },
+    metricAddBtn: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: '#F1F4F5',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    metricAddBtnText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: Colors.primary,
+        lineHeight: 20,
+    },
+    metricCardBody: {
+        gap: 2,
+    },
+    metricCardTitle: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: Colors.text,
+    },
+    metricCardSubtitle: {
+        fontSize: 11,
+        fontWeight: '500',
+        color: '#999',
+    },
+    metricBarBg: {
+        width: '100%',
+        height: 6,
+        backgroundColor: '#F0F0F0',
+        borderRadius: 3,
+        overflow: 'hidden',
+    },
+    metricBar: {
+        height: '100%',
+        borderRadius: 3,
+    },
+    metricChevron: {
+        fontSize: 22,
+        color: '#BBBBBB',
+        fontWeight: '300',
     },
 });
