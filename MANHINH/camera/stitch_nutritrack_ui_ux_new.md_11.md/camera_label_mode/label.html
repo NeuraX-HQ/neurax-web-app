@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Precision Scan - Label Mode</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-error-container": "#93000a",
+              "tertiary-fixed": "#ffdad7",
+              "on-primary-fixed-variant": "#005236",
+              "primary-container": "#10b981",
+              "on-secondary": "#ffffff",
+              "on-primary-fixed": "#002113",
+              "error-container": "#ffdad6",
+              "surface-container-lowest": "#ffffff",
+              "on-surface-variant": "#3c4a42",
+              "tertiary-container": "#fc7c78",
+              "on-tertiary-fixed": "#410005",
+              "on-tertiary-container": "#711419",
+              "surface-bright": "#f7f9fb",
+              "background": "#f7f9fb",
+              "surface-container-highest": "#e0e3e5",
+              "tertiary": "#a43a3a",
+              "on-primary-container": "#00422b",
+              "tertiary-fixed-dim": "#ffb3af",
+              "surface-container": "#eceef0",
+              "surface-variant": "#e0e3e5",
+              "on-secondary-container": "#646464",
+              "on-tertiary": "#ffffff",
+              "surface-dim": "#d8dadc",
+              "surface-container-low": "#f2f4f6",
+              "on-primary": "#ffffff",
+              "on-secondary-fixed-variant": "#474747",
+              "on-surface": "#191c1e",
+              "on-error": "#ffffff",
+              "secondary-container": "#e2e2e2",
+              "primary": "#006c49",
+              "on-tertiary-fixed-variant": "#842225",
+              "secondary-fixed-dim": "#c6c6c6",
+              "on-background": "#191c1e",
+              "surface": "#f7f9fb",
+              "secondary-fixed": "#e2e2e2",
+              "outline-variant": "#bbcabf",
+              "primary-fixed-dim": "#4edea3",
+              "outline": "#6c7a71",
+              "surface-container-high": "#e6e8ea",
+              "inverse-primary": "#4edea3",
+              "on-secondary-fixed": "#1b1b1b",
+              "primary-fixed": "#6ffbbe",
+              "inverse-surface": "#2d3133",
+              "error": "#ba1a1a",
+              "surface-tint": "#006c49",
+              "inverse-on-surface": "#eff1f3",
+              "secondary": "#5e5e5e"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Space Grotesk"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .scan-bracket {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-color: #10b981;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-black overflow-hidden h-screen font-body text-on-surface select-none">
+<!-- Camera Background -->
+<div class="absolute inset-0 z-0">
+<img alt="Nutrition label on food packaging close up" class="w-full h-full object-cover opacity-80 grayscale-[0.2]" data-alt="Close up of a nutrition facts label on food packaging" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDD3ZLuALn1g1F4AN9OW_ulLgep6HpvcHnoB-tpW-VDNXWXBd9_W3YOl0T1ggOQfir0KOC0FqlpMlR6yIPikZoe_JYvKEGgLDlX94rnYMzgiNgx8dObxG-c-rDSTmjp5mCDKvcAG49N0XLcgU5V1euI1iBJSibgcEYBRluDCRnSeOxGWT3RBy2f7FuKb7LSiwb8iMfY29tpagZTxEVJ68Y_m5HFYjOIa04T86U_uzIwvO53J5A7YCQe5YHoHuIXE-qIMr62ecTB9w"/>
+</div>
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-6 py-4 w-full bg-transparent glassmorphism backdrop-blur-md">
+<button class="text-slate-300 hover:opacity-80 transition-opacity scale-95 active:duration-100">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<h1 class="font-headline uppercase tracking-widest text-xs font-bold text-emerald-500 dark:text-emerald-400">PRECISION SCAN</h1>
+<button class="text-slate-300 hover:opacity-80 transition-opacity scale-95 active:duration-100">
+<span class="material-symbols-outlined" data-icon="flashlight_on">flashlight_on</span>
+</button>
+</header>
+<!-- Scanning Overlay & Viewfinder -->
+<main class="relative h-full w-full flex flex-col items-center justify-center pt-20 pb-40">
+<!-- Viewfinder Frame -->
+<div class="relative w-72 h-96 flex items-center justify-center">
+<!-- Corners (Brackets) -->
+<div class="scan-bracket top-0 left-0 border-t-2 border-l-2"></div>
+<div class="scan-bracket top-0 right-0 border-t-2 border-r-2"></div>
+<div class="scan-bracket bottom-0 left-0 border-b-2 border-l-2"></div>
+<div class="scan-bracket bottom-0 right-0 border-b-2 border-r-2"></div>
+<!-- Scanning Line -->
+<div class="absolute top-0 left-0 w-full h-0.5 bg-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.8)] animate-pulse"></div>
+<!-- Focus indicator center -->
+<div class="w-4 h-4 border border-emerald-500/30 rounded-full"></div>
+</div>
+<!-- Scanning Text HUD -->
+<div class="mt-12 flex flex-col items-center">
+<div class="bg-slate-950/40 backdrop-blur-lg px-6 py-2 rounded-full flex items-center gap-3 border border-white/10">
+<span class="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
+<span class="font-label text-white text-[10px] tracking-[0.2em] font-bold uppercase">Scanning Nutrition Label...</span>
+</div>
+<!-- Secondary Technical Metadata -->
+<div class="mt-4 flex gap-8">
+<div class="text-center">
+<p class="font-label text-[8px] text-slate-400 tracking-widest uppercase">Precision</p>
+<p class="font-label text-[10px] text-white font-bold tracking-tighter">98.4%</p>
+</div>
+<div class="text-center border-l border-white/10 pl-8">
+<p class="font-label text-[8px] text-slate-400 tracking-widest uppercase">Depth</p>
+<p class="font-label text-[10px] text-white font-bold tracking-tighter">0.45m</p>
+</div>
+<div class="text-center border-l border-white/10 pl-8">
+<p class="font-label text-[8px] text-slate-400 tracking-widest uppercase">ISO</p>
+<p class="font-label text-[10px] text-white font-bold tracking-tighter">100</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Tactical Bottom Bar Cluster -->
+<div class="fixed bottom-28 left-0 w-full px-12 flex justify-between items-center z-40">
+<!-- Gallery Button -->
+<button class="w-12 h-12 rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-white scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="photo_library">photo_library</span>
+</button>
+<!-- Analysis Shutter Button (Primary Action) -->
+<button class="w-20 h-20 rounded-full p-1 bg-white/20 backdrop-blur-md border border-white/30 active:scale-90 transition-all duration-200">
+<div class="w-full h-full rounded-full bg-white flex items-center justify-center text-on-surface shadow-2xl">
+<span class="material-symbols-outlined text-3xl" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+</button>
+<!-- Flash Toggle -->
+<button class="w-12 h-12 rounded-xl bg-slate-900/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-white scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined" data-icon="flash_on">flash_on</span>
+</button>
+</div>
+<!-- Navigation Shell (BottomNavBar) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-8 pb-8 pt-4 bg-slate-950/60 dark:bg-slate-900/80 rounded-t-3xl backdrop-blur-xl shadow-2xl">
+<!-- FOOD TAB -->
+<button class="flex flex-col items-center justify-center text-slate-400 px-4 py-2 hover:text-emerald-200 transition-colors Active: scale-90 transition-transform duration-200">
+<span class="material-symbols-outlined mb-1" data-icon="photo_camera">photo_camera</span>
+<span class="font-space-grotesk text-[10px] font-bold tracking-widest uppercase">FOOD</span>
+</button>
+<!-- BARCODE TAB -->
+<button class="flex flex-col items-center justify-center text-slate-400 px-4 py-2 hover:text-emerald-200 transition-colors Active: scale-90 transition-transform duration-200">
+<span class="material-symbols-outlined mb-1" data-icon="barcode_scanner">barcode_scanner</span>
+<span class="font-space-grotesk text-[10px] font-bold tracking-widest uppercase">BARCODE</span>
+</button>
+<!-- LABEL TAB (ACTIVE) -->
+<button class="flex flex-col items-center justify-center text-emerald-400 bg-emerald-500/10 rounded-xl px-4 py-2 hover:text-emerald-200 transition-colors Active: scale-90 transition-transform duration-200">
+<span class="material-symbols-outlined mb-1" data-icon="sticky_note_2">sticky_note_2</span>
+<span class="font-space-grotesk text-[10px] font-bold tracking-widest uppercase">LABEL</span>
+</button>
+</nav>
+<!-- Viewfinder Calibration Graphics -->
+<div class="fixed inset-0 pointer-events-none border-[30px] border-slate-950/20 mix-blend-overlay"></div>
+</body></html>
