@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Asset } from 'expo-asset';
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 const { width, height } = Dimensions.get('window');
 
@@ -17,32 +18,33 @@ const WELCOME_IMAGES = [
     require('../assets/images/friends.png'),
 ];
 
-const FEATURES = [
-    {
-        titleStr: 'Your AI Nutrition\nPartner',
-        subtitle: 'Track meals, challenge friends, and meet AI Bảo — your personal health coach.',
-    },
-    {
-        titleStr: 'Smart Meal\nPlanning',
-        subtitle: 'Get personalized recipes tailored to your goals and dietary preferences.',
-    },
-    {
-        titleStr: 'Challenge Friends,\nWin Together',
-        subtitle: 'Join weekly health challenges and compete with your community.',
-    },
-];
-
-const STATS = [
-    { label: 'Users', value: '10K+' },
-    { label: 'Recipes', value: '500+' },
-    { label: 'Rating', value: '4.9★' },
-];
-
 export default function WelcomeScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
+    const { t } = useAppLanguage();
 
     const [currentIndex, setCurrentIndex] = useState(0);
+
+    const features = [
+        {
+            titleStr: t('welcome.feature1.title'),
+            subtitle: t('welcome.feature1.subtitle'),
+        },
+        {
+            titleStr: t('welcome.feature2.title'),
+            subtitle: t('welcome.feature2.subtitle'),
+        },
+        {
+            titleStr: t('welcome.feature3.title'),
+            subtitle: t('welcome.feature3.subtitle'),
+        },
+    ];
+
+    const stats = [
+        { label: t('welcome.stats.users'), value: '10K+' },
+        { label: t('welcome.stats.recipes'), value: '500+' },
+        { label: t('welcome.stats.rating'), value: '4.9★' },
+    ];
 
     // Text fade: text fades out then in
     const textOpacity = React.useRef(new Animated.Value(1)).current;
@@ -75,7 +77,7 @@ export default function WelcomeScreen() {
         return () => clearInterval(interval);
     }, []);
 
-    const feature = FEATURES[currentIndex];
+    const feature = features[currentIndex];
 
     return (
         <View style={styles.container}>
@@ -120,7 +122,7 @@ export default function WelcomeScreen() {
 
                 {/* Stats row */}
                 <View style={styles.statsRow}>
-                    {STATS.map((stat, i) => (
+                    {stats.map((stat, i) => (
                         <View key={i} style={styles.statCard}>
                             <Text style={styles.statValue}>{stat.value}</Text>
                             <Text style={styles.statLabel}>{stat.label}</Text>
@@ -134,13 +136,13 @@ export default function WelcomeScreen() {
                     onPress={() => router.push('/onboarding/step1')}
                     activeOpacity={0.85}
                 >
-                    <Text style={styles.primaryButtonText}>Get Started</Text>
+                    <Text style={styles.primaryButtonText}>{t('welcome.getStarted')}</Text>
                 </TouchableOpacity>
 
                 <View style={styles.loginFooter}>
-                    <Text style={styles.loginText}>Already have an account? </Text>
+                    <Text style={styles.loginText}>{t('welcome.haveAccount')} </Text>
                     <TouchableOpacity onPress={() => router.push('/login' as any)}>
-                        <Text style={styles.loginLink}>Log In</Text>
+                        <Text style={styles.loginLink}>{t('welcome.login')}</Text>
                     </TouchableOpacity>
                 </View>
             </Animated.View>

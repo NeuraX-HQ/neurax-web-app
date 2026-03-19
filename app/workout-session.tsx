@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors, Shadows } from '../src/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 interface Exercise {
     id: string;
@@ -19,6 +20,7 @@ interface Exercise {
 
 export default function WorkoutSessionScreen() {
     const router = useRouter();
+    const { t, language } = useAppLanguage();
     const params = useLocalSearchParams();
     
     // Mock data - in real app, this would come from params
@@ -153,10 +155,10 @@ export default function WorkoutSessionScreen() {
                     <Ionicons name="close" size={28} color={Colors.text} />
                 </TouchableOpacity>
                 <View style={styles.headerCenter}>
-                    <Text style={styles.headerTitle}>Buổi tập</Text>
+                    <Text style={styles.headerTitle}>{t('workout.title')}</Text>
                     <TouchableOpacity onPress={() => setShowModeSettings(true)}>
                         <Text style={styles.headerSubtitle}>
-                            {workoutMode === 'circuit' ? '🔄 Circuit' : '📋 Traditional'} • {completedReps}/{totalReps} reps
+                            {workoutMode === 'circuit' ? t('workout.mode.circuit') : t('workout.mode.traditional')} • {completedReps}/{totalReps} {t('workout.repsShort')}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -187,13 +189,13 @@ export default function WorkoutSessionScreen() {
                 {/* Break Timer */}
                 {isBreak && (
                     <View style={[styles.breakCard, Shadows.medium]}>
-                        <Text style={styles.breakTitle}>⏱️ Thời gian nghỉ</Text>
+                        <Text style={styles.breakTitle}>{t('workout.breakTime')}</Text>
                         <Text style={styles.breakTimer}>{formatTime(timer)}</Text>
                         <TouchableOpacity 
                             style={styles.skipBreakButton}
                             onPress={skipBreak}
                         >
-                            <Text style={styles.skipBreakText}>Bỏ qua nghỉ</Text>
+                            <Text style={styles.skipBreakText}>{t('workout.skipBreak')}</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -206,9 +208,9 @@ export default function WorkoutSessionScreen() {
                                 <Text style={styles.exerciseIconLargeText}>{currentExercise.icon}</Text>
                             </View>
                             <View style={styles.exerciseHeaderInfo}>
-                                <Text style={styles.exerciseNameLarge}>{currentExercise.nameVi}</Text>
+                                <Text style={styles.exerciseNameLarge}>{language === 'vi' ? currentExercise.nameVi : currentExercise.name}</Text>
                                 <Text style={styles.exerciseDetails}>
-                                    {currentExercise.sets} hiệp × {currentExercise.reps} lần
+                                    {t('workout.setReps', { sets: currentExercise.sets, reps: currentExercise.reps })}
                                 </Text>
                             </View>
                         </View>
@@ -239,14 +241,14 @@ export default function WorkoutSessionScreen() {
                         </View>
 
                         <Text style={styles.setInstruction}>
-                            Nhấn vào số hiệp sau khi hoàn thành
+                            {t('workout.tapSetInstruction')}
                         </Text>
                     </View>
                 )}
 
                 {/* All Exercises List */}
                 <View style={styles.exercisesSection}>
-                    <Text style={styles.sectionTitle}>Tất cả bài tập • Nhấn để chuyển</Text>
+                    <Text style={styles.sectionTitle}>{t('workout.allExercises')}</Text>
                     {exercises.map((exercise, index) => {
                         const isActive = index === currentExerciseIndex;
                         const isCompleted = exercise.completedSets.length === exercise.sets;
@@ -279,10 +281,14 @@ export default function WorkoutSessionScreen() {
                                             styles.exerciseItemName,
                                             isCompleted && styles.exerciseItemNameCompleted
                                         ]}>
-                                            {exercise.nameVi}
+                                            {language === 'vi' ? exercise.nameVi : exercise.name}
                                         </Text>
                                         <Text style={styles.exerciseItemSets}>
-                                            {exercise.completedSets.length}/{exercise.sets} hiệp • {exercise.reps} lần/hiệp
+                                            {t('workout.progressSetReps', {
+                                                completed: exercise.completedSets.length,
+                                                sets: exercise.sets,
+                                                reps: exercise.reps,
+                                            })}
                                         </Text>
                                     </View>
                                 </View>
@@ -318,7 +324,7 @@ export default function WorkoutSessionScreen() {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Cài đặt thời gian nghỉ</Text>
+                            <Text style={styles.modalTitle}>{t('workout.breakSettings')}</Text>
                             <TouchableOpacity onPress={() => setShowBreakSettings(false)}>
                                 <Ionicons name="close" size={24} color={Colors.textSecondary} />
                             </TouchableOpacity>
@@ -360,7 +366,7 @@ export default function WorkoutSessionScreen() {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Chế độ tập luyện</Text>
+                            <Text style={styles.modalTitle}>{t('workout.modeSettings')}</Text>
                             <TouchableOpacity onPress={() => setShowModeSettings(false)}>
                                 <Ionicons name="close" size={24} color={Colors.textSecondary} />
                             </TouchableOpacity>
@@ -383,10 +389,10 @@ export default function WorkoutSessionScreen() {
                                         styles.modeOptionTitle,
                                         workoutMode === 'circuit' && styles.modeOptionTitleSelected
                                     ]}>
-                                        Circuit Training
+                                        {t('workout.mode.circuitTitle')}
                                     </Text>
                                     <Text style={styles.modeOptionDesc}>
-                                        Luân phiên giữa các bài tập (1 hiệp mỗi bài)
+                                        {t('workout.mode.circuitDesc')}
                                     </Text>
                                 </View>
                             </View>
@@ -412,10 +418,10 @@ export default function WorkoutSessionScreen() {
                                         styles.modeOptionTitle,
                                         workoutMode === 'traditional' && styles.modeOptionTitleSelected
                                     ]}>
-                                        Traditional
+                                        {t('workout.mode.traditionalTitle')}
                                     </Text>
                                     <Text style={styles.modeOptionDesc}>
-                                        Hoàn thành tất cả hiệp của 1 bài trước khi chuyển
+                                        {t('workout.mode.traditionalDesc')}
                                     </Text>
                                 </View>
                             </View>
@@ -436,18 +442,18 @@ export default function WorkoutSessionScreen() {
                 <View style={styles.completeOverlay}>
                     <View style={styles.completeCard}>
                         <Text style={styles.completeEmoji}>🎉</Text>
-                        <Text style={styles.completeTitle}>Hoàn thành!</Text>
+                        <Text style={styles.completeTitle}>{t('workout.completeTitle')}</Text>
                         <Text style={styles.completeMessage}>
-                            Bạn đã hoàn thành {totalReps} reps
+                            {t('workout.completeMessage', { totalReps })}
                         </Text>
                         <Text style={styles.completeTime}>
-                            Thời gian: {getTotalWorkoutTime()}
+                            {t('workout.completeTime', { time: getTotalWorkoutTime() })}
                         </Text>
                         <TouchableOpacity
                             style={styles.completeButton}
                             onPress={finishWorkout}
                         >
-                            <Text style={styles.completeButtonText}>Xong</Text>
+                            <Text style={styles.completeButtonText}>{t('workout.done')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

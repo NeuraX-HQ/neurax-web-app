@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
-import { View, StyleSheet, Platform, AppState, AppStateStatus } from 'react-native';
+import { View, StyleSheet, Platform, AppState, AppStateStatus, ActivityIndicator, Text } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
@@ -9,10 +9,20 @@ import BiometricPrompt from '../src/components/BiometricPrompt';
 import 'react-native-get-random-values';
 import "../src/lib/amplify";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { LanguageProvider, useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function RootLayout() {
+    return (
+        <LanguageProvider>
+            <RootLayoutShell />
+        </LanguageProvider>
+    );
+}
+
+function RootLayoutShell() {
     const router = useRouter();
     const segments = useSegments();
+    const { t, targetLanguage, isSwitchingLanguage } = useAppLanguage();
     const { isAuthenticated, checkSession, checkBiometricAvailability } = useAuthStore();
     const [showBiometric, setShowBiometric] = useState(false);
     const [isReady, setIsReady] = useState(false);
@@ -50,14 +60,9 @@ export default function RootLayout() {
         if (!isReady) return;
 
         const inAuthGroup = segments[0] === '(tabs)';
-        const inPublicGroup = !segments[0] || segments[0] === 'welcome' || segments[0] === 'login' || segments[0] === 'signup' || segments[0] === 'verify-otp';
-
         if (!isAuthenticated && inAuthGroup) {
             // Not logged in but trying to access a secure screen
             router.replace('/welcome');
-        } else if (isAuthenticated && inPublicGroup) {
-            // Logged in but viewing welcome or login page
-            router.replace('/(tabs)/home');
         }
     }, [isAuthenticated, segments, isReady]);
 
@@ -139,17 +144,40 @@ export default function RootLayout() {
                 <Stack.Screen name="add-hydration" options={{ presentation: 'modal' }} />
                 <Stack.Screen name="add-to-fridge" options={{ presentation: 'modal' }} />
                 <Stack.Screen name="edit-ingredients" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="recipe-ingredients" />
+                <Stack.Screen name="recipe-cooking" />
+                <Stack.Screen name="recipe-complete" />
                 <Stack.Screen name="notifications" />
                 <Stack.Screen name="profile" />
+                <Stack.Screen name="profile-personal-info" />
+                <Stack.Screen name="profile-health-goal" />
+                <Stack.Screen name="profile-activity-level" />
                 <Stack.Screen name="settings" />
+                <Stack.Screen name="achievements" />
+                <Stack.Screen name="privacy-policy" />
+                <Stack.Screen name="terms-of-service" />
             </Stack>
 
             <BiometricPrompt
                 visible={showBiometric}
                 onSuccess={handleBiometricSuccess}
                 onCancel={handleBiometricCancel}
-                message="Authenticate to access NutriTrack"
+                message={t('auth.biometricPrompt')}
             />
+
+            {isSwitchingLanguage ? (
+                <View style={styles.languageOverlay} pointerEvents="auto">
+                    <View style={styles.languageOverlayCard}>
+                        <ActivityIndicator size="large" color="#2ECC71" />
+                        <Text style={styles.languageOverlayTitle}>{t('language.switchingTitle')}</Text>
+                        <Text style={styles.languageOverlaySubtitle}>
+                            {t('language.switchingSubtitle', {
+                                language: targetLanguage === 'vi' ? t('language.name.vi') : t('language.name.en'),
+                            })}
+                        </Text>
+                    </View>
+                </View>
+            ) : null}
             </View>
         </GestureHandlerRootView>
     );
@@ -157,4 +185,33 @@ export default function RootLayout() {
 
 const styles = StyleSheet.create({
     root: { flex: 1, backgroundColor: '#FFFFFF' },
+    languageOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(17, 24, 39, 0.25)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+        zIndex: 1000,
+    },
+    languageOverlayCard: {
+        width: '100%',
+        maxWidth: 320,
+        borderRadius: 16,
+        backgroundColor: '#FFFFFF',
+        paddingVertical: 22,
+        paddingHorizontal: 18,
+        alignItems: 'center',
+    },
+    languageOverlayTitle: {
+        marginTop: 12,
+        fontSize: 17,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    languageOverlaySubtitle: {
+        marginTop: 6,
+        fontSize: 14,
+        color: '#4B5563',
+        textAlign: 'center',
+    },
 });

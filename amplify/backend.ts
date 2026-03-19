@@ -2,6 +2,7 @@ import { defineBackend } from '@aws-amplify/backend';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
 import { askGemini } from './ask-gemini/resource';
+import { askBedrock } from './ask-bedrock/resource';
 import { processNutrition } from './process-nutrition/resource';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
@@ -17,6 +18,7 @@ const backend = defineBackend({
   auth,
   data,
   askGemini,
+  askBedrock,
   processNutrition,
   storage,
   resizeAndAntiMaliciousImg,
@@ -70,3 +72,13 @@ processNutritionLambda.addToRolePolicy(new iam.PolicyStatement({
   ],
   resources: ['arn:aws:dynamodb:*:*:table/Food-*'],
 }));
+
+// Grant permissions for askBedrock to invoke Bedrock models
+const askBedrockLambda = backend.askBedrock.resources.lambda;
+askBedrockLambda.addToRolePolicy(
+  new iam.PolicyStatement({
+    effect: iam.Effect.ALLOW,
+    actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+    resources: ["*"],
+  })
+);

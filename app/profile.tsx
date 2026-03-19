@@ -1,13 +1,14 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { signOut } from 'aws-amplify/auth';
 import { useAuthStore } from '../src/store/authStore';
-import { getOnboardingData } from '../src/store/userStore';
+import { getOnboardingData, getUserData, UserData } from '../src/store/userStore';
 import { Colors, Shadows } from '../src/constants/colors';
 import { ProfileIcon } from '../src/components/TabIcons';
 import Svg, { Path, Circle, Line, Polyline, Rect } from 'react-native-svg';
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 // --- Inline SVG Icons ---
 function BackArrow({ size = 22, color = Colors.primary }: { size?: number; color?: string }) {
@@ -83,39 +84,85 @@ function ChevronRight({ size = 18, color = Colors.textLight }: { size?: number; 
 
 export default function ProfileScreen() {
     const router = useRouter();
-    const { logout } = useAuthStore();
+    const { t } = useAppLanguage();
+    const { logout, email } = useAuthStore();
     const [gender, setGender] = React.useState<string>('');
+    const [userData, setUserData] = React.useState<UserData>({
+        name: 'Admin',
+        email: 'admin@nutritrack.com',
+        weight: 75,
+        goalWeight: 70,
+        streak: 14,
+        dailyCalories: 1800,
+        waterIntake: 800,
+        waterGoal: 2500,
+    });
+    const [profileName, setProfileName] = React.useState('Admin');
+    const [activityLevel, setActivityLevel] = React.useState('');
 
     React.useEffect(() => {
         const fetchUserData = async () => {
-            const data = await getOnboardingData();
-            if (data?.gender) {
-                setGender(data.gender.toLowerCase());
+            const [onboarding, storedUser] = await Promise.all([getOnboardingData(), getUserData()]);
+
+            if (onboarding?.gender) {
+                setGender(onboarding.gender.toLowerCase());
+            }
+
+            if (storedUser) {
+                setUserData(storedUser);
+            }
+
+            if (onboarding?.name?.trim()) {
+                setProfileName(onboarding.name.trim());
+            } else if (storedUser?.name?.trim()) {
+                setProfileName(storedUser.name.trim());
+            }
+
+            if (onboarding?.activityLevel?.trim()) {
+                setActivityLevel(onboarding.activityLevel);
             }
         };
         fetchUserData();
     }, []);
 
     const handleSignOut = async () => {
-        try {
-            await signOut();
-            await logout();
-            router.replace('/welcome');
-        } catch (error) {
-            console.log('Error signing out: ', error);
-        }
+        Alert.alert(t('settings.logoutTitle'), t('settings.logoutMessage'), [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+                text: t('settings.logout'),
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await signOut();
+                        await logout();
+                        router.replace('/welcome');
+                    } catch (error) {
+                        console.log('Error signing out: ', error);
+                    }
+                },
+            },
+        ]);
+    };
+
+    const formatActivityLevel = (value: string) => {
+        const normalized = value.toLowerCase();
+        if (normalized.includes('light')) return t('profile.activity.light');
+        if (normalized.includes('moderate')) return t('profile.activity.moderate');
+        if (normalized.includes('active')) return t('profile.activity.active');
+        if (normalized.includes('very')) return t('profile.activity.veryActive');
+        return value || t('profile.activity.notSet');
     };
 
     const stats = [
-        { label: 'Weight', value: '75', unit: 'kg' },
-        { label: 'Goal', value: '70', unit: 'kg' },
-        { label: 'Streak', value: '14', unit: '🔥' },
+        { label: t('profile.weight'), value: String(userData.weight), unit: 'kg' },
+        { label: t('profile.goal'), value: String(userData.goalWeight), unit: 'kg' },
+        { label: t('profile.streak'), value: String(userData.streak), unit: '🔥' },
     ];
 
     const accountItems = [
-        { label: 'Personal Info', icon: <PersonIcon /> },
-        { label: 'Health Goals', icon: <TargetIcon /> },
-        { label: 'Activity Level', icon: <ActivityIcon /> },
+        { label: t('profile.personalInfo'), icon: <PersonIcon />, onPress: () => router.push('/profile-personal-info') },
+        { label: t('profile.healthGoal'), icon: <TargetIcon />, onPress: () => router.push('/profile-health-goal') },
+        { label: `${t('profile.activityLevel')}: ${formatActivityLevel(activityLevel)}`, icon: <ActivityIcon />, onPress: () => router.push('/profile-activity-level') },
     ];
 
     return (
@@ -125,7 +172,7 @@ export default function ProfileScreen() {
                 <TouchableOpacity style={styles.headerBtn} onPress={() => router.back()}>
                     <BackArrow />
                 </TouchableOpacity>
-                <Text style={styles.title}>Profile</Text>
+                <Text style={styles.title}>{t('profile.title')}</Text>
                 <TouchableOpacity style={styles.headerBtn}>
                     <MoreIcon />
                 </TouchableOpacity>
@@ -148,8 +195,8 @@ export default function ProfileScreen() {
                             <EditPenIcon size={14} />
                         </TouchableOpacity>
                     </View>
-                    <Text style={styles.userName}>Admin</Text>
-                    <Text style={styles.userEmail}>admin@nutritrack.com</Text>
+                    <Text style={styles.userName}>{profileName}</Text>
+                    <Text style={styles.userEmail}>{email || userData.email}</Text>
                 </View>
 
                 {/* Stats Row */}
@@ -166,7 +213,7 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Account Section */}
-                <Text style={styles.sectionTitle}>ACCOUNT</Text>
+                <Text style={styles.sectionTitle}>{t('settings.section.account')}</Text>
                 <View style={styles.menuGroup}>
                     {accountItems.map((item, idx) => (
                         <TouchableOpacity
@@ -175,6 +222,7 @@ export default function ProfileScreen() {
                                 styles.menuItem,
                                 idx < accountItems.length - 1 && styles.menuItemBorder,
                             ]}
+                            onPress={item.onPress}
                         >
                             <View style={styles.menuIconBox}>{item.icon}</View>
                             <Text style={styles.menuLabel}>{item.label}</Text>
@@ -184,39 +232,42 @@ export default function ProfileScreen() {
                 </View>
 
                 {/* Integrations Section */}
-                <Text style={styles.sectionTitle}>INTEGRATIONS</Text>
+                <Text style={styles.sectionTitle}>{t('profile.integrations')}</Text>
                 <View style={styles.menuGroup}>
-                    <TouchableOpacity style={styles.menuItem}>
+                    <TouchableOpacity
+                        style={styles.menuItem}
+                        onPress={() => Alert.alert(t('common.success'), t('profile.integrationSoon'))}
+                    >
                         <View style={styles.menuIconBox}>
                             <SyncIcon />
                         </View>
-                        <Text style={styles.menuLabel}>Connected Apps</Text>
-                        <Text style={styles.menuBadge}>2 Active</Text>
+                        <Text style={styles.menuLabel}>{t('profile.connectedApps')}</Text>
+                        <Text style={styles.menuBadge}>{t('profile.activeCount', { count: 2 })}</Text>
                         <ChevronRight />
                     </TouchableOpacity>
                 </View>
 
                 {/* Preferences Section */}
-                <Text style={styles.sectionTitle}>PREFERENCES</Text>
+                <Text style={styles.sectionTitle}>{t('settings.section.preferences')}</Text>
                 <View style={styles.menuGroup}>
-                    <TouchableOpacity style={[styles.menuItem, styles.menuItemBorder]}>
+                    <TouchableOpacity style={[styles.menuItem, styles.menuItemBorder]} onPress={() => router.push('/settings')}>
                         <View style={styles.menuIconBox}>
                             <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={Colors.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                                 <Circle cx="12" cy="12" r="3" />
                                 <Path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                             </Svg>
                         </View>
-                        <Text style={styles.menuLabel}>Settings</Text>
+                        <Text style={styles.menuLabel}>{t('settings.title')}</Text>
                         <ChevronRight />
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.menuItem}>
+                    <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/notifications')}>
                         <View style={styles.menuIconBox}>
                             <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={Colors.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                                 <Path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                                 <Path d="M13.73 21a2 2 0 0 1-3.46 0" />
                             </Svg>
                         </View>
-                        <Text style={styles.menuLabel}>Notifications</Text>
+                        <Text style={styles.menuLabel}>{t('profile.notifications')}</Text>
                         <ChevronRight />
                     </TouchableOpacity>
 
@@ -228,7 +279,7 @@ export default function ProfileScreen() {
                                 <Line x1="21" y1="12" x2="9" y2="12" />
                             </Svg>
                         </View>
-                        <Text style={[styles.menuLabel, { color: '#FF4D4D' }]}>Sign Out</Text>
+                        <Text style={[styles.menuLabel, { color: '#FF4D4D' }]}>{t('settings.logout')}</Text>
                         <ChevronRight color="#FF4D4D" />
                     </TouchableOpacity>
                 </View>

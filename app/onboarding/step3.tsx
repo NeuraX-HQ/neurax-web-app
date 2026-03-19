@@ -6,9 +6,11 @@ import { Colors } from '../../src/constants/colors';
 import { saveOnboardingData } from '../../src/store/userStore';
 import { goals } from '../../src/data/mockData';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 export default function Step3() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const [selected, setSelected] = useState('');
 
     const handleNext = async () => {
@@ -32,10 +34,10 @@ export default function Step3() {
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.titleRow}>
                     <Ionicons name="flag-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
-                    <Text style={styles.title}>Mục tiêu của bạn là gì?</Text>
+                    <Text style={styles.title}>{t('onboarding.step3.title')}</Text>
                 </View>
                 <Text style={styles.subtitle}>
-                    Chúng mình sẽ thiết lập lộ trình dinh dưỡng phù hợp nhất với mục tiêu này.
+                    {t('onboarding.step3.subtitle')}
                 </Text>
 
                 {goals.map((goal) => (
@@ -52,7 +54,7 @@ export default function Step3() {
                             />
                         </View>
                         <Text style={[styles.optionText, selected === goal.id && styles.optionTextSelected]}>
-                            {goal.label}
+                            {t(`onboarding.goal.${goal.id}`)}
                         </Text>
                         <View style={[styles.radio, selected === goal.id && styles.radioSelected]}>
                             {selected === goal.id && <View style={styles.radioDot} />}
@@ -69,7 +71,7 @@ export default function Step3() {
                     onPress={handleNext}
                     disabled={!selected}
                 >
-                    <Text style={styles.buttonText}>Tiếp tục  →</Text>
+                    <Text style={styles.buttonText}>{t('onboarding.continue')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

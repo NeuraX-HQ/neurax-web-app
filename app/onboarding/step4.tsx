@@ -5,6 +5,7 @@ import { Colors } from '../../src/constants/colors';
 import { saveOnboardingData } from '../../src/store/userStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 const { width, height: screenHeight } = Dimensions.get('window');
 const RULER_HEIGHT = 280;
@@ -15,6 +16,7 @@ const MAX_VAL = 220;
 
 export default function Step4() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const insets = useSafeAreaInsets();
     const [height, setHeight] = useState(170);
     const scrollViewRef = useRef<ScrollView>(null);
@@ -62,9 +64,9 @@ export default function Step4() {
             <View style={styles.content}>
                 <View style={styles.titleRow}>
                     <Ionicons name="resize-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
-                    <Text style={styles.title}>Chiều cao của bạn?</Text>
+                    <Text style={styles.title}>{t('onboarding.step4.title')}</Text>
                 </View>
-                <Text style={styles.subtitle}>Giúp chúng mình tính toán chỉ số BMI chính xác hơn.</Text>
+                <Text style={styles.subtitle}>{t('onboarding.step4.subtitle')}</Text>
 
                 <View style={styles.pickerArea}>
                     <View style={styles.valueDisplay}>
@@ -121,7 +123,7 @@ export default function Step4() {
 
             <View style={styles.footer}>
                 <TouchableOpacity style={styles.button} onPress={handleNext}>
-                    <Text style={styles.buttonText}>Tiếp tục  →</Text>
+                    <Text style={styles.buttonText}>{t('onboarding.continue')}</Text>
                 </TouchableOpacity>
             </View>
         </View>

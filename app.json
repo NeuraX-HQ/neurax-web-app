@@ -52,7 +52,9 @@
         }
       ],
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      "expo-asset",
+      "expo-secure-store"
     ],
     "extra": {
       "router": {},

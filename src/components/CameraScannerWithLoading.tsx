@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal } from 'react-native';
 import { CameraScanner } from './CameraScanner';
 import { LoadingAnalysis } from './LoadingAnalysis';
+import { useAppLanguage } from '../i18n/LanguageProvider';
 
 interface CameraScannerWithLoadingProps {
     visible: boolean;
@@ -9,6 +10,7 @@ interface CameraScannerWithLoadingProps {
 }
 
 export function CameraScannerWithLoading({ visible, onClose }: CameraScannerWithLoadingProps) {
+    const { t } = useAppLanguage();
     const [isAnalyzing, setIsAnalyzing] = useState(false);
 
     const handleClose = () => {
@@ -30,7 +32,7 @@ export function CameraScannerWithLoading({ visible, onClose }: CameraScannerWith
                 animationType="fade"
                 transparent={false}
             >
-                <LoadingAnalysis message="Đang phân tích món ăn" />
+                <LoadingAnalysis message={t('camera.analyzing')} />
             </Modal>
         </>
     );

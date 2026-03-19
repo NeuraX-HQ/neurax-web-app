@@ -1,23 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadows } from '../../src/constants/colors';
 import { mockLeaderboard } from '../../src/data/mockData';
-import Svg, { Path, Circle, Line } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
+import { Video, ResizeMode } from 'expo-av';
+import { useMealStore } from '../../src/store/mealStore';
 
 type SortMode = 'streak' | 'petScore';
-
-function SortIcon({ size = 20, color = '#000' }: { size?: number; color?: string }) {
-    return (
-        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <Line x1="4" y1="6" x2="13" y2="6" />
-            <Line x1="4" y1="12" x2="11" y2="12" />
-            <Line x1="4" y1="18" x2="9" y2="18" />
-            <Path d="M17 8l3 -3 3 3" />
-            <Path d="M20 5v14" />
-        </Svg>
-    );
-}
 
 function ChevronDown({ size = 16, color = '#666' }: { size?: number; color?: string }) {
     return (
@@ -43,15 +34,36 @@ function ArrowDown({ size = 14, color = '#E74C3C' }: { size?: number; color?: st
     );
 }
 
-const SORT_OPTIONS: { key: SortMode; label: string; icon: string }[] = [
-    { key: 'streak', label: 'Streak hoàn thành', icon: '🔥' },
-    { key: 'petScore', label: 'Điểm nuôi dưỡng bé', icon: '🐾' },
+const SORT_OPTIONS: { key: SortMode; labelKey: string; icon: string }[] = [
+    { key: 'streak', labelKey: 'battle.sort.streak', icon: '🔥' },
+    { key: 'petScore', labelKey: 'battle.sort.petScore', icon: '🐾' },
 ];
 
+const DRAGON_STAGE_VIDEOS = [
+    require('../../MANHINH/1.mp4'),
+    require('../../MANHINH/2.mp4'),
+    require('../../MANHINH/3.mp4'),
+    require('../../MANHINH/4.mp4'),
+    require('../../MANHINH/5.mp4'),
+];
+
+const TOTAL_EVOLUTION_DAYS = 180;
+const TOTAL_STAGES = 5;
+const DAYS_PER_STAGE = TOTAL_EVOLUTION_DAYS / TOTAL_STAGES;
+
 export default function BattleScreen() {
+    const { t } = useAppLanguage();
+    const { meals } = useMealStore();
     const [tab, setTab] = useState<'friends' | 'achievements'>('friends');
     const [sortMode, setSortMode] = useState<SortMode>('streak');
     const [showSortMenu, setShowSortMenu] = useState(false);
+    const [devBoostDays, setDevBoostDays] = useState(0);
+
+    useEffect(() => {
+        // Friends ranking focuses on streak, achievements focuses on pet score.
+        setSortMode(tab === 'friends' ? 'streak' : 'petScore');
+    }, [tab]);
+
 
     const sortedData = useMemo(() => {
         const data = [...mockLeaderboard];
@@ -66,13 +78,37 @@ export default function BattleScreen() {
     const top3 = sortedData.slice(0, 3);
     const rest = sortedData.slice(3);
 
-    const getDisplayScore = (user: typeof mockLeaderboard[0]) => {
-        return sortMode === 'streak' ? `${user.streak} days` : `${user.petScore}`;
-    };
-
     const getDisplayScoreShort = (user: typeof mockLeaderboard[0]) => {
         return sortMode === 'streak' ? `${user.streak}` : `${user.petScore}`;
     };
+
+    const petProgressDays = useMemo(() => new Set(meals.map((meal) => meal.date)).size, [meals]);
+    const effectivePetDays = Math.max(0, __DEV__ ? petProgressDays + devBoostDays : petProgressDays);
+    const petStreak = effectivePetDays;
+    const petScore = effectivePetDays * 20;
+
+    const petLevel = effectivePetDays <= 0
+        ? 1
+        : Math.min(TOTAL_STAGES, Math.floor((effectivePetDays - 1) / DAYS_PER_STAGE) + 1);
+    const petStageIndex = petLevel - 1;
+    const dragonVideoSource = DRAGON_STAGE_VIDEOS[petStageIndex];
+
+    const currentStageStart = petStageIndex * DAYS_PER_STAGE;
+    const daysIntoStage = petLevel === 1
+        ? Math.min(DAYS_PER_STAGE, effectivePetDays)
+        : Math.min(DAYS_PER_STAGE, Math.max(0, effectivePetDays - currentStageStart));
+    const level = petLevel;
+    const xpNeed = DAYS_PER_STAGE;
+    const xpInLevel = petLevel === TOTAL_STAGES ? DAYS_PER_STAGE : daysIntoStage;
+
+
+    const milestones = [36, 72, 108, 144, 180];
+    const achievedMilestones = milestones.filter((m) => petStreak >= m).length;
+    const currentBadge =
+        petStreak >= 180 ? t('battle.badge.legendary') :
+            petStreak >= 144 ? t('battle.badge.diamond') :
+                petStreak >= 108 ? t('battle.badge.gold') :
+                    petStreak >= 72 ? t('battle.badge.silver') : t('battle.badge.starter');
 
     const podiumColors = ['#FFF5E1', '#E8F0FE', '#FFE8E0'];
     const podiumBorderColors = ['#FFD700', '#C0C8D4', '#CD7F32'];
@@ -86,14 +122,20 @@ export default function BattleScreen() {
         <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.title}>Leaderboard</Text>
-                <TouchableOpacity
-                    style={styles.sortButton}
-                    onPress={() => setShowSortMenu(true)}
-                >
-                    <Text style={styles.sortButtonText}>Sort</Text>
-                    <ChevronDown size={14} color={Colors.textSecondary} />
-                </TouchableOpacity>
+                <Text style={styles.title}>{t('battle.title')}</Text>
+                {tab === 'friends' ? (
+                    <TouchableOpacity
+                        style={styles.sortButton}
+                        onPress={() => setShowSortMenu(true)}
+                    >
+                        <Text style={styles.sortButtonText}>{t('battle.sortButton')}</Text>
+                        <ChevronDown size={14} color={Colors.textSecondary} />
+                    </TouchableOpacity>
+                ) : (
+                    <View style={styles.levelPill}>
+                        <Text style={styles.levelPillText}>{t('battle.levelShort', { level })}</Text>
+                    </View>
+                )}
             </View>
 
             {/* Tabs */}
@@ -102,17 +144,19 @@ export default function BattleScreen() {
                     style={[styles.tab, tab === 'friends' && styles.tabActive]}
                     onPress={() => setTab('friends')}
                 >
-                    <Text style={[styles.tabText, tab === 'friends' && styles.tabTextActive]}>Friends</Text>
+                    <Text style={[styles.tabText, tab === 'friends' && styles.tabTextActive]}>{t('battle.tab.friends')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.tab, tab === 'achievements' && styles.tabActive]}
                     onPress={() => setTab('achievements')}
                 >
-                    <Text style={[styles.tabText, tab === 'achievements' && styles.tabTextActive]}>Achievements</Text>
+                    <Text style={[styles.tabText, tab === 'achievements' && styles.tabTextActive]}>{t('battle.tab.achievements')}</Text>
                 </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            {tab === 'friends' ? (
+                <>
+                    <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Sort badge */}
                 <View style={styles.sortBadgeRow}>
                     <View style={styles.sortBadge}>
@@ -120,7 +164,7 @@ export default function BattleScreen() {
                             {SORT_OPTIONS.find(o => o.key === sortMode)?.icon}
                         </Text>
                         <Text style={styles.sortBadgeText}>
-                            {SORT_OPTIONS.find(o => o.key === sortMode)?.label}
+                            {t(SORT_OPTIONS.find(o => o.key === sortMode)?.labelKey || 'battle.sort.streak')}
                         </Text>
                     </View>
                 </View>
@@ -160,8 +204,8 @@ export default function BattleScreen() {
 
                 {/* Rankings divider */}
                 <View style={styles.rankingsDivider}>
-                    <Text style={styles.rankingsLabel}>Rankings</Text>
-                    <Text style={styles.rankingsTimer}>Resets in 4h</Text>
+                    <Text style={styles.rankingsLabel}>{t('battle.rankings')}</Text>
+                    <Text style={styles.rankingsTimer}>{t('battle.refreshInHours', { hours: 4 })}</Text>
                 </View>
 
                 {/* Rankings List */}
@@ -178,8 +222,8 @@ export default function BattleScreen() {
                                 <Text style={styles.rankName}>{user.name}</Text>
                                 <Text style={styles.rankStreak}>
                                     {sortMode === 'streak'
-                                        ? `🔥 ${user.streak} days streak`
-                                        : `🐾 ${user.petScore} pts`}
+                                        ? t('battle.streakWithEmoji', { count: user.streak })
+                                        : t('battle.petScoreWithEmoji', { score: user.petScore })}
                                 </Text>
                             </View>
                             <Text style={styles.rankScore}>{getDisplayScoreShort(user)}</Text>
@@ -203,37 +247,123 @@ export default function BattleScreen() {
                 </View>
 
                 <View style={{ height: 140 }} />
-            </ScrollView>
+                    </ScrollView>
 
-            {/* You bar - sticky at bottom */}
-            <View style={styles.youBar}>
-                <View style={[styles.rankRow, styles.rankRowYou, Shadows.medium]}>
-                    <Text style={[styles.rankNum, { color: Colors.accent }]}>42</Text>
-                    <View style={[styles.rankAvatar, { backgroundColor: Colors.accentLight }]}>
-                        <Text>👤</Text>
+                    {/* You bar - sticky at bottom */}
+                    <View style={styles.youBar}>
+                        <View style={[styles.rankRow, styles.rankRowYou, Shadows.medium]}>
+                            <Text style={[styles.rankNum, { color: Colors.accent }]}>42</Text>
+                            <View style={[styles.rankAvatar, { backgroundColor: Colors.accentLight }]}>
+                                <Text>👤</Text>
+                            </View>
+                            <View style={styles.rankInfo}>
+                                <Text style={[styles.rankName, { color: Colors.accent }]}>{t('battle.you')}</Text>
+                                <Text style={styles.rankStreak}>
+                                    {sortMode === 'streak'
+                                        ? t('battle.streakWithEmoji', { count: petStreak })
+                                        : t('battle.petScoreWithEmoji', { score: petScore })}
+                                </Text>
+                            </View>
+                            <Text style={[styles.rankScore, { color: Colors.accent }]}>
+                                {sortMode === 'streak' ? String(petStreak) : String(petScore)}
+                            </Text>
+                            <View style={styles.rankChangeRow}>
+                                <ArrowUp size={12} />
+                                <Text style={[styles.rankChange, styles.rankUp]}>4</Text>
+                            </View>
+                        </View>
                     </View>
-                    <View style={styles.rankInfo}>
-                        <Text style={[styles.rankName, { color: Colors.accent }]}>You</Text>
-                        <Text style={styles.rankStreak}>
-                            {sortMode === 'streak' ? '🔥 3 days streak' : '🐾 420 pts'}
+                </>
+            ) : (
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.achievementsContent}>
+                    <View style={styles.petStatRow}>
+                        <View style={styles.petStatCard}>
+                            <Text style={styles.petStatLabel}>{t('battle.currentStreak')}</Text>
+                            <Text style={styles.petStatValue}>🔥 {petStreak}</Text>
+                        </View>
+                        <View style={styles.petStatCard}>
+                            <Text style={styles.petStatLabel}>{t('battle.badge')}</Text>
+                            <Text style={styles.petStatValue}>🏅 {currentBadge}</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.petArena}>
+                        <View
+                            style={[
+                                styles.dragonWrap,
+                            ]}
+                        >
+                            <Video
+                                source={dragonVideoSource}
+                                style={styles.dragonVideo}
+                                resizeMode={ResizeMode.COVER}
+                                shouldPlay
+                                isLooping
+                                isMuted
+                                useNativeControls={false}
+                            />
+                        </View>
+                    </View>
+
+                    <Text style={styles.petName}>{t('battle.petName')}</Text>
+                    <Text style={styles.petDesc}>{t('battle.petDesc')}</Text>
+
+                    <View style={styles.xpCard}>
+                        <View style={styles.xpTopRow}>
+                            <Text style={styles.xpTitle}>{t('battle.xpAndLevel')}</Text>
+                            <Text style={styles.xpValue}>{xpInLevel}/{xpNeed} ngày</Text>
+                        </View>
+                        <View style={styles.xpTrack}>
+                            <View style={[styles.xpFill, { width: `${Math.min(100, (xpInLevel / xpNeed) * 100)}%` }]} />
+                        </View>
+                        <Text style={styles.xpHint}>
+                            {level < TOTAL_STAGES
+                                ? t('battle.xpToNextLevel', { days: Math.max(0, xpNeed - xpInLevel), level: level + 1 })
+                                : t('achievements.maxLevel')}
                         </Text>
                     </View>
-                    <Text style={[styles.rankScore, { color: Colors.accent }]}>
-                        {sortMode === 'streak' ? '3' : '420'}
-                    </Text>
-                    <View style={styles.rankChangeRow}>
-                        <ArrowUp size={12} />
-                        <Text style={[styles.rankChange, styles.rankUp]}>4</Text>
+
+                    {__DEV__ ? (
+                        <View style={styles.devCard}>
+                            <Text style={styles.devTitle}>DEV Test</Text>
+                            <View style={styles.devRow}>
+                                <TouchableOpacity style={styles.devButton} onPress={() => setDevBoostDays((prev) => prev + 36)}>
+                                    <Text style={styles.devButtonText}>+36 ngày</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.devButton} onPress={() => setDevBoostDays((prev) => prev + 180)}>
+                                    <Text style={styles.devButtonText}>+180 ngày</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.devButton, styles.devButtonGhost]} onPress={() => setDevBoostDays(0)}>
+                                    <Text style={[styles.devButtonText, styles.devButtonGhostText]}>Reset</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <Text style={styles.devHint}>Base: {petProgressDays} | Boost: +{devBoostDays} | Display: {effectivePetDays}</Text>
+                        </View>
+                    ) : null}
+
+                    <View style={styles.milestoneCard}>
+                        <View style={styles.milestoneRow}>
+                            {milestones.map((m) => {
+                                const unlocked = petStreak >= m;
+                                return (
+                                    <View key={m} style={[styles.milestoneChip, unlocked && styles.milestoneChipActive]}>
+                                        <Text style={[styles.milestoneText, unlocked && styles.milestoneTextActive]}>{t('battle.dayCount', { count: m })}</Text>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                        <Text style={styles.milestoneHint}>{t('battle.unlockedMilestones', { unlocked: achievedMilestones, total: 5 })}</Text>
                     </View>
-                </View>
-            </View>
+
+                </ScrollView>
+            )}
 
             {/* Sort Modal */}
             <Modal visible={showSortMenu} transparent animationType="fade">
                 <Pressable style={styles.overlay} onPress={() => setShowSortMenu(false)}>
                     <View style={styles.sortMenuContainer}>
                         <View style={styles.sortMenu}>
-                            <Text style={styles.sortMenuTitle}>Sắp xếp theo</Text>
+                            <Text style={styles.sortMenuTitle}>{t('battle.sortBy')}</Text>
                             {SORT_OPTIONS.map((option) => (
                                 <TouchableOpacity
                                     key={option.key}
@@ -251,7 +381,7 @@ export default function BattleScreen() {
                                         styles.sortMenuItemText,
                                         sortMode === option.key && styles.sortMenuItemTextActive,
                                     ]}>
-                                        {option.label}
+                                        {t(option.labelKey)}
                                     </Text>
                                     {sortMode === option.key && (
                                         <View style={styles.checkCircle}>
@@ -289,6 +419,13 @@ const styles = StyleSheet.create({
         backgroundColor: '#F0F0F0',
     },
     sortButtonText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+    levelPill: {
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        borderRadius: 16,
+        backgroundColor: '#E8F3FF',
+    },
+    levelPillText: { fontSize: 13, fontWeight: '700', color: '#2563EB' },
     tabs: {
         flexDirection: 'row',
         marginHorizontal: 20,
@@ -416,6 +553,151 @@ const styles = StyleSheet.create({
     rankUp: { color: Colors.accent },
     rankDown: { color: Colors.red },
 
+    achievementsContent: {
+        paddingHorizontal: 16,
+        paddingBottom: 32,
+    },
+    petStatRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 12,
+    },
+    petStatCard: {
+        flex: 1,
+        borderRadius: 14,
+        backgroundColor: '#FFFFFF',
+        padding: 12,
+        ...Shadows.small,
+    },
+    petStatLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
+    petStatValue: { marginTop: 6, fontSize: 16, color: Colors.primary, fontWeight: '800' },
+    petArena: {
+        marginTop: 6,
+        marginBottom: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 220,
+    },
+    dragonWrap: {
+        width: '100%',
+        aspectRatio: 16 / 9,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        ...Shadows.medium,
+        overflow: 'hidden',
+    },
+    dragonVideo: {
+        width: '100%',
+        height: '100%',
+    },
+    petName: {
+        textAlign: 'center',
+        fontSize: 20,
+        fontWeight: '800',
+        color: Colors.primary,
+    },
+    petDesc: {
+        textAlign: 'center',
+        marginTop: 6,
+        fontSize: 13,
+        color: Colors.textSecondary,
+        marginBottom: 14,
+    },
+    xpCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 14,
+        padding: 14,
+        marginBottom: 12,
+        ...Shadows.small,
+    },
+    xpTopRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    xpTitle: { fontSize: 15, fontWeight: '700', color: Colors.text },
+    xpValue: { fontSize: 13, fontWeight: '700', color: Colors.accent },
+    xpTrack: {
+        height: 10,
+        borderRadius: 8,
+        backgroundColor: '#E5E7EB',
+        overflow: 'hidden',
+    },
+    xpFill: {
+        height: '100%',
+        backgroundColor: Colors.accent,
+        borderRadius: 8,
+    },
+    xpHint: { marginTop: 8, fontSize: 12, color: Colors.textSecondary },
+    devCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 14,
+        padding: 12,
+        marginBottom: 12,
+        ...Shadows.small,
+    },
+    devTitle: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: Colors.text,
+        marginBottom: 8,
+    },
+    devRow: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    devButton: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 10,
+        paddingVertical: 9,
+        backgroundColor: Colors.primary,
+    },
+    devButtonGhost: {
+        backgroundColor: '#F3F4F6',
+    },
+    devButtonText: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    devButtonGhostText: {
+        color: '#111827',
+    },
+    devHint: {
+        marginTop: 8,
+        fontSize: 11,
+        color: Colors.textSecondary,
+        fontWeight: '600',
+    },
+    milestoneCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 14,
+        padding: 14,
+        marginBottom: 14,
+        ...Shadows.small,
+    },
+    milestoneRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+    milestoneChip: {
+        flex: 1,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+        backgroundColor: '#F9FAFB',
+        paddingVertical: 8,
+        alignItems: 'center',
+    },
+    milestoneChipActive: {
+        borderColor: Colors.accent,
+        backgroundColor: Colors.accentLight,
+    },
+    milestoneText: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
+    milestoneTextActive: { color: Colors.accent, fontWeight: '700' },
+    milestoneHint: { fontSize: 12, color: Colors.textSecondary },
     // Sort Modal
     overlay: {
         flex: 1,

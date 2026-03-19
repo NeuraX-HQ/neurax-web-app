@@ -5,9 +5,11 @@ import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { saveOnboardingData } from '../../src/store/userStore';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 export default function Step1() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const [name, setName] = useState('');
     const [isFocused, setIsFocused] = useState(false);
 
@@ -33,19 +35,19 @@ export default function Step1() {
                 <View style={styles.content}>
                     <View style={styles.titleRow}>
                         <Ionicons name="person-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
-                        <Text style={styles.title}>Tên bạn là gì?</Text>
+                        <Text style={styles.title}>{t('onboarding.step1.title')}</Text>
                     </View>
                     <Text style={styles.subtitle}>
-                        Chúng mình sẽ gọi bạn bằng tên thân mật này để hành trình thêm gần gũi nhé.
+                        {t('onboarding.step1.subtitle')}
                     </Text>
 
-                    <Text style={styles.label}>Tên của bạn</Text>
+                    <Text style={styles.label}>{t('onboarding.step1.label')}</Text>
                     <TextInput
                         style={[
                             styles.input,
                             (isFocused || name.length > 0) && styles.inputActive
                         ]}
-                        placeholder="Ví dụ: Minh Bảo"
+                        placeholder={t('onboarding.step1.placeholder')}
                         placeholderTextColor={Colors.textLight}
                         value={name}
                         onChangeText={setName}
@@ -59,7 +61,7 @@ export default function Step1() {
                     <View style={styles.infoBox}>
                         <Ionicons name="shield-checkmark-outline" size={18} color={Colors.primary} />
                         <Text style={styles.infoText}>
-                            Tên của bạn chỉ hiển thị trong app và hoàn toàn bảo mật.
+                            {t('onboarding.step1.info')}
                         </Text>
                     </View>
 
@@ -68,7 +70,7 @@ export default function Step1() {
                         onPress={handleNext}
                         disabled={!name}
                     >
-                        <Text style={styles.buttonText}>Tiếp tục  →</Text>
+                        <Text style={styles.buttonText}>{t('onboarding.continue')}</Text>
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>

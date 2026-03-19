@@ -6,9 +6,11 @@ import { Colors } from '../../src/constants/colors';
 import { saveOnboardingData } from '../../src/store/userStore';
 import { activityLevels } from '../../src/data/mockData';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 export default function Step7() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const [selected, setSelected] = useState('');
 
     const handleNext = async () => {
@@ -32,10 +34,10 @@ export default function Step7() {
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.titleRow}>
                     <Ionicons name="flash-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
-                    <Text style={styles.title}>Mức độ vận động của bạn?</Text>
+                    <Text style={styles.title}>{t('onboarding.step7.title')}</Text>
                 </View>
                 <Text style={styles.subtitle}>
-                    AI Bảo sẽ dựa vào đây để tính toán lượng calo cần thiết mỗi ngày cho bạn.
+                    {t('onboarding.step7.subtitle')}
                 </Text>
 
                 {activityLevels.map((level) => (
@@ -53,10 +55,10 @@ export default function Step7() {
                         </View>
                         <View style={styles.optionContent}>
                             <Text style={[styles.optionTitle, selected === level.id && styles.optionTitleSelected]}>
-                                {level.label}
+                                {t(`onboarding.activity.${level.id}.label`)}
                             </Text>
                             <Text style={styles.optionDesc}>
-                                {level.description}
+                                {t(`onboarding.activity.${level.id}.desc`)}
                             </Text>
                         </View>
                         <View style={[styles.radio, selected === level.id && styles.radioSelected]}>
@@ -74,7 +76,7 @@ export default function Step7() {
                     onPress={handleNext}
                     disabled={!selected}
                 >
-                    <Text style={styles.buttonText}>Tiếp tục  →</Text>
+                    <Text style={styles.buttonText}>{t('onboarding.continue')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

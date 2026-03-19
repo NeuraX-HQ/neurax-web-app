@@ -5,11 +5,13 @@ import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { saveOnboardingData, getOnboardingData } from '../../src/store/userStore';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 const ITEM_WIDTH = 12;
 
 export default function Step6() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const [weight, setWeight] = useState(55);
     const [minVal, setMinVal] = useState(30);
     const [maxVal, setMaxVal] = useState(200);
@@ -87,9 +89,9 @@ export default function Step6() {
             <View style={styles.content}>
                 <View style={styles.titleRow}>
                     <Ionicons name="trophy-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
-                    <Text style={styles.title}>Cân nặng mục tiêu</Text>
+                    <Text style={styles.title}>{t('onboarding.step6.title')}</Text>
                 </View>
-                <Text style={styles.subtitle}>Mục tiêu cân nặng lý tưởng mà bạn muốn hướng tới.</Text>
+                <Text style={styles.subtitle}>{t('onboarding.step6.subtitle')}</Text>
 
                 <View style={styles.valueContainer}>
                     <Text style={styles.value}>{weight}</Text>
@@ -150,7 +152,7 @@ export default function Step6() {
 
             <View style={styles.footer}>
                 <TouchableOpacity style={styles.button} onPress={handleNext}>
-                    <Text style={styles.buttonText}>Tiếp tục  →</Text>
+                    <Text style={styles.buttonText}>{t('onboarding.continue')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

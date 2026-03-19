@@ -5,11 +5,13 @@ import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { saveOnboardingData } from '../../src/store/userStore';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 const { width } = Dimensions.get('window');
 
 export default function Step2() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const [selected, setSelected] = useState('');
 
     const handleNext = async () => {
@@ -33,10 +35,10 @@ export default function Step2() {
             <View style={styles.content}>
                 <View style={styles.titleRow}>
                     <Ionicons name="transgender-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
-                    <Text style={styles.title}>Giới tính của bạn?</Text>
+                    <Text style={styles.title}>{t('onboarding.step2.title')}</Text>
                 </View>
                 <Text style={styles.subtitle}>
-                    Giúp chúng mình xác định mức đốt cháy năng lượng cơ bản chính xác hơn.
+                    {t('onboarding.step2.subtitle')}
                 </Text>
 
                 <View style={styles.genderContainer}>
@@ -47,7 +49,7 @@ export default function Step2() {
                         <View style={[styles.iconCircle, selected === 'male' && styles.iconCircleSelected]}>
                             <Ionicons name="male" size={32} color={selected === 'male' ? '#FFFFFF' : Colors.primary} />
                         </View>
-                        <Text style={[styles.genderLabel, selected === 'male' && styles.genderLabelSelected]}>NAM</Text>
+                        <Text style={[styles.genderLabel, selected === 'male' && styles.genderLabelSelected]}>{t('onboarding.step2.male')}</Text>
                         {selected === 'male' && <View style={styles.checkIcon}><Ionicons name="checkmark-circle" size={20} color={Colors.primary} /></View>}
                     </TouchableOpacity>
 
@@ -58,7 +60,7 @@ export default function Step2() {
                         <View style={[styles.iconCircle, selected === 'female' && styles.iconCircleSelected]}>
                             <Ionicons name="female" size={32} color={selected === 'female' ? '#FFFFFF' : Colors.primary} />
                         </View>
-                        <Text style={[styles.genderLabel, selected === 'female' && styles.genderLabelSelected]}>NỮ</Text>
+                        <Text style={[styles.genderLabel, selected === 'female' && styles.genderLabelSelected]}>{t('onboarding.step2.female')}</Text>
                         {selected === 'female' && <View style={styles.checkIcon}><Ionicons name="checkmark-circle" size={20} color={Colors.primary} /></View>}
                     </TouchableOpacity>
                 </View>
@@ -67,7 +69,7 @@ export default function Step2() {
                     style={styles.otherBtn}
                     onPress={() => setSelected('other')}
                 >
-                    <Text style={[styles.otherText, selected === 'other' && styles.otherTextSelected]}>Khác / Không muốn tiết lộ</Text>
+                    <Text style={[styles.otherText, selected === 'other' && styles.otherTextSelected]}>{t('onboarding.step2.other')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -77,7 +79,7 @@ export default function Step2() {
                     onPress={handleNext}
                     disabled={!selected}
                 >
-                    <Text style={styles.buttonText}>Tiếp tục  →</Text>
+                    <Text style={styles.buttonText}>{t('onboarding.continue')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

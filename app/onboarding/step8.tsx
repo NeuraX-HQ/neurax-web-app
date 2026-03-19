@@ -6,9 +6,11 @@ import { Colors } from '../../src/constants/colors';
 import { saveOnboardingData } from '../../src/store/userStore';
 import { dietaryRestrictions } from '../../src/data/mockData';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 export default function Step8() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const [selected, setSelected] = useState<string[]>([]);
     const [custom, setCustom] = useState('');
 
@@ -39,10 +41,10 @@ export default function Step8() {
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.titleRow}>
                     <Ionicons name="nutrition-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
-                    <Text style={styles.title}>Hạn chế ăn uống?</Text>
+                    <Text style={styles.title}>{t('onboarding.step8.title')}</Text>
                 </View>
                 <Text style={styles.subtitle}>
-                    Chúng mình sẽ đề xuất các món ăn phù hợp với sức khỏe của riêng bạn.
+                    {t('onboarding.step8.subtitle')}
                 </Text>
 
                 <View style={styles.grid}>
@@ -69,17 +71,17 @@ export default function Step8() {
                                 styles.gridLabel,
                                 selected.includes(item.id) && styles.gridLabelSelected
                             ]}>
-                                {item.label}
+                                {t(`onboarding.dietary.${item.id}`)}
                             </Text>
                         </TouchableOpacity>
                     ))}
                 </View>
 
                 <View style={styles.customContainer}>
-                    <Text style={styles.customLabel}>Hạn chế khác (nếu có)</Text>
+                    <Text style={styles.customLabel}>{t('onboarding.step8.customLabel')}</Text>
                     <TextInput
                         style={styles.customInput}
-                        placeholder="Ví dụ: Không ăn tôm, dị ứng đậu..."
+                        placeholder={t('onboarding.step8.placeholder')}
                         placeholderTextColor={Colors.textLight}
                         value={custom}
                         onChangeText={setCustom}
@@ -91,7 +93,7 @@ export default function Step8() {
 
             <View style={styles.footer}>
                 <TouchableOpacity style={styles.button} onPress={handleNext}>
-                    <Text style={styles.buttonText}>Tiếp tục  →</Text>
+                    <Text style={styles.buttonText}>{t('onboarding.continue')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

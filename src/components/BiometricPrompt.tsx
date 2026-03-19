@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../store/authStore';
+import { useAppLanguage } from '../i18n/LanguageProvider';
 
 interface BiometricPromptProps {
     visible: boolean;
@@ -14,10 +15,12 @@ export default function BiometricPrompt({
     visible,
     onSuccess,
     onCancel,
-    message = 'Authenticate to continue',
+    message,
 }: BiometricPromptProps) {
+    const { t } = useAppLanguage();
     const { authenticateWithBiometric } = useAuthStore();
     const [isAuthenticating, setIsAuthenticating] = useState(false);
+    const promptMessage = message || t('biometric.prompt');
 
     useEffect(() => {
         if (visible && !isAuthenticating) {
@@ -27,7 +30,7 @@ export default function BiometricPrompt({
 
     const handleAuthenticate = async () => {
         setIsAuthenticating(true);
-        const success = await authenticateWithBiometric(message);
+        const success = await authenticateWithBiometric(promptMessage);
         setIsAuthenticating(false);
 
         if (success) {
@@ -50,8 +53,8 @@ export default function BiometricPrompt({
                         <Ionicons name="finger-print" size={64} color="#4CAF50" />
                     </View>
 
-                    <Text style={styles.title}>Authentication Required</Text>
-                    <Text style={styles.message}>{message}</Text>
+                    <Text style={styles.title}>{t('biometric.required')}</Text>
+                    <Text style={styles.message}>{promptMessage}</Text>
 
                     <TouchableOpacity
                         style={styles.retryButton}
@@ -59,7 +62,7 @@ export default function BiometricPrompt({
                         disabled={isAuthenticating}
                     >
                         <Text style={styles.retryButtonText}>
-                            {isAuthenticating ? 'Authenticating...' : 'Try Again'}
+                            {isAuthenticating ? t('biometric.authenticating') : t('biometric.tryAgain')}
                         </Text>
                     </TouchableOpacity>
 
@@ -67,7 +70,7 @@ export default function BiometricPrompt({
                         style={styles.cancelButton}
                         onPress={onCancel}
                     >
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                        <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
                     </TouchableOpacity>
                 </View>
             </View>

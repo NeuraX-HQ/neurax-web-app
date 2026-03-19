@@ -3,6 +3,7 @@ import {
     View, Text, StyleSheet, Animated, Dimensions,
 } from 'react-native';
 import { Colors } from '../constants/colors';
+import { useAppLanguage } from '../i18n/LanguageProvider';
 
 const { width } = Dimensions.get('window');
 
@@ -10,7 +11,9 @@ interface LoadingAnalysisProps {
     message?: string;
 }
 
-export function LoadingAnalysis({ message = 'Đang phân tích...' }: LoadingAnalysisProps) {
+export function LoadingAnalysis({ message }: LoadingAnalysisProps) {
+    const { t } = useAppLanguage();
+    const loadingMessage = message || t('loading.analysis');
     const spinAnim = useRef(new Animated.Value(0)).current;
     const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -58,8 +61,8 @@ export function LoadingAnalysis({ message = 'Đang phân tích...' }: LoadingAna
             >
                 <View style={styles.spinnerInner} />
             </Animated.View>
-            <Text style={styles.message}>{message}</Text>
-            <Text style={styles.submessage}>Vui lòng đợi...</Text>
+            <Text style={styles.message}>{loadingMessage}</Text>
+            <Text style={styles.submessage}>{t('loading.pleaseWait')}</Text>
         </View>
     );
 }

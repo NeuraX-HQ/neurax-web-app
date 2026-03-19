@@ -6,10 +6,12 @@ import { Colors } from '../../src/constants/colors';
 import { saveOnboardingData, getOnboardingData, OnboardingData } from '../../src/store/userStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 export default function Step9() {
     const router = useRouter();
     const { isAuthenticated } = useAuthStore();
+    const { t } = useAppLanguage();
     const [data, setData] = useState<OnboardingData | null>(null);
     const fadeAnim = useState(new Animated.Value(0))[0];
 
@@ -45,7 +47,7 @@ export default function Step9() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={22} color={Colors.primary} />
                 </TouchableOpacity>
-                <Text style={styles.stepText}>HOÀN TẤT</Text>
+                <Text style={styles.stepText}>{t('onboarding.step9.done')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -61,10 +63,10 @@ export default function Step9() {
 
                 <View style={styles.titleRow}>
                     <Ionicons name="ribbon-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
-                    <Text style={styles.title}>Lộ trình sẵn sàng!</Text>
+                    <Text style={styles.title}>{t('onboarding.step9.title')}</Text>
                 </View>
                 <Text style={styles.subtitle}>
-                    AI Bảo đã tối ưu hóa kế hoạch dinh dưỡng dành riêng cho {data.name}.
+                    {t('onboarding.step9.subtitle', { name: data.name || '' })}
                 </Text>
 
                 <View style={styles.summaryCard}>
@@ -75,8 +77,8 @@ export default function Step9() {
                         <View>
                             <Text style={styles.summaryLabel}>MỤC TIÊU</Text>
                             <Text style={styles.summaryValue}>
-                                {data.goal === 'lose' ? 'Giảm cân' :
-                                    data.goal === 'gain' ? 'Tăng cân' : 'Duy trì sức khỏe'}
+                                {data.goal === 'lose' ? t('onboarding.goal.lose') :
+                                    data.goal === 'gain' ? t('onboarding.goal.gain') : t('onboarding.goal.maintain')}
                             </Text>
                         </View>
                     </View>
@@ -88,7 +90,7 @@ export default function Step9() {
                             <Ionicons name="trending-down-outline" size={20} color="#4A90D9" />
                         </View>
                         <View>
-                            <Text style={styles.summaryLabel}>CÂN NẶNG MỤC TIÊU</Text>
+                            <Text style={styles.summaryLabel}>{t('onboarding.step9.targetWeight')}</Text>
                             <Text style={styles.summaryValue}>{data.targetWeight} kg</Text>
                         </View>
                     </View>
@@ -98,7 +100,7 @@ export default function Step9() {
                             <Ionicons name="flash-outline" size={20} color="#9B59B6" />
                         </View>
                         <View>
-                            <Text style={styles.summaryLabel}>TỐC ĐỘ MỤC TIÊU</Text>
+                            <Text style={styles.summaryLabel}>{t('onboarding.step9.targetSpeed')}</Text>
                             <Text style={styles.summaryValue}>{data.weightChangeSpeed.toFixed(1)} kg/tuần</Text>
                         </View>
                     </View>
@@ -110,7 +112,7 @@ export default function Step9() {
                             <Ionicons name="restaurant-outline" size={20} color="#F39C12" />
                         </View>
                         <View>
-                            <Text style={styles.summaryLabel}>LƯỢNG CALO / NGÀY</Text>
+                            <Text style={styles.summaryLabel}>{t('onboarding.step9.dailyCalories')}</Text>
                             <Text style={styles.summaryValue}>1,850 kcal</Text>
                         </View>
                     </View>
@@ -119,9 +121,9 @@ export default function Step9() {
                 <View style={styles.aiMessage}>
                     <View style={styles.aiBubble}>
                         <Text style={styles.aiText}>
-                            "Tôi tin rằng với kế hoạch này, bạn sẽ đạt được mục tiêu trong khoảng <Text style={styles.bold}>
-                                {Math.ceil(Math.abs(data.targetWeight - data.currentWeight) / data.weightChangeSpeed)} tuần
-                            </Text>. Hãy bắt đầu thôi!"
+                            {t('onboarding.step9.aiMessage', {
+                                weeks: Math.ceil(Math.abs(data.targetWeight - data.currentWeight) / data.weightChangeSpeed),
+                            })}
                         </Text>
                     </View>
                 </View>
@@ -131,7 +133,7 @@ export default function Step9() {
 
             <View style={styles.footer}>
                 <TouchableOpacity style={styles.button} onPress={handleStart}>
-                    <Text style={styles.buttonText}>Bắt đầu ngay  →</Text>
+                    <Text style={styles.buttonText}>{t('onboarding.step9.startNow')}</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>

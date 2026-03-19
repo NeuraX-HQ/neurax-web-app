@@ -7,9 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMealStore } from '../src/store/mealStore';
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function EditIngredientsScreen() {
     const router = useRouter();
+    const { t } = useAppLanguage();
     const currentFoodItem = useMealStore(state => state.currentFoodItem);
     const setCurrentFoodItem = useMealStore(state => state.setCurrentFoodItem);
 
@@ -22,9 +24,9 @@ export default function EditIngredientsScreen() {
                 if (typeof ing === 'string') {
                     // Fallback for old data format
                     const amountMap = ['150 g', '50 g', '300 ml', '30 g'];
-                    return `${ing} ${amountMap[idx] || 'Vừa đủ'}`;
+                    return `${ing} ${amountMap[idx] || t('editIngredients.defaultAmount')}`;
                 }
-                if (ing.name && ing.amount && ing.amount !== 'Vừa đủ') {
+                if (ing.name && ing.amount && ing.amount !== t('editIngredients.defaultAmount')) {
                     return `${ing.name} ${ing.amount}`;
                 } else if (ing.name) {
                     return ing.name;
@@ -40,7 +42,7 @@ export default function EditIngredientsScreen() {
         const lines = editingText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
         if (lines.length === 0) {
-            Alert.alert('Lỗi', 'Vui lòng nhập ít nhất một nguyên liệu');
+            Alert.alert(t('common.error'), t('editIngredients.errorEmpty'));
             return;
         }
 
@@ -60,7 +62,7 @@ export default function EditIngredientsScreen() {
             }
 
             // Defaults if no number is found
-            return { name: line, amount: "Vừa đủ" };
+            return { name: line, amount: t('editIngredients.defaultAmount') };
         });
 
         if (currentFoodItem) {
@@ -80,15 +82,15 @@ export default function EditIngredientsScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.closeButton}>
                     <Ionicons name="close" size={28} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Ingredients</Text>
+                <Text style={styles.headerTitle}>{t('editIngredients.title')}</Text>
                 <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-                    <Text style={styles.saveButtonText}>Save</Text>
+                    <Text style={styles.saveButtonText}>{t('editIngredients.save')}</Text>
                 </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.content}>
                 {/* Section Label */}
-                <Text style={styles.sectionLabel}>NỘI DUNG NGUYÊN LIỆU</Text>
+                <Text style={styles.sectionLabel}>{t('editIngredients.sectionLabel')}</Text>
 
                 {/* Text Input */}
                 <TextInput
@@ -96,7 +98,7 @@ export default function EditIngredientsScreen() {
                     value={editingText}
                     onChangeText={setEditingText}
                     multiline
-                    placeholder="Trứng gà 150g&#10;Cá 200g&#10;Rau 50g"
+                    placeholder={t('editIngredients.placeholder')}
                     placeholderTextColor="#999"
                     autoFocus
                 />

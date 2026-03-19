@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Dimensions, Alert, TouchableWithoutFeedback, Modal } from 'react-native';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, TouchableWithoutFeedback, Modal, FlatList, Animated, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Swipeable, TouchableOpacity as GHTouchableOpacity } from 'react-native-gesture-handler';
 import { Colors, Shadows } from '../../src/constants/colors';
@@ -10,53 +10,144 @@ import { NotificationIcon, SettingsIcon, ProfileIcon } from '../../src/component
 import { drinkTypes } from '../../src/data/mockData';
 import { CalorieGauge } from '../../src/components/CalorieGauge';
 import { useMealStore, Meal } from '../../src/store/mealStore';
-import { getOnboardingData } from '../../src/store/userStore';
+import { getOnboardingData, getUserData } from '../../src/store/userStore';
+import { useAuthStore } from '../../src/store/authStore';
+import { VoiceModal } from '../../src/components/VoiceModal';
+import { CameraScannerWithLoading } from '../../src/components/CameraScannerWithLoading';
+import { SearchScanner } from '../../src/components/SearchScanner';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
+import { getCurrentStreak } from '../../src/utils/streak';
+
+const WEEKDAY_LABELS_BY_LANG: Record<'vi' | 'en', string[]> = {
+    vi: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'],
+    en: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+};
+const ADD_MEAL_METHODS = [
+    { id: 'voice', icon: 'mic-outline', labelKey: 'tabs.voice', descKey: 'tabs.voiceDesc' },
+    { id: 'camera', icon: 'camera-outline', labelKey: 'tabs.camera', descKey: 'tabs.cameraDesc' },
+    { id: 'search', icon: 'search-outline', labelKey: 'tabs.search', descKey: 'tabs.searchDesc' },
+] as const;
+
+const toIsoDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const fromIsoDate = (iso: string) => {
+    const [year, month, day] = iso.split('-').map(Number);
+    return new Date(year, month - 1, day);
+};
+
+const addDaysToIso = (iso: string, days: number) => {
+    const d = fromIsoDate(iso);
+    d.setDate(d.getDate() + days);
+    return toIsoDate(d);
+};
+
+const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
 
 export default function HomeScreen() {
     const router = useRouter();
+    const { width: windowWidth } = useWindowDimensions();
+    const flatListRef = useRef<FlatList>(null);
 
-    // Generate dynamic calendar dates
-    const { weekDaysLabels, dates, fullDates, monthName, todayIndex } = useMemo(() => {
-        const today = new Date();
-        const currentMonthName = today.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-        
-        const dayOfWeek = today.getDay();
-        const diffToMonday = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        const monday = new Date(today);
-        monday.setDate(diffToMonday);
-        
-        const d_labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-        const d_dates = [];
-        const d_fullDates = [];
-        let tIndex = 0;
-        
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(monday);
-            d.setDate(monday.getDate() + i);
-            d_dates.push(d.getDate());
-            
-            const isoDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            d_fullDates.push(isoDate);
-            
-            if (d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear()) {
-                tIndex = i;
-            }
-        }
-        
-        return { weekDaysLabels: d_labels, dates: d_dates, fullDates: d_fullDates, monthName: currentMonthName, todayIndex: tIndex };
-    }, []);
+    const { t, language } = useAppLanguage();
+    const locale = language === 'vi' ? 'vi-VN' : 'en-US';
+    const weekdayLabels = WEEKDAY_LABELS_BY_LANG[language];
+    const todayIso = toIsoDate(new Date());
+
+    useFocusEffect(
+        useCallback(() => {
+            // Only scroll to current week, but don't force select today
+            // so the user stays on the date they were just logging for.
+            flatListRef.current?.scrollToIndex({ index: 2, animated: true });
+        }, [])
+    );
 
     const [refreshing, setRefreshing] = useState(false);
-    const [selectedDay, setSelectedDay] = useState(todayIndex);
     const [gender, setGender] = useState<string>('');
-    const selectedDateStr = fullDates[selectedDay];
+    const [dailyCalorieTarget, setDailyCalorieTarget] = useState(1800);
+    const [showCaloriesEaten, setShowCaloriesEaten] = useState(false);
+    const [showMonthPicker, setShowMonthPicker] = useState(false);
+    const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
+    const userEmail = useAuthStore((state) => state.email);
 
     // Meal store
-    const { meals, getTodayStats, loadMeals, getMealsByDate, removeMeal } = useMealStore();
+    const { meals, loadMeals, getMealsByDate, removeMeal, selectedDateStr: storeSelectedDateStr } = useMealStore();
+    const selectedDateStr = storeSelectedDateStr || todayIso;
+    const setSelectedDateStr = (date: string) => useMealStore.setState({ selectedDateStr: date });
+    const hasAnyMeals = meals && meals.length > 0;
     const displayedMeals = getMealsByDate(selectedDateStr);
+    const usedMealDates = useMemo(() => new Set(meals.map((meal) => meal.date)), [meals]);
+    const currentStreak = useMemo(() => getCurrentStreak(usedMealDates, todayIso), [usedMealDates, todayIso]);
+
+    const { caloriesByDate, earliestLogDate } = useMemo(() => {
+        const map: Record<string, number> = {};
+        let minDate = todayIso;
+        for (const meal of meals) {
+            map[meal.date] = (map[meal.date] ?? 0) + meal.calories;
+            if (meal.date < minDate) {
+                minDate = meal.date;
+            }
+        }
+        return { caloriesByDate: map, earliestLogDate: minDate };
+    }, [meals, todayIso]);
+
+    const dateStrip = useMemo(() => {
+        const today = new Date();
+        const dayOfWeek = (today.getDay() + 6) % 7; 
+        const currentMonday = new Date(today);
+        currentMonday.setDate(today.getDate() - dayOfWeek);
+
+        const weeks = [];
+        for (let weekOffset = -2; weekOffset <= 2; weekOffset++) {
+            const week = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(currentMonday);
+                d.setDate(currentMonday.getDate() + (weekOffset * 7) + i);
+                week.push({
+                    iso: toIsoDate(d),
+                    weekdayIndex: i,
+                    day: d.getDate(),
+                });
+            }
+            weeks.push(week);
+        }
+        return weeks;
+    }, []);
+
+    const selectedDate = useMemo(() => fromIsoDate(selectedDateStr), [selectedDateStr]);
+    const monthName = useMemo(
+        () => selectedDate.toLocaleDateString(locale, { month: 'short', year: 'numeric' }).toUpperCase(),
+        [locale, selectedDate]
+    );
+
+    const displayedDateLabel = useMemo(() => {
+        return selectedDate.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+        });
+    }, [locale, selectedDate]);
+
+    const greetingName = useMemo(() => {
+        if (!userEmail) return t('home.greetingFallback');
+        const localPart = userEmail.split('@')[0];
+        return localPart || t('home.greetingFallback');
+    }, [t, userEmail]);
+
+    const mealTypeLabel = (type: Meal['type']) => {
+        if (type === 'BREAKFAST') return t('home.mealType.breakfast');
+        if (type === 'LUNCH') return t('home.mealType.lunch');
+        if (type === 'DINNER') return t('home.mealType.dinner');
+        return t('home.mealType.snack');
+    };
 
     const swipeableRefs = useRef(new Map<string, any>());
     const openMealIdRef = useRef<string | null>(null);
+    const swipeOpenedAtRef = useRef(0);
 
     const closeOpenRow = () => {
         if (openMealIdRef.current) {
@@ -67,6 +158,15 @@ export default function HomeScreen() {
         }
         return false;
     };
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            await loadMeals();
+        } finally {
+            setRefreshing(false);
+        }
+    }, [loadMeals]);
 
     const withAutoClose = (action: () => void) => () => {
         if (closeOpenRow()) return;
@@ -83,20 +183,92 @@ export default function HomeScreen() {
         { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 }
     );
 
-    const maxCalories = 2500;
+    const calorieWindow = useMemo(() => {
+        const dailyTarget = Math.max(0, Math.round(dailyCalorieTarget));
+        const mealDates = Object.keys(caloriesByDate);
+
+        if (!mealDates.length) {
+            return {
+                dailyTarget,
+                effectiveTarget: dailyTarget,
+                eaten: 0,
+                left: dailyTarget,
+                carryOverToNextDay: 0,
+            };
+        }
+
+        const startDate = earliestLogDate;
+
+        let carryOver = 0;
+        let cursor = startDate;
+        let effectiveTargetForSelected = dailyTarget;
+        let eatenForSelected = 0;
+        let leftForSelected = dailyTarget;
+
+        while (cursor <= selectedDateStr) {
+            const effectiveTarget = Math.max(dailyTarget - carryOver, 0);
+            const eaten = Math.round(caloriesByDate[cursor] ?? 0);
+            const left = Math.max(effectiveTarget - eaten, 0);
+            const nextCarryOver = Math.max(eaten - effectiveTarget, 0);
+
+            if (cursor === selectedDateStr) {
+                effectiveTargetForSelected = effectiveTarget;
+                eatenForSelected = eaten;
+                leftForSelected = left;
+            }
+
+            carryOver = nextCarryOver;
+            cursor = addDaysToIso(cursor, 1);
+        }
+
+        return {
+            dailyTarget,
+            effectiveTarget: effectiveTargetForSelected,
+            eaten: eatenForSelected,
+            left: leftForSelected,
+            carryOverToNextDay: carryOver,
+        };
+    }, [caloriesByDate, dailyCalorieTarget, selectedDateStr]);
+
+    const maxCalories = Math.max(1, calorieWindow.effectiveTarget);
+    const caloriesEaten = Math.round(calorieWindow.eaten);
+    const caloriesLeft = Math.round(calorieWindow.left);
+    const calorieGaugeValue = showCaloriesEaten
+        ? `${caloriesEaten}/${maxCalories}`
+        : `${caloriesLeft}`;
+    const calorieGaugeLabel = showCaloriesEaten
+        ? t('home.caloriesEaten')
+        : t('home.caloriesLeft');
     const protein = { current: Math.round(stats.totalProtein), max: 140 };
     const carbs = { current: Math.round(stats.totalCarbs), max: 280 };
     const fat = { current: Math.round(stats.totalFat), max: 75 };
-    const [waterCurrent, setWaterCurrent] = useState(800);
+    const [waterByDate, setWaterByDate] = useState<Record<string, number>>({
+        [todayIso]: 800,
+    });
     const waterMax = 2500;
+    const waterCurrent = waterByDate[selectedDateStr] ?? 0;
+    const [exerciseByDate] = useState<Record<string, number>>(() => {
+        const seeded: Record<string, number> = {};
+        for (let i = -6; i <= 0; i++) {
+            const d = new Date();
+            d.setDate(d.getDate() + i);
+            const iso = toIsoDate(d);
+            seeded[iso] = i === 0 ? 0 : Math.max(0, 25 + i * 3);
+        }
+        return seeded;
+    });
+    const exerciseMinutes = exerciseByDate[selectedDateStr] ?? 0;
 
     // Load meals on mount
     useEffect(() => {
         loadMeals();
         const fetchUserData = async () => {
-            const data = await getOnboardingData();
-            if (data?.gender) {
-                setGender(data.gender.toLowerCase());
+            const [onboarding, user] = await Promise.all([getOnboardingData(), getUserData()]);
+            if (onboarding?.gender) {
+                setGender(onboarding.gender.toLowerCase());
+            }
+            if (user?.dailyCalories && Number.isFinite(user.dailyCalories)) {
+                setDailyCalorieTarget(Math.max(1, Math.round(user.dailyCalories)));
             }
         };
         fetchUserData();
@@ -106,67 +278,122 @@ export default function HomeScreen() {
     const [showHydration, setShowHydration] = useState(false);
     const [selectedDrink, setSelectedDrink] = useState('water');
     const [drinkAmount, setDrinkAmount] = useState(200);
+    const drinkFillAnim = useRef(new Animated.Value(200)).current;
+    const [showAddMethod, setShowAddMethod] = useState(false);
+    const [voiceVisible, setVoiceVisible] = useState(false);
+    const [cameraVisible, setCameraVisible] = useState(false);
+    const [searchVisible, setSearchVisible] = useState(false);
+    const addMethodScale = useRef(new Animated.Value(0)).current;
+    const addMethodOpacity = useRef(new Animated.Value(0)).current;
 
-    const STEPS = [50, 100, 150, 200, 250];
     const GLASS_H = 240;
-
     const addWater = () => {
-        setWaterCurrent(prev => Math.min(prev + drinkAmount, waterMax));
+        setWaterByDate((prev) => ({
+            ...prev,
+            [selectedDateStr]: Math.min((prev[selectedDateStr] ?? 0) + drinkAmount, waterMax),
+        }));
         setShowHydration(false);
     };
+
+    const openAddMethod = () => {
+        setShowAddMethod(true);
+        Animated.parallel([
+            Animated.spring(addMethodScale, { toValue: 1, useNativeDriver: true, damping: 18, stiffness: 280 }),
+            Animated.timing(addMethodOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+        ]).start();
+    };
+
+    const closeAddMethod = () => {
+        Animated.parallel([
+            Animated.spring(addMethodScale, { toValue: 0, useNativeDriver: true, damping: 18, stiffness: 280 }),
+            Animated.timing(addMethodOpacity, { toValue: 0, duration: 120, useNativeDriver: true }),
+        ]).start(() => setShowAddMethod(false));
+    };
+
+    const handleSelectAddMethod = (methodId: 'voice' | 'camera' | 'search') => {
+        closeAddMethod();
+        if (methodId === 'voice') {
+            setTimeout(() => setVoiceVisible(true), 180);
+            return;
+        }
+        if (methodId === 'camera') {
+            setTimeout(() => setCameraVisible(true), 180);
+            return;
+        }
+        setTimeout(() => setSearchVisible(true), 180);
+    };
+
+    useEffect(() => {
+        Animated.timing(drinkFillAnim, {
+            toValue: (drinkAmount / 250) * GLASS_H,
+            duration: 180,
+            useNativeDriver: false,
+        }).start();
+    }, [drinkAmount, drinkFillAnim]);
+
+    const prevMonth = () => {
+        setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    };
+
+    const nextMonth = () => {
+        setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    };
+
+    const monthPickerGrid = useMemo(() => {
+        const year = calendarMonth.getFullYear();
+        const month = calendarMonth.getMonth();
+        const first = new Date(year, month, 1);
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const firstDayMondayBased = (first.getDay() + 6) % 7;
+
+        const cells: Array<{ type: 'empty' } | { type: 'day'; iso: string; day: number }> = [];
+        for (let i = 0; i < firstDayMondayBased; i++) {
+            cells.push({ type: 'empty' });
+        }
+        for (let day = 1; day <= daysInMonth; day++) {
+            const d = new Date(year, month, day);
+            cells.push({ type: 'day', iso: toIsoDate(d), day });
+        }
+
+        return cells;
+    }, [calendarMonth]);
 
     // Group meals by type
     const getMealsByType = (type: Meal['type']) => {
         return displayedMeals.filter(meal => meal.type === type);
     };
 
-    const confirmDelete = (mealId: string, mealName: string) => {
-        Alert.alert(
-            'Xóa món ăn',
-            `Bạn có chắc chắn muốn xóa "${mealName}" khỏi nhật ký không?`,
-            [
-                { text: 'Hủy', style: 'cancel' },
-                { text: 'Xóa', style: 'destructive', onPress: () => removeMeal(mealId) },
-            ]
-        );
-    };
-
-    const renderRightActions = (mealId: string, mealName: string) => {
+    const renderRightActions = (mealId: string) => {
         return (
             <GHTouchableOpacity
                 style={[styles.deleteAction, { height: '100%' }]}
-                onPress={() => confirmDelete(mealId, mealName)}
+                onPress={() => {
+                    removeMeal(mealId);
+                    const ref = swipeableRefs.current.get(mealId);
+                    if (ref) ref.close();
+                    if (openMealIdRef.current === mealId) {
+                        openMealIdRef.current = null;
+                    }
+                }}
             >
-                <Ionicons name="trash-outline" size={24} color="#FFF" />
+                <Text style={styles.deleteActionText}>Delete</Text>
             </GHTouchableOpacity>
         );
     };
 
-    const renderMealCard = (meal: Meal) => (
-        <Swipeable 
-            key={meal.id}
-            ref={(ref) => {
-                if (ref) swipeableRefs.current.set(meal.id, ref);
-                else swipeableRefs.current.delete(meal.id);
-            }}
-            onSwipeableWillOpen={() => {
-                if (openMealIdRef.current && openMealIdRef.current !== meal.id) {
-                    const prevRef = swipeableRefs.current.get(openMealIdRef.current);
-                    if (prevRef) prevRef.close();
+    const renderMealPressable = (meal: Meal) => (
+        <TouchableOpacity
+            style={[styles.mealCard, Shadows.small, { marginHorizontal: 0, marginBottom: 0 }]}
+            onPress={() => {
+                // Ignore accidental tap generated right after a swipe release on web.
+                if (Date.now() - swipeOpenedAtRef.current < 300) {
+                    return;
                 }
-                openMealIdRef.current = meal.id;
-            }}
-            onSwipeableWillClose={() => {
-                if (openMealIdRef.current === meal.id) {
-                    openMealIdRef.current = null;
+                if (openMealIdRef.current) {
+                    return;
                 }
-            }}
-            renderRightActions={() => renderRightActions(meal.id, meal.name)}
-            containerStyle={{ marginHorizontal: 16, marginBottom: 8 }}
-        >
-            <TouchableOpacity
-                style={[styles.mealCard, Shadows.small, { marginHorizontal: 0, marginBottom: 0 }]}
-                onPress={withAutoClose(() => router.push({
+
+                router.push({
                     pathname: '/food-detail',
                     params: {
                         foodData: JSON.stringify({
@@ -181,29 +408,77 @@ export default function HomeScreen() {
                         source: 'meal',
                         mealId: meal.id,
                     }
-                }))}
-            >
-                <View style={styles.mealImage}>
-                    {meal.image && meal.image.startsWith('file://') ? (
-                        <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
-                    ) : (
-                        <Text style={styles.mealEmoji}>{meal.image || '🍽️'}</Text>
-                    )}
-                </View>
-                <View style={styles.mealInfo}>
-                    <Text style={styles.mealName}>{meal.name}</Text>
-                    <Text style={styles.mealTime}>{meal.time}</Text>
-                </View>
-                <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
-            </TouchableOpacity>
-        </Swipeable>
+                });
+            }}
+        >
+            <View style={styles.mealImage}>
+                {meal.image && meal.image.startsWith('file://') ? (
+                    <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
+                ) : (
+                    <Text style={styles.mealEmoji}>{meal.image || '🍽️'}</Text>
+                )}
+            </View>
+            <View style={styles.mealInfo}>
+                <Text style={styles.mealName}>{meal.name}</Text>
+                <Text style={styles.mealTime}>{meal.time}</Text>
+            </View>
+            <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
+        </TouchableOpacity>
     );
+
+    const renderMealCard = (meal: Meal) => {
+        const canQuickDelete = true;
+
+        if (!canQuickDelete) {
+            return (
+                <View key={meal.id} style={{ marginHorizontal: 16, marginBottom: 8 }}>
+                    {renderMealPressable(meal)}
+                </View>
+            );
+        }
+
+        return (
+        <Swipeable 
+            key={meal.id}
+            rightThreshold={10}
+            overshootRight={false}
+            ref={(ref) => {
+                if (ref) swipeableRefs.current.set(meal.id, ref);
+                else swipeableRefs.current.delete(meal.id);
+            }}
+            onSwipeableOpen={(direction) => {
+                if (direction === 'right') {
+                    openMealIdRef.current = meal.id;
+                    swipeOpenedAtRef.current = Date.now();
+                }
+            }}
+            onSwipeableWillOpen={() => {
+                if (openMealIdRef.current && openMealIdRef.current !== meal.id) {
+                    const prevRef = swipeableRefs.current.get(openMealIdRef.current);
+                    if (prevRef) prevRef.close();
+                }
+                openMealIdRef.current = meal.id;
+            }}
+            onSwipeableWillClose={() => {
+                if (openMealIdRef.current === meal.id) {
+                    openMealIdRef.current = null;
+                }
+            }}
+            renderRightActions={() => renderRightActions(meal.id)}
+            containerStyle={{ marginHorizontal: 16, marginBottom: 8 }}
+        >
+            {renderMealPressable(meal)}
+        </Swipeable>
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false} onScrollBeginDrag={closeOpenRow}>
-                <TouchableWithoutFeedback onPress={closeOpenRow}>
-                    <View style={{ flex: 1 }}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
+                <View style={{ flex: 1 }}>
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.headerLeft}>
@@ -217,7 +492,7 @@ export default function HomeScreen() {
                             )}
                             <View style={styles.statusDot} />
                         </TouchableOpacity>
-                        <Text style={styles.greeting}>Hi Admin!</Text>
+                        <Text style={styles.greeting}>{t('home.greeting', { name: greetingName })}</Text>
                     </View>
                     <View style={styles.headerRight}>
                         <TouchableOpacity onPress={withAutoClose(() => router.push('/notifications'))}>
@@ -231,40 +506,108 @@ export default function HomeScreen() {
 
                 {/* Month & Streak */}
                 <View style={styles.monthRow}>
-                    <Text style={styles.monthText}>{monthName} ▾</Text>
-                    <View style={styles.streakBadge}>
-                        <Text style={styles.streakText}>14 days 🔥</Text>
-                    </View>
+                    <TouchableOpacity
+                        style={styles.monthDropdown}
+                        onPress={withAutoClose(() => {
+                            setCalendarMonth(startOfMonth(selectedDate));
+                            setShowMonthPicker(true);
+                        })}
+                    >
+                        <Text style={styles.monthText}>{monthName} ▾</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.streakBadge} onPress={withAutoClose(() => router.push('/achievements'))}>
+                        <Text style={styles.streakText}>{t('home.streakDays', { count: currentStreak })} 🔥</Text>
+                    </TouchableOpacity>
                 </View>
 
-                {/* Week Days */}
-                <View style={styles.weekRow}>
-                    {weekDaysLabels.map((day, i) => (
-                        <TouchableOpacity
-                            key={i}
-                            style={[styles.dayItem, selectedDay === i && styles.dayItemSelected]}
-                            onPress={withAutoClose(() => setSelectedDay(i))}
-                        >
-                            <Text style={[styles.dayLabel, selectedDay === i && styles.dayLabelSelected]}>{day}</Text>
-                            <Text style={[styles.dayDate, selectedDay === i && styles.dayDateSelected]}>{dates[i]}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                {/* Sliding Date Strip */}
+                <FlatList
+                    ref={flatListRef}
+                    data={dateStrip}
+                    keyExtractor={(week) => week[0].iso}
+                    horizontal
+                    pagingEnabled
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ paddingVertical: 8 }}
+                    initialScrollIndex={2}
+                    getItemLayout={(_, index) => ({ length: windowWidth, offset: windowWidth * index, index })}
+                    renderItem={({ item: week }: { item: { iso: string; weekdayIndex: number; day: number }[] }) => (
+                        <View style={[styles.weekContainer, { width: windowWidth }]}>
+                            {week.map(item => {
+                                const isSelected = item.iso === selectedDateStr;
+                                const isPast = item.iso < todayIso;
+                                const isToday = item.iso === todayIso;
+                                const isAfterOrOnStart = item.iso >= earliestLogDate;
+                                
+                                let ringStyle = {};
+                                if (isPast && isAfterOrOnStart) {
+                                    const eaten = caloriesByDate[item.iso];
+                                    if (eaten === undefined) {
+                                        ringStyle = styles.dayRingDashed;
+                                    } else {
+                                        const excess = eaten - dailyCalorieTarget;
+                                        if (excess <= 100) {
+                                            ringStyle = styles.dayRingGreen;
+                                        } else if (excess <= 200) {
+                                            ringStyle = styles.dayRingYellow;
+                                        } else {
+                                            ringStyle = styles.dayRingRed;
+                                        }
+                                    }
+                                }
+
+                                return (
+                                    <View key={item.iso} style={styles.dayContainer}>
+                                        <View style={[styles.dayRingWrapper, ringStyle]}>
+                                            <TouchableOpacity
+                                                style={[
+                                                    styles.dayItem,
+                                                    isSelected && styles.dayItemSelected,
+                                                    !isSelected && isToday && styles.dayItemToday,
+                                                ]}
+                                                onPress={withAutoClose(() => setSelectedDateStr(item.iso))}
+                                            >
+                                                <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
+                                                    {weekdayLabels[item.weekdayIndex]}
+                                                </Text>
+                                                <Text style={[styles.dayDate, isSelected && styles.dayDateSelected]}>
+                                                    {item.day}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    )}
+                />
 
                 {/* Calorie Card */}
                 <View style={[styles.card, Shadows.medium]}>
                     <View style={styles.calorieRow}>
-                        <CalorieGauge current={Math.round(stats.totalCalories)} max={maxCalories} size={120} strokeWidth={7} />
+                        <TouchableOpacity
+                            activeOpacity={0.85}
+                            onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
+                        >
+                            <CalorieGauge
+                                current={caloriesEaten}
+                                max={maxCalories}
+                                size={120}
+                                strokeWidth={7}
+                                displayValue={calorieGaugeValue}
+                                label={calorieGaugeLabel}
+                            />
+                        </TouchableOpacity>
                         <View style={styles.macros}>
                             <View style={styles.macroRow}>
                                 <Text style={styles.macroEmoji}>🥩</Text>
                                 <View style={styles.macroInfo}>
                                     <View style={styles.macroHeader}>
-                                        <Text style={styles.macroName}>Protein</Text>
+                                        <Text style={styles.macroName}>{t('home.protein')}</Text>
                                         <Text style={styles.macroValue}>{protein.current}/{protein.max}g</Text>
                                     </View>
                                     <View style={styles.macroBarBg}>
-                                        <View style={[styles.macroBar, { width: `${(protein.current / protein.max) * 100}%`, backgroundColor: Colors.protein }]} />
+                                        <View style={[styles.macroBar, { width: `${Math.min((protein.current / protein.max) * 100, 100)}%`, backgroundColor: Colors.protein }]} />
                                     </View>
                                 </View>
                             </View>
@@ -272,11 +615,11 @@ export default function HomeScreen() {
                                 <Text style={styles.macroEmoji}>🍞</Text>
                                 <View style={styles.macroInfo}>
                                     <View style={styles.macroHeader}>
-                                        <Text style={styles.macroName}>Carbs</Text>
+                                        <Text style={styles.macroName}>{t('home.carbs')}</Text>
                                         <Text style={styles.macroValue}>{carbs.current}/{carbs.max}g</Text>
                                     </View>
                                     <View style={styles.macroBarBg}>
-                                        <View style={[styles.macroBar, { width: `${(carbs.current / carbs.max) * 100}%`, backgroundColor: Colors.carbs }]} />
+                                        <View style={[styles.macroBar, { width: `${Math.min((carbs.current / carbs.max) * 100, 100)}%`, backgroundColor: Colors.carbs }]} />
                                     </View>
                                 </View>
                             </View>
@@ -284,7 +627,7 @@ export default function HomeScreen() {
                                 <Text style={styles.macroEmoji}>🧀</Text>
                                 <View style={styles.macroInfo}>
                                     <View style={styles.macroHeader}>
-                                        <Text style={styles.macroName}>Fat</Text>
+                                        <Text style={styles.macroName}>{t('home.fat')}</Text>
                                         <Text style={styles.macroValue}>{fat.current}/{fat.max}g</Text>
                                     </View>
                                     <View style={styles.macroBarBg}>
@@ -301,7 +644,7 @@ export default function HomeScreen() {
                     <View style={styles.waterRow}>
                         <Text style={styles.waterIcon}>💧</Text>
                         <View style={styles.waterInfo}>
-                            <Text style={styles.waterTitle}>Water Intake</Text>
+                            <Text style={styles.waterTitle}>{t('home.waterIntake')}</Text>
                             <View style={styles.waterBarBg}>
                                 <View style={[styles.waterBar, { width: `${(waterCurrent / waterMax) * 100}%` }]} />
                             </View>
@@ -321,9 +664,9 @@ export default function HomeScreen() {
                     <View style={styles.exerciseRow}>
                         <Text style={styles.exerciseIcon}>🏃</Text>
                         <View style={styles.exerciseInfo}>
-                            <Text style={styles.exerciseTitle}>Exercise</Text>
+                            <Text style={styles.exerciseTitle}>{t('home.exercise')}</Text>
                         </View>
-                        <Text style={styles.exerciseValue}>0 / 45 min</Text>
+                        <Text style={styles.exerciseValue}>{exerciseMinutes} / 45 {t('home.min')}</Text>
                         <View style={styles.exerciseArrow}>
                             <Text style={styles.exerciseArrowText}>›</Text>
                         </View>
@@ -332,13 +675,13 @@ export default function HomeScreen() {
 
                 {/* Today's Meals */}
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Today's Meals</Text>
-                    <Text style={styles.sectionSubtitle}>{Math.round(stats.totalCalories)} kcal total</Text>
+                    <Text style={styles.sectionTitle}>{t('home.meals')}</Text>
+                    <Text style={styles.sectionSubtitle}>{Math.round(stats.totalCalories)} {t('home.kcalTotal')}</Text>
                 </View>
 
                 {/* Breakfast Section */}
                 <View style={styles.mealSection}>
-                    <Text style={styles.mealSectionLabel}>BREAKFAST</Text>
+                    <Text style={styles.mealSectionLabel}>{mealTypeLabel('BREAKFAST')}</Text>
                     {getMealsByType('BREAKFAST').length > 0 && (
                         <Text style={styles.mealSectionCalories}>
                             {getMealsByType('BREAKFAST').reduce((sum, m) => sum + m.calories, 0)} kcal
@@ -349,15 +692,15 @@ export default function HomeScreen() {
                 {getMealsByType('BREAKFAST').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(() => router.push('/(tabs)/add'))}
+                        onPress={withAutoClose(openAddMethod)}
                     >
-                        <Text style={styles.logMealText}>+ Log breakfast</Text>
+                        <Text style={styles.logMealText}>{t('home.logMeal.breakfast')}</Text>
                     </TouchableOpacity>
                 )}
 
                 {/* Lunch Section */}
                 <View style={styles.mealSection}>
-                    <Text style={styles.mealSectionLabel}>LUNCH</Text>
+                    <Text style={styles.mealSectionLabel}>{mealTypeLabel('LUNCH')}</Text>
                     {getMealsByType('LUNCH').length > 0 && (
                         <Text style={styles.mealSectionCalories}>
                             {getMealsByType('LUNCH').reduce((sum, m) => sum + m.calories, 0)} kcal
@@ -368,15 +711,15 @@ export default function HomeScreen() {
                 {getMealsByType('LUNCH').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(() => router.push('/(tabs)/add'))}
+                        onPress={withAutoClose(openAddMethod)}
                     >
-                        <Text style={styles.logMealText}>+ Log lunch</Text>
+                        <Text style={styles.logMealText}>{t('home.logMeal.lunch')}</Text>
                     </TouchableOpacity>
                 )}
 
                 {/* Dinner Section */}
                 <View style={styles.mealSection}>
-                    <Text style={styles.mealSectionLabel}>DINNER</Text>
+                    <Text style={styles.mealSectionLabel}>{mealTypeLabel('DINNER')}</Text>
                     {getMealsByType('DINNER').length > 0 && (
                         <Text style={styles.mealSectionCalories}>
                             {getMealsByType('DINNER').reduce((sum, m) => sum + m.calories, 0)} kcal
@@ -387,15 +730,15 @@ export default function HomeScreen() {
                 {getMealsByType('DINNER').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(() => router.push('/(tabs)/add'))}
+                        onPress={withAutoClose(openAddMethod)}
                     >
-                        <Text style={styles.logMealText}>+ Log dinner</Text>
+                        <Text style={styles.logMealText}>{t('home.logMeal.dinner')}</Text>
                     </TouchableOpacity>
                 )}
 
                 {/* Snack Section */}
                 <View style={styles.mealSection}>
-                    <Text style={styles.mealSectionLabel}>SNACK</Text>
+                    <Text style={styles.mealSectionLabel}>{mealTypeLabel('SNACK')}</Text>
                     {getMealsByType('SNACK').length > 0 && (
                         <Text style={styles.mealSectionCalories}>
                             {getMealsByType('SNACK').reduce((sum, m) => sum + m.calories, 0)} kcal
@@ -406,16 +749,66 @@ export default function HomeScreen() {
                 {getMealsByType('SNACK').length === 0 && (
                     <TouchableOpacity
                         style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(() => router.push('/(tabs)/add'))}
+                        onPress={withAutoClose(openAddMethod)}
                     >
-                        <Text style={styles.logMealText}>+ Log snack</Text>
+                        <Text style={styles.logMealText}>{t('home.logMeal.snack')}</Text>
                     </TouchableOpacity>
                 )}
 
                 <View style={{ height: 90 }} />
+                </View>
+            </ScrollView>
+
+            {/* Add Meal Method Popup */}
+            <Modal visible={showAddMethod} transparent animationType="none" onRequestClose={closeAddMethod}>
+                <TouchableWithoutFeedback onPress={closeAddMethod}>
+                    <View style={styles.addMethodBackdrop}>
+                        <TouchableWithoutFeedback>
+                            <Animated.View
+                                style={[
+                                    styles.addMethodPopup,
+                                    {
+                                        opacity: addMethodOpacity,
+                                        transform: [
+                                            { scale: addMethodScale },
+                                            {
+                                                translateY: addMethodScale.interpolate({
+                                                    inputRange: [0, 1],
+                                                    outputRange: [20, 0],
+                                                }),
+                                            },
+                                        ],
+                                    },
+                                ]}
+                            >
+                                <View style={styles.addMethodHeader}>
+                                    <Text style={styles.addMethodTitle}>{t('tabs.addFoodMethodTitle')}</Text>
+                                    <TouchableOpacity onPress={closeAddMethod} style={styles.addMethodCloseBtn}>
+                                        <Ionicons name="close" size={18} color="#666" />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={styles.addMethodOptionsRow}>
+                                    {ADD_MEAL_METHODS.map((opt) => (
+                                        <TouchableOpacity
+                                            key={opt.id}
+                                            style={styles.addMethodOptionCard}
+                                            onPress={() => handleSelectAddMethod(opt.id)}
+                                            activeOpacity={0.7}
+                                        >
+                                            <View style={styles.addMethodOptionIcon}>
+                                                <Ionicons name={opt.icon} size={24} color="#333" />
+                                            </View>
+                                            <Text style={styles.addMethodOptionLabel}>{t(opt.labelKey)}</Text>
+                                            <Text style={styles.addMethodOptionDesc}>{t(opt.descKey)}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </Animated.View>
+                        </TouchableWithoutFeedback>
                     </View>
                 </TouchableWithoutFeedback>
-            </ScrollView>
+            </Modal>
 
             {/* Hydration Modal */}
             <Modal visible={showHydration} animationType="slide" transparent={false}>
@@ -426,8 +819,8 @@ export default function HomeScreen() {
                             <Text style={hStyles.backArrow}>←</Text>
                         </TouchableOpacity>
                         <View style={hStyles.headerCenter}>
-                            <Text style={hStyles.title}>Add Hydration</Text>
-                            <Text style={hStyles.subtitle}>Today, Feb 2, 2026</Text>
+                            <Text style={hStyles.title}>{t('home.addHydration')}</Text>
+                            <Text style={hStyles.subtitle}>{displayedDateLabel}</Text>
                         </View>
                         <View style={{ width: 24 }} />
                     </View>
@@ -458,8 +851,21 @@ export default function HomeScreen() {
                     {/* Water Glass Visualization */}
                     <View style={hStyles.glassArea}>
                         <View style={hStyles.glass}>
+                            <View style={hStyles.tapZonesOverlay}>
+                                {[250, 200, 150, 100, 50].map((amount) => (
+                                    <TouchableOpacity
+                                        key={amount}
+                                        style={[
+                                            hStyles.tapZone,
+                                            drinkAmount >= amount && hStyles.tapZoneActive,
+                                        ]}
+                                        activeOpacity={1}
+                                        onPress={() => setDrinkAmount(amount)}
+                                    />
+                                ))}
+                            </View>
                             {/* Ruler: full-width horizontal lines, no labels */}
-                            <View style={hStyles.rulerInner}>
+                            <View style={hStyles.rulerInner} pointerEvents="none">
                                 {[200, 150, 100, 50].map((threshold, idx) => (
                                     <View key={idx} style={[
                                         hStyles.rulerLine,
@@ -468,8 +874,9 @@ export default function HomeScreen() {
                                 ))}
                             </View>
                             {/* Water fill */}
-                            <View style={[hStyles.waterFill, { height: `${(drinkAmount / 250) * 100}%` }]} />
+                            <Animated.View pointerEvents="none" style={[hStyles.waterFill, { height: drinkFillAnim }]} />
                         </View>
+                        <Text style={hStyles.glassHint}>{t('home.tapToSetAmount')}</Text>
                     </View>
 
                     {/* Amount Controls */}
@@ -477,6 +884,7 @@ export default function HomeScreen() {
                         <View style={hStyles.amountRow}>
                             <TouchableOpacity
                                 style={hStyles.amountBtn}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 onPress={() => setDrinkAmount(Math.max(50, drinkAmount - 50))}
                             >
                                 <Text style={hStyles.amountBtnText}>—</Text>
@@ -486,6 +894,7 @@ export default function HomeScreen() {
                             </View>
                             <TouchableOpacity
                                 style={[hStyles.amountBtn, hStyles.amountBtnPlus]}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 onPress={() => setDrinkAmount(Math.min(250, drinkAmount + 50))}
                             >
                                 <Text style={[hStyles.amountBtnText, hStyles.amountBtnPlusText]}>+</Text>
@@ -495,11 +904,82 @@ export default function HomeScreen() {
                         {/* Add Button */}
                         <TouchableOpacity style={hStyles.addBtn} onPress={addWater}>
                             <Text style={hStyles.addBtnIcon}>💧</Text>
-                            <Text style={hStyles.addBtnText}>Add Drink</Text>
+                            <Text style={hStyles.addBtnText}>{t('home.addDrink')}</Text>
                         </TouchableOpacity>
                     </View>
                 </SafeAreaView>
             </Modal>
+
+            {/* Month Picker */}
+            <Modal visible={showMonthPicker} animationType="fade" transparent>
+                <TouchableWithoutFeedback onPress={() => setShowMonthPicker(false)}>
+                    <View style={styles.calendarBackdrop}>
+                        <TouchableWithoutFeedback>
+                            <View style={styles.calendarCard}>
+                                <View style={styles.calendarHeader}>
+                                    <TouchableOpacity onPress={prevMonth} style={styles.calendarNavBtn}>
+                                        <Text style={styles.calendarNavText}>‹</Text>
+                                    </TouchableOpacity>
+                                    <Text style={styles.calendarHeaderTitle}>
+                                        {calendarMonth.toLocaleDateString(locale, { month: 'long', year: 'numeric' })}
+                                    </Text>
+                                    <TouchableOpacity onPress={nextMonth} style={styles.calendarNavBtn}>
+                                        <Text style={styles.calendarNavText}>›</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={styles.calendarWeekHeader}>
+                                    {weekdayLabels.map((d, index) => (
+                                        <Text key={`${d}-${index}`} style={styles.calendarWeekLabel}>{d}</Text>
+                                    ))}
+                                </View>
+
+                                <View style={styles.calendarGrid}>
+                                    {monthPickerGrid.map((cell, index) => {
+                                        if (cell.type === 'empty') {
+                                            return <View key={`e-${index}`} style={styles.calendarCell} />;
+                                        }
+
+                                        const isSelected = cell.iso === selectedDateStr;
+                                        const isPast = cell.iso < todayIso;
+                                        const isToday = cell.iso === todayIso;
+
+                                        return (
+                                            <TouchableOpacity
+                                                key={cell.iso}
+                                                style={[
+                                                    styles.calendarCell,
+                                                    styles.calendarDay,
+                                                    isSelected && styles.calendarDaySelected,
+                                                    !isSelected && isToday && styles.calendarDayToday,
+                                                ]}
+                                                onPress={() => {
+                                                    setSelectedDateStr(cell.iso);
+                                                    setShowMonthPicker(false);
+                                                }}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.calendarDayText,
+                                                        isSelected && styles.calendarDayTextSelected,
+                                                        !isSelected && isPast && styles.calendarDayTextPast,
+                                                    ]}
+                                                >
+                                                    {cell.day}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
+
+            <VoiceModal visible={voiceVisible} onClose={() => setVoiceVisible(false)} dateStr={selectedDateStr} />
+            <CameraScannerWithLoading visible={cameraVisible} onClose={() => setCameraVisible(false)} dateStr={selectedDateStr} />
+            <SearchScanner visible={searchVisible} onClose={() => setSearchVisible(false)} dateStr={selectedDateStr} />
         </SafeAreaView>
     );
 }
@@ -565,8 +1045,29 @@ const hStyles = StyleSheet.create({
         justifyContent: 'flex-end',
         overflow: 'hidden',
     },
+    tapZonesOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 4,
+    },
+    tapZone: {
+        flex: 1,
+        width: '100%',
+    },
+    tapZoneActive: {
+        backgroundColor: '#2F80ED',
+    },
     waterFill: {
         backgroundColor: '#5BA3F5',
+    },
+    glassHint: {
+        marginTop: 12,
+        fontSize: 12,
+        color: Colors.textSecondary,
+        fontWeight: '500',
     },
     // ruler inside glass — full-width horizontal lines
     rulerInner: {
@@ -581,11 +1082,11 @@ const hStyles = StyleSheet.create({
     },
     rulerLine: {
         width: '100%',
-        height: 1,
-        backgroundColor: 'rgba(0,0,0,0.08)',
+        height: 2,
+        backgroundColor: 'rgba(47, 128, 237, 0.08)',
     },
-    rulerLineActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
-    controlsArea: { paddingHorizontal: 20, paddingBottom: 24 },
+    rulerLineActive: { backgroundColor: '#2F80ED' },
+    controlsArea: { paddingHorizontal: 20, paddingBottom: 24, position: 'relative', zIndex: 3, elevation: 3 },
     amountRow: {
         flexDirection: 'row',
         justifyContent: 'center',
@@ -671,6 +1172,10 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
     },
     monthText: { fontSize: 15, fontWeight: '600', color: Colors.text },
+    monthDropdown: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     streakBadge: {
         backgroundColor: '#FFF3E6',
         borderRadius: 16,
@@ -678,13 +1183,45 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
     },
     streakText: { fontSize: 12, color: Colors.streak, fontWeight: '600' },
-    weekRow: {
+    weekContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        justifyContent: 'space-evenly',
+        alignItems: 'center',
     },
-    dayItem: { alignItems: 'center', paddingVertical: 6, paddingHorizontal: 8, borderRadius: 12 },
+    dayContainer: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    dayItem: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 8,
+        width: 46,
+        borderRadius: 12,
+    },
+    dayRingWrapper: {
+        borderRadius: 14,
+        padding: 2,
+        borderWidth: 1.5,
+        borderColor: 'transparent',
+    },
+    dayRingDashed: {
+        borderColor: '#9CA3AF',
+        borderStyle: 'dashed',
+    },
+    dayRingGreen: {
+        borderColor: '#10B981',
+    },
+    dayRingYellow: {
+        borderColor: '#F59E0B',
+    },
+    dayRingRed: {
+        borderColor: '#EF4444',
+    },
+    dayItemToday: {
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+    },
     dayItemSelected: { backgroundColor: Colors.primary },
     dayLabel: { fontSize: 11, color: Colors.textSecondary, fontWeight: '500', marginBottom: 3 },
     dayLabelSelected: { color: '#FFFFFF' },
@@ -780,9 +1317,14 @@ const styles = StyleSheet.create({
         backgroundColor: '#FF3B30',
         justifyContent: 'center',
         alignItems: 'center',
-        width: 70,
+        width: 92,
         borderRadius: 14,
         marginLeft: 8,
+    },
+    deleteActionText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '700',
     },
     mealCard: {
         backgroundColor: '#FFFFFF',
@@ -821,4 +1363,155 @@ const styles = StyleSheet.create({
         borderStyle: 'dashed',
     },
     logMealText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+    addMethodBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.25)',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        paddingBottom: 90,
+    },
+    addMethodPopup: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        paddingTop: 16,
+        paddingHorizontal: 16,
+        paddingBottom: 20,
+        width: 320,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 20,
+        elevation: 20,
+    },
+    addMethodHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+    },
+    addMethodTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#111',
+    },
+    addMethodCloseBtn: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#F0F0F0',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    addMethodOptionsRow: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    addMethodOptionCard: {
+        flex: 1,
+        backgroundColor: '#F7F8FA',
+        borderRadius: 14,
+        paddingVertical: 16,
+        alignItems: 'center',
+        gap: 6,
+    },
+    addMethodOptionIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        backgroundColor: '#EDEDEF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 2,
+    },
+    addMethodOptionLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#111',
+    },
+    addMethodOptionDesc: {
+        fontSize: 10,
+        color: '#888',
+        textAlign: 'center',
+    },
+    calendarBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.28)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    calendarCard: {
+        width: '100%',
+        maxWidth: 360,
+        borderRadius: 16,
+        backgroundColor: '#FFFFFF',
+        padding: 16,
+    },
+    calendarHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    calendarNavBtn: {
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#F3F4F6',
+    },
+    calendarNavText: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: Colors.primary,
+    },
+    calendarHeaderTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: Colors.text,
+    },
+    calendarWeekHeader: {
+        flexDirection: 'row',
+        marginBottom: 8,
+    },
+    calendarWeekLabel: {
+        flex: 1,
+        textAlign: 'center',
+        fontSize: 12,
+        color: Colors.textSecondary,
+        fontWeight: '600',
+    },
+    calendarGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+    },
+    calendarCell: {
+        width: '14.2857%',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginVertical: 3,
+    },
+    calendarDay: {
+        height: 36,
+        borderRadius: 10,
+    },
+    calendarDayToday: {
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+    },
+    calendarDaySelected: {
+        backgroundColor: Colors.primary,
+    },
+    calendarDayText: {
+        fontSize: 14,
+        color: Colors.text,
+        fontWeight: '600',
+    },
+    calendarDayTextSelected: {
+        color: '#FFFFFF',
+    },
+    calendarDayTextPast: {
+        color: '#9CA3AF',
+    },
 });

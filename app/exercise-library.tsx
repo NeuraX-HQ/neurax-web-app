@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors, Shadows } from '../src/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 interface Exercise {
     id: string;
@@ -91,6 +92,7 @@ const exercises: Exercise[] = [
 
 export default function ExerciseLibraryScreen() {
     const router = useRouter();
+    const { t, language } = useAppLanguage();
     const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
     const [showDetail, setShowDetail] = useState(false);
     const [showWorkoutList, setShowWorkoutList] = useState(false);
@@ -133,7 +135,7 @@ export default function ExerciseLibraryScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="chevron-back" size={24} color={Colors.text} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Exercise Library</Text>
+                <Text style={styles.headerTitle}>{t('exerciseLibrary.title')}</Text>
                 <View style={{ width: 24 }} />
             </View>
 
@@ -148,7 +150,7 @@ export default function ExerciseLibraryScreen() {
                         <View style={styles.exerciseIcon}>
                             <Text style={styles.exerciseIconText}>{exercise.icon}</Text>
                         </View>
-                        <Text style={styles.exerciseName}>{exercise.name}</Text>
+                        <Text style={styles.exerciseName}>{language === 'vi' ? exercise.nameVi : exercise.name}</Text>
                         <TouchableOpacity
                             style={styles.addButton}
                             onPress={() => openExerciseDetail(exercise)}
@@ -168,7 +170,7 @@ export default function ExerciseLibraryScreen() {
                     onPress={() => setShowWorkoutList(true)}
                 >
                     <Text style={styles.workoutBadgeText}>
-                        {workoutList.length} bài tập đã chọn • Xem chi tiết
+                        {t('exerciseLibrary.selectedCount', { count: workoutList.length })}
                     </Text>
                 </TouchableOpacity>
             )}
@@ -187,7 +189,7 @@ export default function ExerciseLibraryScreen() {
                                 {/* Modal Header */}
                                 <View style={styles.modalHeader}>
                                     <View>
-                                        <Text style={styles.modalTitle}>{selectedExercise.nameVi}</Text>
+                                        <Text style={styles.modalTitle}>{language === 'vi' ? selectedExercise.nameVi : selectedExercise.name}</Text>
                                         <Text style={styles.modalCategory}>{selectedExercise.category}</Text>
                                     </View>
                                     <TouchableOpacity
@@ -210,7 +212,7 @@ export default function ExerciseLibraryScreen() {
 
                                     {/* Instructions */}
                                     <View style={styles.instructionsSection}>
-                                        <Text style={styles.sectionTitle}>HƯỚNG DẪN KỸ THUẬT</Text>
+                                        <Text style={styles.sectionTitle}>{t('exerciseLibrary.instructions')}</Text>
                                         <Text style={styles.instructionsText}>
                                             {selectedExercise.instructions}
                                         </Text>
@@ -219,7 +221,7 @@ export default function ExerciseLibraryScreen() {
                                     {/* Sets and Reps Controls */}
                                     <View style={styles.controlsSection}>
                                         <View style={styles.controlGroup}>
-                                            <Text style={styles.controlLabel}>SỐ HIỆP (SETS)</Text>
+                                            <Text style={styles.controlLabel}>{t('exerciseLibrary.sets')}</Text>
                                             <View style={styles.controlRow}>
                                                 <TouchableOpacity
                                                     style={styles.controlButton}
@@ -240,7 +242,7 @@ export default function ExerciseLibraryScreen() {
                                         </View>
 
                                         <View style={styles.controlGroup}>
-                                            <Text style={styles.controlLabel}>SỐ LẦN (REPS)</Text>
+                                            <Text style={styles.controlLabel}>{t('exerciseLibrary.reps')}</Text>
                                             <View style={styles.controlRow}>
                                                 <TouchableOpacity
                                                     style={styles.controlButton}
@@ -267,7 +269,7 @@ export default function ExerciseLibraryScreen() {
                                         onPress={addToWorkout}
                                     >
                                         <Ionicons name="add" size={20} color="#FFFFFF" />
-                                        <Text style={styles.addToWorkoutText}>Thêm vào buổi tập</Text>
+                                        <Text style={styles.addToWorkoutText}>{t('exerciseLibrary.addToWorkout')}</Text>
                                     </TouchableOpacity>
 
                                     <View style={{ height: 20 }} />
@@ -290,9 +292,12 @@ export default function ExerciseLibraryScreen() {
                         {/* Modal Header */}
                         <View style={styles.modalHeader}>
                             <View>
-                                <Text style={styles.modalTitle}>Buổi tập của bạn</Text>
+                                <Text style={styles.modalTitle}>{t('exerciseLibrary.yourWorkout')}</Text>
                                 <Text style={styles.modalCategory}>
-                                    {workoutList.length} bài tập • {workoutList.reduce((sum, ex) => sum + ex.sets * ex.reps, 0)} lần
+                                    {t('exerciseLibrary.workoutSummary', {
+                                        count: workoutList.length,
+                                        reps: workoutList.reduce((sum, ex) => sum + ex.sets * ex.reps, 0),
+                                    })}
                                 </Text>
                             </View>
                             <TouchableOpacity
@@ -312,9 +317,9 @@ export default function ExerciseLibraryScreen() {
                                             <Text style={styles.workoutItemIconText}>{exercise.icon}</Text>
                                         </View>
                                         <View style={styles.workoutItemInfo}>
-                                            <Text style={styles.workoutItemName}>{exercise.nameVi}</Text>
+                                            <Text style={styles.workoutItemName}>{language === 'vi' ? exercise.nameVi : exercise.name}</Text>
                                             <Text style={styles.workoutItemDetails}>
-                                                {exercise.sets} hiệp × {exercise.reps} lần
+                                                {t('exerciseLibrary.setReps', { sets: exercise.sets, reps: exercise.reps })}
                                             </Text>
                                         </View>
                                     </View>
@@ -330,7 +335,7 @@ export default function ExerciseLibraryScreen() {
                             {workoutList.length === 0 && (
                                 <View style={styles.emptyState}>
                                     <Text style={styles.emptyStateText}>
-                                        Chưa có bài tập nào được chọn
+                                        {t('exerciseLibrary.empty')}
                                     </Text>
                                 </View>
                             )}
@@ -346,7 +351,7 @@ export default function ExerciseLibraryScreen() {
                                     onPress={startWorkout}
                                 >
                                     <Ionicons name="play" size={20} color="#FFFFFF" />
-                                    <Text style={styles.startWorkoutText}>Bắt đầu tập</Text>
+                                    <Text style={styles.startWorkoutText}>{t('exerciseLibrary.startWorkout')}</Text>
                                 </TouchableOpacity>
                             </View>
                         )}

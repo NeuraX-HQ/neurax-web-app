@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityInd
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { signUp } from "aws-amplify/auth";
+import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function SignUpScreen() {
     const router = useRouter();
+    const { t } = useAppLanguage();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -14,12 +16,12 @@ export default function SignUpScreen() {
 
     const handleSignUp = async () => {
         if (!email || !password || !confirmPassword) {
-            Alert.alert("Lỗi", "Vui lòng điền đầy đủ thông tin.");
+            Alert.alert(t('common.error'), t('signup.errorFill'));
             return;
         }
 
         if (password !== confirmPassword) {
-            Alert.alert("Lỗi", "Mật khẩu xác nhận không khớp.");
+            Alert.alert(t('common.error'), t('signup.errorMismatch'));
             return;
         }
 
@@ -43,13 +45,13 @@ export default function SignUpScreen() {
                     params: { email: email }
                 });
             } else if (isSignUpComplete) {
-                Alert.alert("Thành công", "Đăng ký thành công!");
+                Alert.alert(t('common.success'), t('signup.success'));
                 router.replace('/login');
             }
 
         } catch (error: any) {
             console.log("Sign up error:", error);
-            Alert.alert("Lỗi đăng ký", error.message || "Đã xảy ra lỗi khi đăng ký.");
+            Alert.alert(t('signup.errorTitle'), error.message || t('signup.errorFallback'));
         } finally {
             setLoading(false);
         }
@@ -59,12 +61,12 @@ export default function SignUpScreen() {
         <View style={styles.container}>
             <SafeAreaView style={styles.safeArea}>
 
-                <Text style={styles.title}>Đăng ký</Text>
-                <Text style={styles.subtitle}>Tạo tài khoản NutriTrack mới</Text>
+                <Text style={styles.title}>{t('signup.title')}</Text>
+                <Text style={styles.subtitle}>{t('signup.subtitle')}</Text>
 
                 <TextInput
                     style={styles.input}
-                    placeholder="Email"
+                    placeholder={t('signup.email')}
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
@@ -73,7 +75,7 @@ export default function SignUpScreen() {
 
                 <TextInput
                     style={styles.input}
-                    placeholder="Mật khẩu"
+                    placeholder={t('signup.password')}
                     secureTextEntry
                     value={password}
                     onChangeText={setPassword}
@@ -81,7 +83,7 @@ export default function SignUpScreen() {
 
                 <TextInput
                     style={styles.input}
-                    placeholder="Xác nhận Mật khẩu"
+                    placeholder={t('signup.confirmPassword')}
                     secureTextEntry
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -95,14 +97,14 @@ export default function SignUpScreen() {
                     {loading ? (
                         <ActivityIndicator color="white" />
                     ) : (
-                        <Text style={styles.buttonText}>Đăng ký</Text>
+                        <Text style={styles.buttonText}>{t('signup.button')}</Text>
                     )}
                 </TouchableOpacity>
 
                 <View style={styles.footerContainer}>
-                    <Text style={styles.footerText}>Đã có tài khoản? </Text>
+                    <Text style={styles.footerText}>{t('signup.hasAccount')} </Text>
                     <TouchableOpacity onPress={() => router.push('/login')}>
-                        <Text style={styles.footerLink}>Đăng nhập</Text>
+                        <Text style={styles.footerLink}>{t('signup.login')}</Text>
                     </TouchableOpacity>
                 </View>
 

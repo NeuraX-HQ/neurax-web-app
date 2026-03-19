@@ -2,15 +2,26 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Colors } from '../constants/colors';
+import { useAppLanguage } from '../i18n/LanguageProvider';
 
 interface CalorieGaugeProps {
     current: number;
     max: number;
     size?: number;
     strokeWidth?: number;
+    displayValue?: string | number;
+    label?: string;
 }
 
-export function CalorieGauge({ current, max, size = 120, strokeWidth = 10 }: CalorieGaugeProps) {
+export function CalorieGauge({
+    current,
+    max,
+    size = 120,
+    strokeWidth = 10,
+    displayValue,
+    label,
+}: CalorieGaugeProps) {
+    const { t } = useAppLanguage();
     const radius = (size - strokeWidth) / 2;
     const cx = size / 2;
     const cy = size / 2;
@@ -22,6 +33,9 @@ export function CalorieGauge({ current, max, size = 120, strokeWidth = 10 }: Cal
 
     const progress = Math.min(current / max, 1);
     const progressAngle = startAngle + totalArc * progress;
+    const valueText = String(displayValue ?? current);
+    const labelText = label ?? t('calorieGauge.label');
+    const isCompactValue = valueText.length >= 8;
 
     const polarToCartesian = (angle: number) => {
         const rad = ((angle - 90) * Math.PI) / 180;
@@ -71,8 +85,8 @@ export function CalorieGauge({ current, max, size = 120, strokeWidth = 10 }: Cal
             {/* Center content */}
             <View style={styles.center}>
                 <Text style={styles.fireEmoji}>🔥</Text>
-                <Text style={styles.value}>{current}</Text>
-                <Text style={styles.label}>CALORIES</Text>
+                <Text style={[styles.value, isCompactValue && styles.valueCompact]}>{valueText}</Text>
+                <Text style={styles.label}>{labelText}</Text>
             </View>
         </View>
     );
@@ -91,5 +105,6 @@ const styles = StyleSheet.create({
     },
     fireEmoji: { fontSize: 14, marginBottom: 1 },
     value: { fontSize: 22, fontWeight: '800', color: Colors.primary },
+    valueCompact: { fontSize: 18 },
     label: { fontSize: 7, color: '#999', letterSpacing: 1.5, fontWeight: '600' },
 });
