@@ -116,6 +116,55 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
         return dataUrl.split(',')[1] || null;
     }, []);
 
+    const [flashMode, setFlashMode] = useState<'on' | 'off'>('off');
+
+    const toggleFlash = () => {
+        setFlashMode(prev => prev === 'off' ? 'on' : 'off');
+    };
+
+    const handleGallery = async () => {
+        if (analyzing) return;
+        setAnalyzing(true);
+        onAnalyzing?.(true);
+
+        try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                quality: 0.6,
+                base64: true,
+                allowsEditing: true,
+            });
+            
+            if (result.canceled || !result.assets?.length) return;
+            
+            const asset = result.assets[0];
+            let base64Data = asset.base64 || null;
+            const imageUri = asset.uri;
+            
+            if (!base64Data && asset.uri) {
+                base64Data = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' as any });
+            }
+
+            if (!base64Data) throw new Error(t('camera.error.readData'));
+
+            const analysisResult = await analyzeFoodImage(base64Data);
+            if (analysisResult.success && analysisResult.data) {
+                onClose();
+                router.push({
+                    pathname: '/food-detail',
+                    params: { foodData: JSON.stringify(analysisResult.data), source: 'camera', image: imageUri || '' },
+                });
+            } else {
+                Alert.alert(t('common.error'), analysisResult.error || t('camera.error.analysisError'));
+            }
+        } catch (error) {
+            Alert.alert(t('camera.error.captureTitle'), error instanceof Error ? error.message : t('camera.error.captureFailed'));
+        } finally {
+            setAnalyzing(false);
+            onAnalyzing?.(false);
+        }
+    };
+
     const handleCapture = async () => {
         if (analyzing) return;
         setAnalyzing(true);
@@ -129,19 +178,19 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                 base64Data = captureWebFrame();
                 if (!base64Data) throw new Error(t('camera.error.captureWebcam'));
             } else {
-                onClose();
-                const result = await ImagePicker.launchCameraAsync({
-                    mediaTypes: ['images'],
+                if (!cameraRef.current) throw new Error(t('camera.error.captureFailed'));
+                
+                const photo = await cameraRef.current.takePictureAsync({
                     quality: 0.6,
                     base64: true,
-                    allowsEditing: false,
                 });
-                if (result.canceled || !result.assets?.length) return;
-                const asset = result.assets[0];
-                base64Data = asset.base64 || null;
-                imageUri = asset.uri;
-                if (!base64Data && asset.uri) {
-                    base64Data = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' as any });
+                
+                if (!photo) throw new Error(t('camera.error.captureFailed'));
+                base64Data = photo.base64 || null;
+                imageUri = photo.uri;
+
+                if (!base64Data && photo.uri) {
+                    base64Data = await FileSystem.readAsStringAsync(photo.uri, { encoding: 'base64' as any });
                 }
             }
 
@@ -220,6 +269,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                         ref={cameraRef}
                         style={StyleSheet.absoluteFill}
                         facing="back"
+                        flash={flashMode}
                         onCameraReady={() => setIsCameraReady(true)}
                         onMountError={() => Alert.alert(t('camera.error.title'), t('camera.error.initFailed'))}
                     />
@@ -309,7 +359,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                     {/* Shutter row */}
                     <View style={s.shutterRow}>
                         {/* Gallery */}
-                        <TouchableOpacity style={s.sideBtn} activeOpacity={0.75}>
+                        <TouchableOpacity style={s.sideBtn} onPress={handleGallery} activeOpacity={0.75}>
                             <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} />
                             <Ionicons name="images-outline" size={22} color="#FFF" style={{ zIndex: 1 }} />
                         </TouchableOpacity>
@@ -347,12 +397,12 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                         )}
 
                         {/* Flash/zoom */}
-                        <TouchableOpacity style={s.sideBtn} activeOpacity={0.75}>
+                        <TouchableOpacity style={s.sideBtn} onPress={toggleFlash} activeOpacity={0.75}>
                             <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} />
                             <Ionicons
-                                name={isBarcode ? 'add-circle-outline' : 'flash-outline'}
+                                name={flashMode === 'on' ? 'flash' : 'flash-outline'}
                                 size={22}
-                                color="#FFF"
+                                color={flashMode === 'on' ? EMERALD : '#FFF'}
                                 style={{ zIndex: 1 }}
                             />
                         </TouchableOpacity>
