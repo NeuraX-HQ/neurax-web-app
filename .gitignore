@@ -58,3 +58,4 @@ infrastructure/
 # amplify
 .amplify
 amplifyconfiguration*
+amplify.yml
