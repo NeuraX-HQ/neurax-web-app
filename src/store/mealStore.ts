@@ -18,8 +18,18 @@ export interface Meal {
     image?: string; // emoji or base64
 }
 
+export interface Activity {
+    id: string;
+    name: string;
+    caloriesBurned: number;
+    durationMinutes: number;
+    time: string;
+    date: string;
+}
+
 interface MealState {
     meals: Meal[];
+    activities: Activity[];
     isLoading: boolean;
     error: string | null;
 
@@ -37,15 +47,19 @@ interface MealState {
     setSelectedMealType: (type: MealType | null) => void;
     setAddMenuOpen: (open: boolean) => void;
     addMeal: (meal: Omit<Meal, 'id' | 'time' | 'date'>) => Promise<void>;
+    addActivity: (activity: Omit<Activity, 'id' | 'time' | 'date'>) => Promise<void>;
     removeMeal: (id: string) => Promise<void>;
     updateMeal: (id: string, updates: Partial<Meal>) => Promise<void>;
     getMealsByDate: (date: string) => Meal[];
+    getActivitiesByDate: (date: string) => Activity[];
     getTodayMeals: () => Meal[];
+    getTodayActivities: () => Activity[];
     getTodayStats: () => {
         totalCalories: number;
         totalProtein: number;
         totalCarbs: number;
         totalFat: number;
+        totalBurnedCalories: number;
     };
     loadMeals: () => Promise<void>;
     clearAllMeals: () => Promise<void>;
@@ -81,6 +95,7 @@ const generateId = (): string => {
 
 export const useMealStore = create<MealState>((set, get) => ({
     meals: [],
+    activities: [],
     isLoading: false,
     error: null,
     selectedDateStr: getTodayDate(),
@@ -115,6 +130,35 @@ export const useMealStore = create<MealState>((set, get) => ({
             console.error('Error adding meal:', error);
             set({
                 error: error instanceof Error ? error.message : 'Failed to add meal',
+                isLoading: false
+            });
+        }
+    },
+
+    addActivity: async (activityData) => {
+        try {
+            set({ isLoading: true, error: null });
+
+            const newActivity: Activity = {
+                ...activityData,
+                id: generateId(),
+                time: getCurrentTime(),
+                date: get().selectedDateStr,
+            };
+
+            const updatedActivities = [...get().activities, newActivity];
+            set({ activities: updatedActivities });
+
+            // Using the same storage key and parsing logic might be complex if we are mixed.
+            // But let's save meals and activities in separate keys to be clean.
+            const ACTIVITY_STORAGE_KEY = '@nutritrack_activities';
+            await AsyncStorage.setItem(ACTIVITY_STORAGE_KEY, JSON.stringify(updatedActivities));
+
+            set({ isLoading: false });
+        } catch (error) {
+            console.error('Error adding activity:', error);
+            set({
+                error: error instanceof Error ? error.message : 'Failed to add activity',
                 isLoading: false
             });
         }
@@ -164,15 +208,25 @@ export const useMealStore = create<MealState>((set, get) => ({
         return get().meals.filter(meal => meal.date === date);
     },
 
+    getActivitiesByDate: (date) => {
+        return get().activities.filter(activity => activity.date === date);
+    },
+
     getTodayMeals: () => {
         const today = getTodayDate();
         return get().meals.filter(meal => meal.date === today);
     },
 
+    getTodayActivities: () => {
+        const today = getTodayDate();
+        return get().activities.filter(activity => activity.date === today);
+    },
+
     getTodayStats: () => {
         const todayMeals = get().getTodayMeals();
+        const todayActivities = get().getTodayActivities();
 
-        return todayMeals.reduce(
+        const mealStats = todayMeals.reduce(
             (acc, meal) => ({
                 totalCalories: acc.totalCalories + meal.calories,
                 totalProtein: acc.totalProtein + meal.protein,
@@ -181,6 +235,13 @@ export const useMealStore = create<MealState>((set, get) => ({
             }),
             { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 }
         );
+
+        const totalBurnedCalories = todayActivities.reduce((sum, act) => sum + act.caloriesBurned, 0);
+
+        return {
+            ...mealStats,
+            totalBurnedCalories,
+        };
     },
 
     loadMeals: async () => {
@@ -188,12 +249,20 @@ export const useMealStore = create<MealState>((set, get) => ({
             set({ isLoading: true, error: null });
 
             const storedMeals = await AsyncStorage.getItem(STORAGE_KEY);
-
             if (storedMeals) {
                 const meals = JSON.parse(storedMeals);
                 set({ meals });
             } else {
                 set({ meals: [] });
+            }
+
+            const ACTIVITY_STORAGE_KEY = '@nutritrack_activities';
+            const storedActivities = await AsyncStorage.getItem(ACTIVITY_STORAGE_KEY);
+            if (storedActivities) {
+                const activities = JSON.parse(storedActivities);
+                set({ activities });
+            } else {
+                set({ activities: [] });
             }
 
             set({ isLoading: false });
@@ -212,7 +281,8 @@ export const useMealStore = create<MealState>((set, get) => ({
             set({ isLoading: true, error: null });
 
             await AsyncStorage.removeItem(STORAGE_KEY);
-            set({ meals: [] });
+            await AsyncStorage.removeItem('@nutritrack_activities');
+            set({ meals: [], activities: [] });
 
             set({ isLoading: false });
         } catch (error) {

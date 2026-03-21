@@ -70,7 +70,7 @@ export default function HomeScreen() {
 
     // Meal store
     const {
-        meals, loadMeals, getMealsByDate, removeMeal,
+        meals, activities, loadMeals, getMealsByDate, removeMeal,
         selectedDateStr: storeSelectedDateStr,
         setSelectedDateStr,
         setSelectedMealType,
@@ -82,17 +82,29 @@ export default function HomeScreen() {
     const usedMealDates = useMemo(() => new Set(meals.map((meal) => meal.date)), [meals]);
     const currentStreak = useMemo(() => getCurrentStreak(usedMealDates, todayIso), [usedMealDates, todayIso]);
 
-    const { caloriesByDate, earliestLogDate } = useMemo(() => {
-        const map: Record<string, number> = {};
+    const { caloriesByDate, burnedByDate, minutesByDate, earliestLogDate } = useMemo(() => {
+        const eatenMap: Record<string, number> = {};
+        const burnedMap: Record<string, number> = {};
+        const minsMap: Record<string, number> = {};
         let minDate = todayIso;
+        
         for (const meal of meals) {
-            map[meal.date] = (map[meal.date] ?? 0) + meal.calories;
+            eatenMap[meal.date] = (eatenMap[meal.date] ?? 0) + meal.calories;
             if (meal.date < minDate) {
                 minDate = meal.date;
             }
         }
-        return { caloriesByDate: map, earliestLogDate: minDate };
-    }, [meals, todayIso]);
+        
+        for (const act of activities || []) {
+            burnedMap[act.date] = (burnedMap[act.date] ?? 0) + act.caloriesBurned;
+            minsMap[act.date] = (minsMap[act.date] ?? 0) + act.durationMinutes;
+            if (act.date < minDate) {
+                minDate = act.date;
+            }
+        }
+        
+        return { caloriesByDate: eatenMap, burnedByDate: burnedMap, minutesByDate: minsMap, earliestLogDate: minDate };
+    }, [meals, activities, todayIso]);
 
     const dateStrip = useMemo(() => {
         const today = new Date();
@@ -205,14 +217,18 @@ export default function HomeScreen() {
         let leftForSelected = dailyTarget;
 
         while (cursor <= selectedDateStr) {
-            const effectiveTarget = Math.max(dailyTarget - carryOver, 0);
             const eaten = Math.round(caloriesByDate[cursor] ?? 0);
-            const left = Math.max(effectiveTarget - eaten, 0);
-            const nextCarryOver = Math.max(eaten - effectiveTarget, 0);
+            const burned = Math.round(burnedByDate[cursor] ?? 0);
+            
+            const totalAllowance = dailyTarget + burned;
+            const totalEatenIncludingDebt = eaten + carryOver;
+
+            const left = Math.max(totalAllowance - totalEatenIncludingDebt, 0);
+            const nextCarryOver = Math.max(totalEatenIncludingDebt - totalAllowance, 0);
 
             if (cursor === selectedDateStr) {
-                effectiveTargetForSelected = effectiveTarget;
-                eatenForSelected = eaten;
+                effectiveTargetForSelected = totalAllowance;
+                eatenForSelected = totalEatenIncludingDebt;
                 leftForSelected = left;
             }
 
@@ -227,7 +243,7 @@ export default function HomeScreen() {
             left: leftForSelected,
             carryOverToNextDay: carryOver,
         };
-    }, [caloriesByDate, dailyCalorieTarget, selectedDateStr]);
+    }, [caloriesByDate, burnedByDate, dailyCalorieTarget, selectedDateStr]);
 
     const maxCalories = Math.max(1, calorieWindow.effectiveTarget);
     const caloriesEaten = Math.round(calorieWindow.eaten);
@@ -274,17 +290,10 @@ export default function HomeScreen() {
     });
     const waterMax = 2500;
     const waterCurrent = waterByDate[selectedDateStr] ?? 0;
-    const [exerciseByDate] = useState<Record<string, number>>(() => {
-        const seeded: Record<string, number> = {};
-        for (let i = -6; i <= 0; i++) {
-            const d = new Date();
-            d.setDate(d.getDate() + i);
-            const iso = toIsoDate(d);
-            seeded[iso] = i === 0 ? 0 : Math.max(0, 25 + i * 3);
-        }
-        return seeded;
-    });
-    const exerciseMinutes = exerciseByDate[selectedDateStr] ?? 0;
+    
+    // Use actual calories burned from workout activities (goal: 400 kcal)
+    const exerciseKcal = Math.round(burnedByDate[selectedDateStr] ?? 0);
+    const exerciseKcalTarget = 400;
 
     // Load meals on mount
     useEffect(() => {
@@ -475,6 +484,7 @@ export default function HomeScreen() {
         <SafeAreaView style={styles.container}>
             <ScrollView
                 showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 120 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
                 <View style={{ flex: 1 }}>
@@ -736,10 +746,10 @@ export default function HomeScreen() {
                         </View>
                         <View style={styles.metricCardBody}>
                             <Text style={styles.metricCardTitle} numberOfLines={1} adjustsFontSizeToFit>{t('home.exercise')}</Text>
-                            <Text style={styles.metricCardSubtitle}>{exerciseMinutes}/45 {t('home.min')}</Text>
+                            <Text style={styles.metricCardSubtitle}>{exerciseKcal}/{exerciseKcalTarget} kcal</Text>
                         </View>
                         <View style={styles.metricBarBg}>
-                            <View style={[styles.metricBar, { width: `${Math.min((exerciseMinutes / 45) * 100, 100)}%`, backgroundColor: Colors.streak }]} />
+                            <View style={[styles.metricBar, { width: `${Math.min((exerciseKcal / exerciseKcalTarget) * 100, 100)}%`, backgroundColor: Colors.streak }]} />
                         </View>
                     </TouchableOpacity>
                 </View>

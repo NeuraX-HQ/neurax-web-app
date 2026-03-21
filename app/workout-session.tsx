@@ -8,13 +8,18 @@ import { Colors, Shadows } from '../src/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
+import { useMealStore } from '../src/store/mealStore';
+
 interface Exercise {
     id: string;
     name: string;
     nameVi: string;
     icon: string;
-    sets: number;
-    reps: number;
+    type: 'reps' | 'duration';
+    metValue: number;
+    sets?: number;
+    reps?: number;
+    durationMinutes?: number;
     completedSets: number[];
 }
 
@@ -22,37 +27,45 @@ export default function WorkoutSessionScreen() {
     const router = useRouter();
     const { t, language } = useAppLanguage();
     const params = useLocalSearchParams();
+    const { addActivity } = useMealStore();
     
-    // Mock data - in real app, this would come from params
-    const [exercises, setExercises] = useState<Exercise[]>([
-        {
-            id: '1',
-            name: 'Push-ups',
-            nameVi: 'Hít đất',
-            icon: '↔️',
-            sets: 3,
-            reps: 12,
-            completedSets: [],
-        },
-        {
-            id: '2',
-            name: 'Squats',
-            nameVi: 'Squat',
-            icon: '⬆️',
-            sets: 4,
-            reps: 15,
-            completedSets: [],
-        },
-        {
-            id: '3',
-            name: 'Plank',
-            nameVi: 'Plank',
-            icon: '—',
-            sets: 3,
-            reps: 60,
-            completedSets: [],
-        },
-    ]);
+    // Parse from params
+    const [exercises, setExercises] = useState<Exercise[]>(() => {
+        if (params.workoutList && typeof params.workoutList === 'string') {
+            try {
+                const parsed = JSON.parse(params.workoutList);
+                return parsed.map((ex: any) => ({
+                    ...ex,
+                    completedSets: [],
+                }));
+            } catch (e) {
+                console.error('Failed to parse workout list', e);
+            }
+        }
+        return [
+            {
+                id: '1',
+                name: 'Push-ups',
+                nameVi: 'Hít đất',
+                icon: '↔️',
+                type: 'reps',
+                metValue: 3.8,
+                sets: 3,
+                reps: 12,
+                completedSets: [],
+            },
+            {
+                id: '2',
+                name: 'Plank',
+                nameVi: 'Plank',
+                icon: '—',
+                type: 'duration',
+                metValue: 3.0,
+                durationMinutes: 2,
+                completedSets: [],
+            },
+        ];
+    });
 
     const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
     const [workoutMode, setWorkoutMode] = useState<'circuit' | 'traditional'>('circuit'); // New: workout mode
@@ -66,15 +79,41 @@ export default function WorkoutSessionScreen() {
     const [workoutStartTime] = useState(Date.now());
     const [showCompleteModal, setShowCompleteModal] = useState(false);
 
+    // Duration timer state
+    const [durationTimer, setDurationTimer] = useState(() => {
+        if (exercises[0]?.type === 'duration') {
+            return (exercises[0].durationMinutes || 0) * 60;
+        }
+        return 0;
+    });
+    const [isDurationTimerRunning, setIsDurationTimerRunning] = useState(false);
+
+    // Effect for duration timer
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isDurationTimerRunning && durationTimer > 0) {
+            interval = setInterval(() => {
+                setDurationTimer(prev => {
+                    if (prev <= 1) {
+                        setIsDurationTimerRunning(false);
+                        completeSet(currentExerciseIndex, 1);
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [isDurationTimerRunning, durationTimer]);
+
     const currentExercise = exercises[currentExerciseIndex];
     const totalExercises = exercises.length;
     
-    // Calculate total reps progress
-    const totalReps = exercises.reduce((sum, ex) => sum + (ex.sets * ex.reps), 0);
-    const completedReps = exercises.reduce((sum, ex) => {
-        return sum + (ex.completedSets.length * ex.reps);
-    }, 0);
-    const progressPercentage = Math.round((completedReps / totalReps) * 100);
+    const totalSets = exercises.reduce((sum, ex) => sum + (ex.type === 'reps' ? (ex.sets || 1) : 1), 0);
+    const completedSets = exercises.reduce((sum, ex) => sum + ex.completedSets.length, 0);
+    const progressPercentage = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
+    
+    const [totalBurnedKcal, setTotalBurnedKcal] = useState(0);
 
     // Timer effect
     useEffect(() => {
@@ -101,22 +140,46 @@ export default function WorkoutSessionScreen() {
             setExercises(newExercises);
 
             // Check if all exercises are complete
-            const allComplete = newExercises.every(ex => ex.completedSets.length === ex.sets);
+            const allComplete = newExercises.every(ex => {
+                if (ex.type === 'reps') return ex.completedSets.length === (ex.sets || 1);
+                return ex.completedSets.length > 0;
+            });
+
             if (allComplete) {
-                setTimeout(() => {
-                    setShowCompleteModal(true);
-                }, 500);
+                calculateAndShowCompleteModal(newExercises);
             } else {
-                // Start break after completing a set
+                // If this specific exercise is fully complete, don't start break if we just do circuit?
+                // For simplicity, just start break as usual
                 startBreak();
             }
         }
+    };
+
+    const calculateAndShowCompleteModal = (data: Exercise[]) => {
+        const totalCaloriesBurned = Math.round(data.reduce((sum, ex) => {
+            if (ex.completedSets.length === 0) return sum;
+            const weight = 65; // standard avg weight
+            let timeInHours = 0;
+            if (ex.type === 'reps') {
+                timeInHours = (ex.completedSets.length * 1) / 60; // assume 1 min per set
+            } else {
+                timeInHours = (ex.durationMinutes || 0) / 60;
+            }
+            return sum + (ex.metValue * weight * timeInHours);
+        }, 0));
+        setTotalBurnedKcal(totalCaloriesBurned);
+        setTimeout(() => {
+            setShowCompleteModal(true);
+        }, 500);
     };
 
     const switchExercise = (index: number) => {
         setCurrentExerciseIndex(index);
         setIsBreak(false);
         setIsTimerRunning(false);
+        setIsDurationTimerRunning(false);
+        const ex = exercises[index];
+        setDurationTimer(ex.type === 'duration' ? (ex.durationMinutes || 0) * 60 : 0);
     };
 
     const startBreak = () => {
@@ -142,7 +205,20 @@ export default function WorkoutSessionScreen() {
         return formatTime(elapsed);
     };
 
-    const finishWorkout = () => {
+    const finishWorkout = async () => {
+        if (totalBurnedKcal > 0) {
+            const totalLoggedDuration = exercises.reduce((sum, ex) => {
+                if (ex.completedSets.length === 0) return sum;
+                if (ex.type === 'reps') return sum + ex.completedSets.length;
+                return sum + (ex.durationMinutes || 0);
+            }, 0);
+
+            await addActivity({
+                name: language === 'vi' ? 'Buổi tập' : 'Workout Session',
+                caloriesBurned: totalBurnedKcal,
+                durationMinutes: Math.max(1, totalLoggedDuration),
+            });
+        }
         setShowCompleteModal(false);
         router.back();
     };
@@ -158,7 +234,7 @@ export default function WorkoutSessionScreen() {
                     <Text style={styles.headerTitle}>{t('workout.title')}</Text>
                     <TouchableOpacity onPress={() => setShowModeSettings(true)}>
                         <Text style={styles.headerSubtitle}>
-                            {workoutMode === 'circuit' ? t('workout.mode.circuit') : t('workout.mode.traditional')} • {completedReps}/{totalReps} {t('workout.repsShort')}
+                            {workoutMode === 'circuit' ? t('workout.mode.circuit') : t('workout.mode.traditional')} • {completedSets}/{totalSets} Hiệp
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -210,39 +286,93 @@ export default function WorkoutSessionScreen() {
                             <View style={styles.exerciseHeaderInfo}>
                                 <Text style={styles.exerciseNameLarge}>{language === 'vi' ? currentExercise.nameVi : currentExercise.name}</Text>
                                 <Text style={styles.exerciseDetails}>
-                                    {t('workout.setReps', { sets: currentExercise.sets, reps: currentExercise.reps })}
+                                    {currentExercise.type === 'reps' 
+                                        ? t('workout.setReps', { sets: currentExercise.sets || 0, reps: currentExercise.reps || 0 })
+                                        : `${currentExercise.durationMinutes || 0} phút`}
                                 </Text>
                             </View>
                         </View>
 
-                        {/* Sets Grid */}
-                        <View style={styles.setsGrid}>
-                            {Array.from({ length: currentExercise.sets }).map((_, index) => {
-                                const setNumber = index + 1;
-                                const isCompleted = currentExercise.completedSets.includes(setNumber);
-                                return (
-                                    <TouchableOpacity
-                                        key={setNumber}
-                                        style={[
-                                            styles.setButton,
-                                            isCompleted && styles.setButtonCompleted
-                                        ]}
-                                        onPress={() => completeSet(currentExerciseIndex, setNumber)}
-                                        disabled={isCompleted}
-                                    >
-                                        {isCompleted ? (
-                                            <Ionicons name="checkmark" size={24} color="#FFFFFF" />
+                        {/* Sets Grid OR Duration completion */}
+                        {currentExercise.type === 'reps' ? (
+                            <>
+                                <View style={styles.setsGrid}>
+                                    {Array.from({ length: currentExercise.sets || 1 }).map((_, index) => {
+                                        const setNumber = index + 1;
+                                        const isCompleted = currentExercise.completedSets.includes(setNumber);
+                                        return (
+                                            <TouchableOpacity
+                                                key={setNumber}
+                                                style={[
+                                                    styles.setButton,
+                                                    isCompleted && styles.setButtonCompleted
+                                                ]}
+                                                onPress={() => completeSet(currentExerciseIndex, setNumber)}
+                                                disabled={isCompleted}
+                                            >
+                                                {isCompleted ? (
+                                                    <Ionicons name="checkmark" size={24} color="#FFFFFF" />
+                                                ) : (
+                                                    <Text style={styles.setButtonText}>{setNumber}</Text>
+                                                )}
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
+                                <Text style={styles.setInstruction}>
+                                    {t('workout.tapSetInstruction')}
+                                </Text>
+                            </>
+                        ) : (
+                            <View style={styles.durationContainer}>
+                                <Text style={styles.durationTimerDisplay}>
+                                    {isDurationTimerRunning || durationTimer > 0 
+                                        ? formatTime(durationTimer) 
+                                        : `${currentExercise.durationMinutes || 0}:00`}
+                                </Text>
+                                
+                                {!currentExercise.completedSets.includes(1) && (
+                                    <View style={styles.durationActionRow}>
+                                        {!isDurationTimerRunning ? (
+                                            <TouchableOpacity 
+                                                style={styles.durationPlayBtn} 
+                                                onPress={() => {
+                                                    if (durationTimer === 0) setDurationTimer((currentExercise.durationMinutes || 0) * 60);
+                                                    setIsDurationTimerRunning(true);
+                                                }}
+                                            >
+                                                <Ionicons name="play" size={32} color="#FFF" />
+                                            </TouchableOpacity>
                                         ) : (
-                                            <Text style={styles.setButtonText}>{setNumber}</Text>
+                                            <TouchableOpacity 
+                                                style={styles.durationPauseBtn} 
+                                                onPress={() => setIsDurationTimerRunning(false)}
+                                            >
+                                                <Ionicons name="pause" size={32} color="#FFF" />
+                                            </TouchableOpacity>
                                         )}
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
+                                    </View>
+                                )}
 
-                        <Text style={styles.setInstruction}>
-                            {t('workout.tapSetInstruction')}
-                        </Text>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.durationCompleteButton,
+                                        currentExercise.completedSets.includes(1) && styles.durationCompleteButtonDone
+                                    ]}
+                                    onPress={() => {
+                                        setIsDurationTimerRunning(false);
+                                        completeSet(currentExerciseIndex, 1);
+                                    }}
+                                    disabled={currentExercise.completedSets.includes(1)}
+                                >
+                                    <Text style={styles.durationCompleteButtonText}>
+                                        {currentExercise.completedSets.includes(1) 
+                                            ? (language === 'vi' ? 'Đã hoàn thành' : 'Completed') 
+                                            : (language === 'vi' ? 'Đánh dấu hoàn thành' : 'Mark as Completed')}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
                     </View>
                 )}
 
@@ -251,12 +381,16 @@ export default function WorkoutSessionScreen() {
                     <Text style={styles.sectionTitle}>{t('workout.allExercises')}</Text>
                     {exercises.map((exercise, index) => {
                         const isActive = index === currentExerciseIndex;
-                        const isCompleted = exercise.completedSets.length === exercise.sets;
-                        const progress = (exercise.completedSets.length / exercise.sets) * 100;
+                        const isCompleted = exercise.type === 'reps' 
+                            ? exercise.completedSets.length === (exercise.sets || 1)
+                            : exercise.completedSets.length > 0;
+                        const progress = exercise.type === 'reps'
+                            ? (exercise.completedSets.length / (exercise.sets || 1)) * 100
+                            : (exercise.completedSets.length > 0 ? 100 : 0);
 
                         return (
                             <TouchableOpacity
-                                key={exercise.id}
+                                key={`${exercise.id}-${index}`}
                                 style={[
                                     styles.exerciseItem,
                                     isActive && styles.exerciseItemActive,
@@ -284,18 +418,18 @@ export default function WorkoutSessionScreen() {
                                             {language === 'vi' ? exercise.nameVi : exercise.name}
                                         </Text>
                                         <Text style={styles.exerciseItemSets}>
-                                            {t('workout.progressSetReps', {
+                                            {exercise.type === 'reps' ? t('workout.progressSetReps', {
                                                 completed: exercise.completedSets.length,
-                                                sets: exercise.sets,
-                                                reps: exercise.reps,
-                                            })}
+                                                sets: exercise.sets || 0,
+                                                reps: exercise.reps || 0,
+                                            }) : `${exercise.durationMinutes || 0} phút`}
                                         </Text>
                                     </View>
                                 </View>
                                 <View style={styles.exerciseItemProgress}>
                                     {isActive && !isCompleted && (
                                         <View style={styles.activeIndicator}>
-                                            <Ionicons name="play" size={16} color="#FFFFFF" />
+                                            <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
                                         </View>
                                     )}
                                     {!isActive && !isCompleted && (
@@ -444,7 +578,7 @@ export default function WorkoutSessionScreen() {
                         <Text style={styles.completeEmoji}>🎉</Text>
                         <Text style={styles.completeTitle}>{t('workout.completeTitle')}</Text>
                         <Text style={styles.completeMessage}>
-                            {t('workout.completeMessage', { totalReps })}
+                            Đã đốt cháy {totalBurnedKcal} kcal
                         </Text>
                         <Text style={styles.completeTime}>
                             {t('workout.completeTime', { time: getTotalWorkoutTime() })}
@@ -699,6 +833,47 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: Colors.primary,
     },
+    durationContainer: {
+        alignItems: 'center',
+        paddingVertical: 10,
+    },
+    durationTimerDisplay: {
+        fontSize: 48,
+        fontWeight: '800',
+        color: Colors.primary,
+        marginBottom: 16,
+    },
+    durationActionRow: {
+        flexDirection: 'row',
+        gap: 20,
+        marginBottom: 20,
+    },
+    durationPlayBtn: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: Colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    durationPauseBtn: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: Colors.danger,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: Colors.danger,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
+    },
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -841,5 +1016,20 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
         textAlign: 'center',
+    },
+    durationCompleteButton: {
+        marginTop: 16,
+        backgroundColor: Colors.primary,
+        paddingVertical: 14,
+        borderRadius: 16,
+        alignItems: 'center',
+    },
+    durationCompleteButtonDone: {
+        backgroundColor: Colors.success,
+    },
+    durationCompleteButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
     },
 });

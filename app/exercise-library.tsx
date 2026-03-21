@@ -16,77 +16,166 @@ interface Exercise {
     category: string;
     description: string;
     instructions: string;
-    sets: number;
-    reps: number;
+    type: 'reps' | 'duration';
+    metValue: number; // Metabolic Equivalent of Task
+    sets?: number;
+    reps?: number;
+    durationMinutes?: number;
     videoUrl?: string;
 }
 
 const exercises: Exercise[] = [
+    // --- NÀI TẬP NGOÀI TRỜI (DURATION) ---
     {
         id: '1',
+        name: 'Running',
+        nameVi: 'Chạy bộ',
+        icon: '🏃‍♂️',
+        category: 'CARDIO & NGOÀI TRỜI',
+        description: 'Đốt calo mạnh mẽ và tăng cường tim mạch',
+        instructions: 'Chạy với tốc độ ổn định, giữ nhịp thở đều đặn và đáp đất bằng giữa bàn chân để giảm chấn thương.',
+        type: 'duration',
+        metValue: 9.8,
+        durationMinutes: 30,
+    },
+    {
+        id: '2',
+        name: 'Walking',
+        nameVi: 'Đi bộ',
+        icon: '🚶‍♂️',
+        category: 'CARDIO & NGOÀI TRỜI',
+        description: 'Vận động nhẹ nhàng, dễ bắt đầu cho mọi người',
+        instructions: 'Đi thành những bước dài vừa phải, đánh tay nhẹ nhàng và giữ thẳng lưng.',
+        type: 'duration',
+        metValue: 3.8,
+        durationMinutes: 45,
+    },
+    {
+        id: '3',
+        name: 'Cycling',
+        nameVi: 'Đạp xe',
+        icon: '🚴‍♂️',
+        category: 'CARDIO & NGOÀI TRỜI',
+        description: 'Tốt cho khớp gối và tim mạch',
+        instructions: 'Đạp với nhịp độ khoảng 60-80 vòng/phút. Điều chỉnh yên xe phù hợp với chiều dài chân.',
+        type: 'duration',
+        metValue: 7.5,
+        durationMinutes: 45,
+    },
+    {
+        id: '4',
+        name: 'Swimming',
+        nameVi: 'Bơi lội',
+        icon: '🏊‍♂️',
+        category: 'CARDIO & NGOÀI TRỜI',
+        description: 'Vận động toàn thân không gây áp lực lên khớp',
+        instructions: 'Bơi sải hoặc bơi nghiêng, chú ý nhịp thở và giữ cơ thể nổi đều.',
+        type: 'duration',
+        metValue: 8.0,
+        durationMinutes: 30,
+    },
+    {
+        id: '5',
+        name: 'Skipping Rope',
+        nameVi: 'Nhảy dây',
+        icon: '➰',
+        category: 'CARDIO & NGOÀI TRỜI',
+        description: 'Đốt calo cực nhanh và tăng sự linh hoạt',
+        instructions: 'Nhảy bằng mũi chân, chỉ cao đủ để qua dây. Quất dây bằng cổ tay chứ không phải cả cánh tay.',
+        type: 'duration',
+        metValue: 11.0,
+        durationMinutes: 15,
+    },
+    {
+        id: '6',
+        name: 'Badminton',
+        nameVi: 'Cầu lông',
+        icon: '🏸',
+        category: 'THỂ THAO',
+        description: 'Tăng phản xạ và sự nhanh nhẹn',
+        instructions: 'Đánh đơn hoặc đôi, tập trung vào bộ pháp di chuyển và sức bật.',
+        type: 'duration',
+        metValue: 5.5,
+        durationMinutes: 60,
+    },
+
+    // --- BÀI TẬP TẠI NHÀ (REPS & DURATION) ---
+    {
+        id: '7',
         name: 'Push-ups',
         nameVi: 'Hít đất',
         icon: '↔️',
         category: 'NGỰC & BẮP TAY SAU',
         description: 'Bài tập cơ bản cho ngực, vai và tay sau',
-        instructions: 'Bắt đầu ở tư thế plank cao, tay rộng hơn vai một chút. Giữ cơ thể thành một đường thẳng từ đầu đến gót chân. Hạ thấp người cho đến khi ngực gần chạm sàn, sau đó đẩy mạnh trở lại vị trí bắt đầu.',
+        instructions: 'Bắt đầu ở tư thế plank cao. Thân người là một đường thẳng. Hạ thấp người cho đến khi ngực gần chạm sàn, sau đó đẩy trở lại.',
+        type: 'reps',
+        metValue: 3.8,
         sets: 3,
-        reps: 12,
-    },
-    {
-        id: '2',
-        name: 'Squats',
-        nameVi: 'Squat',
-        icon: '⬆️',
-        category: 'CHÂN & MÔng',
-        description: 'Bài tập cơ bản cho chân và mông',
-        instructions: 'Đứng thẳng, chân rộng bằng vai. Hạ người xuống như ngồi xuống ghế, giữ lưng thẳng và đầu gối không vượt quá mũi chân. Đẩy mạnh trở lại vị trí đứng.',
-        sets: 4,
         reps: 15,
     },
     {
-        id: '3',
-        name: 'Lunges',
-        nameVi: 'Lunge',
-        icon: '⊕',
-        category: 'CHÂN & MÔng',
-        description: 'Bài tập cho chân và cân bằng',
-        instructions: 'Bước một chân ra phía trước, hạ người xuống cho đến khi cả hai đầu gối tạo góc 90 độ. Đẩy trở lại vị trí ban đầu và đổi chân.',
+        id: '8',
+        name: 'Squats',
+        nameVi: 'Squat',
+        icon: '⬆️',
+        category: 'CHÂN & MÔNG',
+        description: 'Bài tập cơ bản cho chân và mông',
+        instructions: 'Đứng thẳng, chân rộng bằng vai. Hạ người xuống như ngồi xuống ghế, giữ lưng thẳng và đầu gối không vượt quá mũi chân.',
+        type: 'reps',
+        metValue: 5.0,
+        sets: 4,
+        reps: 20,
+    },
+    {
+        id: '9',
+        name: 'Pull-ups',
+        nameVi: 'Kéo xà',
+        icon: '⬆',
+        category: 'LƯNG & TAY TRƯỚC',
+        description: 'Bài tập cho lưng và tay trước',
+        instructions: 'Treo người trên xà đơn, tay rộng hơn vai. Kéo người lên cho đến khi cằm vượt qua xà. Hạ người xuống chậm rãi.',
+        type: 'reps',
+        metValue: 3.8,
+        sets: 3,
+        reps: 8,
+    },
+    {
+        id: '10',
+        name: 'Crunches',
+        nameVi: 'Gập bụng',
+        icon: '〽️',
+        category: 'CORE & BỤNG',
+        description: 'Làm săn chắc cơ bụng',
+        instructions: 'Nằm ngửa, gập đầu gối. Đặt tay sau đầu, nâng vai rời khỏi sàn và siết chặt cơ bụng. Không dùng tay kéo đầu.',
+        type: 'reps',
+        metValue: 2.8,
+        sets: 3,
+        reps: 20,
+    },
+    {
+        id: '11',
+        name: 'Burpees',
+        nameVi: 'Nhảy ếch',
+        icon: '⚡',
+        category: 'TOÀN THÂN',
+        description: 'Kết hợp squat, hít đất và nhảy, đốt calo cực đỉnh',
+        instructions: 'Squat xuống, hai tay chạm đất. Bật chân ra sau thành tư thế hít đất. Làm 1 cái hít đất, bật chân lên lại và nhảy cao lên trời.',
+        type: 'reps',
+        metValue: 8.0,
         sets: 3,
         reps: 10,
     },
     {
-        id: '4',
+        id: '12',
         name: 'Plank',
         nameVi: 'Plank',
         icon: '—',
         category: 'CORE & BỤNG',
-        description: 'Bài tập tăng cường core',
-        instructions: 'Nằm sấp, nâng người lên bằng cẳng tay và mũi chân. Giữ cơ thể thẳng như một đường thẳng, không để hông sụp xuống hay nâng cao.',
-        sets: 3,
-        reps: 60, // seconds
-    },
-    {
-        id: '5',
-        name: 'Deadlifts',
-        nameVi: 'Deadlift',
-        icon: '≡',
-        category: 'LƯNG & CHÂN',
-        description: 'Bài tập toàn thân với trọng lượng',
-        instructions: 'Đứng với chân rộng bằng vai, cầm tạ ở phía trước. Cúi người về phía trước từ hông, giữ lưng thẳng. Đẩy hông về phía trước để trở lại vị trí đứng.',
-        sets: 4,
-        reps: 8,
-    },
-    {
-        id: '6',
-        name: 'Pull-ups',
-        nameVi: 'Kéo xà',
-        icon: '⬆',
-        category: 'LƯNG & TAY',
-        description: 'Bài tập cho lưng và tay trước',
-        instructions: 'Treo người trên xà đơn, tay rộng hơn vai. Kéo người lên cho đến khi cằm vượt qua xà. Hạ người xuống một cách kiểm soát.',
-        sets: 3,
-        reps: 8,
+        description: 'Bài tập tăng cường sức bền core',
+        instructions: 'Nằm sấp, nâng người lên bằng cẳng tay và mũi chân. Giữ cơ thể thẳng như một đường thẳng, siết chặt bụng.',
+        type: 'duration',
+        metValue: 3.8,
+        durationMinutes: 1, // 1 Minute per set usually, but here just total duration
     },
 ];
 
@@ -99,17 +188,19 @@ export default function ExerciseLibraryScreen() {
     const [workoutList, setWorkoutList] = useState<Exercise[]>([]);
     const [sets, setSets] = useState(3);
     const [reps, setReps] = useState(12);
+    const [durationMinutes, setDurationMinutes] = useState(30);
 
     const openExerciseDetail = (exercise: Exercise) => {
         setSelectedExercise(exercise);
-        setSets(exercise.sets);
-        setReps(exercise.reps);
+        setSets(exercise.sets || 3);
+        setReps(exercise.reps || 12);
+        setDurationMinutes(exercise.durationMinutes || 30);
         setShowDetail(true);
     };
 
     const addToWorkout = () => {
         if (selectedExercise) {
-            setWorkoutList([...workoutList, { ...selectedExercise, sets, reps }]);
+            setWorkoutList([...workoutList, { ...selectedExercise, sets, reps, durationMinutes }]);
             setShowDetail(false);
         }
     };
@@ -121,7 +212,10 @@ export default function ExerciseLibraryScreen() {
     const startWorkout = () => {
         // Navigate to workout session screen
         setShowWorkoutList(false);
-        router.push('/workout-session');
+        router.push({
+            pathname: '/workout-session',
+            params: { workoutList: JSON.stringify(workoutList) }
+        });
     };
 
     const adjustValue = (value: number, delta: number, min: number = 1) => {
@@ -220,47 +314,72 @@ export default function ExerciseLibraryScreen() {
 
                                     {/* Sets and Reps Controls */}
                                     <View style={styles.controlsSection}>
-                                        <View style={styles.controlGroup}>
-                                            <Text style={styles.controlLabel}>{t('exerciseLibrary.sets')}</Text>
-                                            <View style={styles.controlRow}>
-                                                <TouchableOpacity
-                                                    style={styles.controlButton}
-                                                    onPress={() => setSets(adjustValue(sets, -1))}
-                                                >
-                                                    <Text style={styles.controlButtonText}>−</Text>
-                                                </TouchableOpacity>
-                                                <View style={styles.controlValue}>
-                                                    <Text style={styles.controlValueText}>{sets}</Text>
+                                        {selectedExercise.type === 'reps' ? (
+                                            <>
+                                                <View style={styles.controlGroup}>
+                                                    <Text style={styles.controlLabel}>{t('exerciseLibrary.sets')}</Text>
+                                                    <View style={styles.controlRow}>
+                                                        <TouchableOpacity
+                                                            style={styles.controlButton}
+                                                            onPress={() => setSets(adjustValue(sets, -1))}
+                                                        >
+                                                            <Text style={styles.controlButtonText}>−</Text>
+                                                        </TouchableOpacity>
+                                                        <View style={styles.controlValue}>
+                                                            <Text style={styles.controlValueText}>{sets}</Text>
+                                                        </View>
+                                                        <TouchableOpacity
+                                                            style={styles.controlButton}
+                                                            onPress={() => setSets(adjustValue(sets, 1))}
+                                                        >
+                                                            <Text style={styles.controlButtonText}>+</Text>
+                                                        </TouchableOpacity>
+                                                    </View>
                                                 </View>
-                                                <TouchableOpacity
-                                                    style={styles.controlButton}
-                                                    onPress={() => setSets(adjustValue(sets, 1))}
-                                                >
-                                                    <Text style={styles.controlButtonText}>+</Text>
-                                                </TouchableOpacity>
-                                            </View>
-                                        </View>
 
-                                        <View style={styles.controlGroup}>
-                                            <Text style={styles.controlLabel}>{t('exerciseLibrary.reps')}</Text>
-                                            <View style={styles.controlRow}>
-                                                <TouchableOpacity
-                                                    style={styles.controlButton}
-                                                    onPress={() => setReps(adjustValue(reps, -1))}
-                                                >
-                                                    <Text style={styles.controlButtonText}>−</Text>
-                                                </TouchableOpacity>
-                                                <View style={styles.controlValue}>
-                                                    <Text style={styles.controlValueText}>{reps}</Text>
+                                                <View style={styles.controlGroup}>
+                                                    <Text style={styles.controlLabel}>{t('exerciseLibrary.reps')}</Text>
+                                                    <View style={styles.controlRow}>
+                                                        <TouchableOpacity
+                                                            style={styles.controlButton}
+                                                            onPress={() => setReps(adjustValue(reps, -1))}
+                                                        >
+                                                            <Text style={styles.controlButtonText}>−</Text>
+                                                        </TouchableOpacity>
+                                                        <View style={styles.controlValue}>
+                                                            <Text style={styles.controlValueText}>{reps}</Text>
+                                                        </View>
+                                                        <TouchableOpacity
+                                                            style={styles.controlButton}
+                                                            onPress={() => setReps(adjustValue(reps, 1))}
+                                                        >
+                                                            <Text style={styles.controlButtonText}>+</Text>
+                                                        </TouchableOpacity>
+                                                    </View>
                                                 </View>
-                                                <TouchableOpacity
-                                                    style={styles.controlButton}
-                                                    onPress={() => setReps(adjustValue(reps, 1))}
-                                                >
-                                                    <Text style={styles.controlButtonText}>+</Text>
-                                                </TouchableOpacity>
+                                            </>
+                                        ) : (
+                                            <View style={styles.controlGroup}>
+                                                <Text style={styles.controlLabel}>{language === 'vi' ? 'Thời gian (phút)' : 'Duration (minutes)'}</Text>
+                                                <View style={styles.controlRow}>
+                                                    <TouchableOpacity
+                                                        style={styles.controlButton}
+                                                        onPress={() => setDurationMinutes(adjustValue(durationMinutes, -5, 5))}
+                                                    >
+                                                        <Text style={styles.controlButtonText}>−</Text>
+                                                    </TouchableOpacity>
+                                                    <View style={styles.controlValue}>
+                                                        <Text style={styles.controlValueText}>{durationMinutes}</Text>
+                                                    </View>
+                                                    <TouchableOpacity
+                                                        style={styles.controlButton}
+                                                        onPress={() => setDurationMinutes(adjustValue(durationMinutes, 5, 5))}
+                                                    >
+                                                        <Text style={styles.controlButtonText}>+</Text>
+                                                    </TouchableOpacity>
+                                                </View>
                                             </View>
-                                        </View>
+                                        )}
                                     </View>
 
                                     {/* Add to Workout Button */}
@@ -296,8 +415,10 @@ export default function ExerciseLibraryScreen() {
                                 <Text style={styles.modalCategory}>
                                     {t('exerciseLibrary.workoutSummary', {
                                         count: workoutList.length,
-                                        reps: workoutList.reduce((sum, ex) => sum + ex.sets * ex.reps, 0),
+                                        reps: workoutList.reduce((sum, ex) => sum + (ex.type === 'reps' ? ((ex.sets||0) * (ex.reps||0)) : 0), 0),
                                     })}
+                                    {workoutList.some(ex => ex.type === 'duration') && 
+                                        ` • ${workoutList.reduce((sum, ex) => sum + (ex.type === 'duration' ? (ex.durationMinutes||0) : 0), 0)} phút`}
                                 </Text>
                             </View>
                             <TouchableOpacity
@@ -319,7 +440,10 @@ export default function ExerciseLibraryScreen() {
                                         <View style={styles.workoutItemInfo}>
                                             <Text style={styles.workoutItemName}>{language === 'vi' ? exercise.nameVi : exercise.name}</Text>
                                             <Text style={styles.workoutItemDetails}>
-                                                {t('exerciseLibrary.setReps', { sets: exercise.sets, reps: exercise.reps })}
+                                                {exercise.type === 'reps' 
+                                                    ? t('exerciseLibrary.setReps', { sets: exercise.sets || 0, reps: exercise.reps || 0 })
+                                                    : `${exercise.durationMinutes || 0} phút`
+                                                }
                                             </Text>
                                         </View>
                                     </View>
