@@ -196,43 +196,6 @@ export default function SettingsScreen() {
                         />
                     ),
                 },
-                {
-                    key: 'email',
-                    icon: '📧',
-                    label: t('settings.emailUpdates'),
-                    trailing: (
-                        <Switch
-                            value={emailUpdates}
-                            onValueChange={handleEmailUpdatesChange}
-                            trackColor={{ false: '#E0E0E0', true: Colors.accent }}
-                            thumbColor="#FFFFFF"
-                        />
-                    ),
-                },
-            ],
-        },
-        {
-            title: t('settings.section.security'),
-            rows: [
-                {
-                    key: 'biometric',
-                    icon: '🔐',
-                    label: t('settings.biometricAuth'),
-                    subtext: !biometricSupported
-                        ? t('settings.notSupported')
-                        : !biometricEnrolled
-                            ? t('settings.noBiometric')
-                            : undefined,
-                    trailing: (
-                        <Switch
-                            value={biometricEnabled}
-                            onValueChange={handleBiometricToggle}
-                            disabled={!biometricSupported || !biometricEnrolled}
-                            trackColor={{ false: '#E0E0E0', true: Colors.accent }}
-                            thumbColor="#FFFFFF"
-                        />
-                    ),
-                },
             ],
         },
         {

@@ -19,6 +19,7 @@ interface FridgeState {
 
     // Actions
     addItem: (item: Omit<FridgeItem, 'id' | 'addedDate'>) => Promise<void>;
+    updateItem: (id: string, updatedData: Partial<FridgeItem>) => Promise<void>;
     removeItem: (id: string) => Promise<void>;
     loadItems: () => Promise<void>;
 }
@@ -46,6 +47,19 @@ export const useFridgeStore = create<FridgeState>((set, get) => ({
         } catch (error) {
             console.error('Error adding to fridge:', error);
             set({ error: 'Failed to add item', isLoading: false });
+        }
+    },
+
+    updateItem: async (id, updatedData) => {
+        try {
+            set({ isLoading: true, error: null });
+            const updatedItems = get().items.map(i => i.id === id ? { ...i, ...updatedData } : i);
+            set({ items: updatedItems });
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedItems));
+            set({ isLoading: false });
+        } catch (error) {
+            console.error('Error updating fridge item:', error);
+            set({ error: 'Failed to update item', isLoading: false });
         }
     },
 

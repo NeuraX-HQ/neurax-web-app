@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, Activi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Swipeable, TouchableOpacity as GHTouchableOpacity } from 'react-native-gesture-handler';
 import { Colors, Shadows } from '../../src/constants/colors';
 import { mockRecipes } from '../../src/data/mockData';
 import { useFridgeStore, FridgeItem } from '../../src/store/fridgeStore';
@@ -58,6 +59,40 @@ export default function KitchenScreen() {
 
     const openRecipeFlow = (recipeId: string) => {
         router.push({ pathname: '/recipe-ingredients', params: { recipeId } });
+    };
+
+    const getMockNutrition = (name: string) => {
+        const lower = name.toLowerCase();
+        if (lower.includes('phở')) return { calories: 450, protein: 30, carbs: 60, fat: 12 };
+        if (lower.includes('bò') || lower.includes('beef')) return { calories: 250, protein: 26, carbs: 0, fat: 15 };
+        if (lower.includes('gà') || lower.includes('chicken')) return { calories: 165, protein: 31, carbs: 0, fat: 3 };
+        if (lower.includes('com') || lower.includes('cơm')) return { calories: 350, protein: 10, carbs: 60, fat: 5 };
+        if (lower.includes('salad') || lower.includes('cải') || lower.includes('rau')) return { calories: 50, protein: 2, carbs: 10, fat: 0 };
+        if (lower.includes('trứng') || lower.includes('egg')) return { calories: 70, protein: 6, carbs: 1, fat: 5 };
+        if (lower.includes('sữa') || lower.includes('milk')) return { calories: 120, protein: 8, carbs: 12, fat: 5 };
+        if (lower.includes('chuối') || lower.includes('banana')) return { calories: 105, protein: 1, carbs: 27, fat: 0 };
+        if (lower.includes('táo') || lower.includes('apple')) return { calories: 95, protein: 0, carbs: 25, fat: 0 };
+        return { calories: 150, protein: 10, carbs: 20, fat: 5 };
+    };
+
+    const handleCardPress = (item: FridgeItem) => {
+        const macros = getMockNutrition(item.name);
+        const payload = {
+            name: item.name,
+            servingSize: item.amount,
+            calories: macros.calories,
+            protein: macros.protein,
+            carbs: macros.carbs,
+            fat: macros.fat,
+            ingredients: []
+        };
+        router.push({
+            pathname: '/food-detail',
+            params: { 
+                foodData: JSON.stringify(payload),
+                source: 'fridge'
+            },
+        });
     };
 
     const EmptyHint = ({ text }: { text: string }) => (
@@ -132,7 +167,7 @@ export default function KitchenScreen() {
                                 {useSoon.length === 0
                                     ? <EmptyHint text={t('kitchen.empty.useSoon')} />
                                     : useSoon.map((item) => (
-                                        <UseSoonCard key={item.id} item={item} onRemove={removeItem} onUse={handleUseItem} t={t} />
+                                        <UseSoonCard key={item.id} item={item} onRemove={removeItem} onUse={handleUseItem} onCardPress={handleCardPress} t={t} />
                                     ))
                                 }
 
@@ -143,7 +178,7 @@ export default function KitchenScreen() {
                                 {thisWeek.length === 0
                                     ? <EmptyHint text={t('kitchen.empty.thisWeek')} />
                                     : thisWeek.map((item) => (
-                                        <ThisWeekCard key={item.id} item={item} t={t} />
+                                        <ThisWeekCard key={item.id} item={item} onRemove={removeItem} onCardPress={handleCardPress} t={t} />
                                     ))
                                 }
 
@@ -154,9 +189,9 @@ export default function KitchenScreen() {
                                 {longTerm.length === 0
                                     ? <EmptyHint text={t('kitchen.empty.longTerm')} />
                                     : (
-                                        <View style={styles.gridRow}>
+                                        <View style={{ gap: 8 }}>
                                             {longTerm.map((item) => (
-                                                <LongTermCard key={item.id} item={item} />
+                                                <LongTermCard key={item.id} item={item} onRemove={removeItem} onCardPress={handleCardPress} t={t} />
                                             ))}
                                         </View>
                                     )
@@ -222,52 +257,81 @@ function UseSoonCard({
     item,
     onRemove,
     onUse,
+    onCardPress,
     t,
 }: {
     item: FridgeItem;
     onRemove: (id: string) => Promise<void>;
     onUse: (item: FridgeItem) => Promise<void>;
+    onCardPress: (item: FridgeItem) => void;
     t: (key: string, params?: Record<string, string | number>) => string;
 }) {
-    return (
-        <View style={[styles.useSoonCard, Shadows.small]}>
-            {/* Expiry ribbon */}
-            <View style={styles.expiryRibbon}>
-                <Text style={styles.expiryRibbonText}>{t('kitchen.expiryInDays', { days: item.daysLeft })}</Text>
+    const renderRightActions = () => {
+        return (
+            <View style={{ flexDirection: 'row', height: '100%', alignItems: 'stretch' }}>
+                <GHTouchableOpacity style={styles.deleteActionBtn} onPress={() => onRemove(item.id)}>
+                    <Text style={styles.actionBtnText}>{t('kitchen.remove')}</Text>
+                </GHTouchableOpacity>
             </View>
+        );
+    };
 
-            <View style={styles.useSoonRow}>
-                {/* Emoji thumb */}
-                <View style={styles.useSoonThumb}>
-                    <Text style={{ fontSize: 32 }}>{item.emoji}</Text>
-                </View>
+    return (
+        <Swipeable rightThreshold={10} renderRightActions={renderRightActions} containerStyle={{ marginBottom: 12 }}>
+            <TouchableOpacity activeOpacity={0.8} onPress={() => onCardPress(item)}>
+                <View style={[styles.useSoonCard, Shadows.small]}>
+                    {/* Expiry ribbon */}
+                    <View style={styles.expiryRibbon}>
+                        <Text style={styles.expiryRibbonText}>{t('kitchen.expiryInDays', { days: item.daysLeft })}</Text>
+                    </View>
 
-                {/* Info */}
-                <View style={styles.useSoonInfo}>
-                    <Text style={styles.fridgeName}>{item.name}</Text>
-                    <Text style={styles.fridgeDetail}>{item.amount} • {item.location}</Text>
-                    <View style={styles.actionRow}>
-                        <TouchableOpacity style={styles.btnUseNow} onPress={() => onUse(item)}>
-                            <Text style={styles.btnUseNowText}>{t('kitchen.useNow')}</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.btnRemove} onPress={() => onRemove(item.id)}>
-                            <Text style={styles.btnRemoveText}>{t('kitchen.remove')}</Text>
-                        </TouchableOpacity>
+                    <View style={styles.useSoonRow}>
+                        {/* Emoji thumb */}
+                        <View style={styles.useSoonThumb}>
+                            <Text style={{ fontSize: 32 }}>{item.emoji}</Text>
+                        </View>
+
+                        {/* Info */}
+                        <View style={styles.useSoonInfo}>
+                            <Text style={styles.fridgeName}>{item.name}</Text>
+                            <Text style={styles.fridgeDetail}>{item.amount} • {item.location}</Text>
+                            <View style={styles.actionRow}>
+                                <TouchableOpacity style={styles.btnUseNow} onPress={() => onUse(item)}>
+                                    <Text style={styles.btnUseNowText}>{t('kitchen.useNow')}</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
                     </View>
                 </View>
-            </View>
-        </View>
+            </TouchableOpacity>
+        </Swipeable>
     );
 }
 
 function ThisWeekCard({
     item,
+    onRemove,
+    onCardPress,
     t,
 }: {
     item: FridgeItem;
+    onRemove: (id: string) => Promise<void>;
+    onCardPress: (item: FridgeItem) => void;
     t: (key: string, params?: Record<string, string | number>) => string;
 }) {
+    const renderRightActions = () => {
+        return (
+            <View style={{ flexDirection: 'row', height: '100%', alignItems: 'stretch' }}>
+                <GHTouchableOpacity style={styles.deleteActionBtn} onPress={() => onRemove(item.id)}>
+                    <Text style={styles.actionBtnText}>{t('kitchen.remove')}</Text>
+                </GHTouchableOpacity>
+            </View>
+        );
+    };
+
     return (
+        <Swipeable rightThreshold={10} renderRightActions={renderRightActions} containerStyle={{ marginBottom: 8 }}>
+        <TouchableOpacity activeOpacity={0.8} onPress={() => onCardPress(item)}>
         <View style={[styles.thisWeekCard, Shadows.small]}>
             <View style={styles.thisWeekThumb}>
                 <Text style={{ fontSize: 26 }}>{item.emoji}</Text>
@@ -280,17 +344,46 @@ function ThisWeekCard({
                 <Text style={[styles.expiryText, { color: Colors.accent }]}>{item.daysLeft}d</Text>
             </View>
         </View>
+        </TouchableOpacity>
+        </Swipeable>
     );
 }
 
-function LongTermCard({ item }: { item: FridgeItem }) {
-    return (
-        <View style={styles.longTermCard}>
-            <View style={styles.longTermThumb}>
-                <Text style={{ fontSize: 28 }}>{item.emoji}</Text>
+function LongTermCard({
+    item,
+    onRemove,
+    onCardPress,
+    t,
+}: {
+    item: FridgeItem;
+    onRemove: (id: string) => Promise<void>;
+    onCardPress: (item: FridgeItem) => void;
+    t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+    const renderRightActions = () => {
+        return (
+            <View style={{ flexDirection: 'row', height: '100%', alignItems: 'stretch' }}>
+                <GHTouchableOpacity style={styles.deleteActionBtn} onPress={() => onRemove(item.id)}>
+                    <Text style={styles.actionBtnText}>{t('kitchen.remove')}</Text>
+                </GHTouchableOpacity>
             </View>
-            <Text style={styles.longTermName} numberOfLines={1}>{item.name}</Text>
-        </View>
+        );
+    };
+
+    return (
+        <Swipeable rightThreshold={10} renderRightActions={renderRightActions} containerStyle={{ marginBottom: 4 }}>
+            <TouchableOpacity activeOpacity={0.8} onPress={() => onCardPress(item)}>
+            <View style={[styles.thisWeekCard, Shadows.small]}>
+                <View style={styles.thisWeekThumb}>
+                    <Text style={{ fontSize: 26 }}>{item.emoji}</Text>
+                </View>
+                <View style={styles.thisWeekInfo}>
+                    <Text style={styles.fridgeName}>{item.name}</Text>
+                    <Text style={styles.fridgeDetail}>{item.amount}</Text>
+                </View>
+            </View>
+            </TouchableOpacity>
+        </Swipeable>
     );
 }
 const styles = StyleSheet.create({
@@ -445,7 +538,6 @@ const styles = StyleSheet.create({
     useSoonCard: {
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
-        marginBottom: 12,
         borderWidth: 1.5,
         borderColor: '#FEE2E2',
         overflow: 'hidden',
@@ -491,7 +583,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderRadius: 14,
         padding: 12,
-        marginBottom: 8,
         gap: 12,
     },
     thisWeekThumb: {
@@ -523,6 +614,31 @@ const styles = StyleSheet.create({
         marginBottom: 6,
     },
     longTermName: { fontSize: 12, fontWeight: '600', color: Colors.text, textAlign: 'center' },
+
+    /* ── Swipe Actions ── */
+    editActionBtn: {
+        backgroundColor: Colors.orange,
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 70,
+        borderRadius: 14,
+        marginLeft: 8,
+        height: '100%',
+    },
+    deleteActionBtn: {
+        backgroundColor: Colors.danger,
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 70,
+        borderRadius: 14,
+        marginLeft: 8,
+        height: '100%',
+    },
+    actionBtnText: {
+        color: '#FFFFFF',
+        fontSize: 13,
+        fontWeight: '700',
+    },
 
     /* ── Recipes tab ── */
     featuredRecipe: {
