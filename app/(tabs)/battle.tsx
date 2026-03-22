@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadows } from '../../src/constants/colors';
@@ -7,6 +7,9 @@ import Svg, { Path } from 'react-native-svg';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 import { Video, ResizeMode } from 'expo-av';
 import { useMealStore } from '../../src/store/mealStore';
+import { getUserData, UserData } from '../../src/store/userStore';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 type SortMode = 'streak' | 'petScore';
 
@@ -58,6 +61,13 @@ export default function BattleScreen() {
     const [sortMode, setSortMode] = useState<SortMode>('streak');
     const [showSortMenu, setShowSortMenu] = useState(false);
     const [devBoostDays, setDevBoostDays] = useState(0);
+    const [userData, setUserData] = useState<UserData | null>(null);
+
+    useFocusEffect(
+        useCallback(() => {
+            getUserData().then(setUserData);
+        }, [])
+    );
 
     useEffect(() => {
         // Friends ranking focuses on streak, achievements focuses on pet score.
@@ -65,27 +75,39 @@ export default function BattleScreen() {
     }, [tab]);
 
 
+    const petProgressDays = useMemo(() => new Set(meals.map((meal) => meal.date)).size, [meals]);
+    const effectivePetDays = Math.max(0, __DEV__ ? petProgressDays + devBoostDays : petProgressDays);
+    const petStreak = effectivePetDays;
+    const petScore = effectivePetDays * 20;
+
     const sortedData = useMemo(() => {
-        const data = [...mockLeaderboard];
+        const currentUser = {
+            rank: 0,
+            name: userData?.name || t('battle.you'),
+            score: 0,
+            streak: petStreak,
+            petScore: petScore,
+            change: 0,
+            isYou: true
+        };
+
+        const data = [...mockLeaderboard.map(item => ({ ...item, isYou: false })), currentUser];
         if (sortMode === 'streak') {
             data.sort((a, b) => b.streak - a.streak);
         } else {
             data.sort((a, b) => b.petScore - a.petScore);
         }
         return data.map((item, i) => ({ ...item, rank: i + 1 }));
-    }, [sortMode]);
+    }, [sortMode, petStreak, petScore, userData, t]);
 
-    const top3 = sortedData.slice(0, 3);
-    const rest = sortedData.slice(3);
+    const userRankInfo = useMemo(() => sortedData.find(u => u.isYou), [sortedData]);
 
-    const getDisplayScoreShort = (user: typeof mockLeaderboard[0]) => {
+    const top3 = useMemo(() => sortedData.slice(0, 3), [sortedData]);
+    const rest = useMemo(() => sortedData.slice(3), [sortedData]);
+
+    const getDisplayScoreShort = (user: { streak: number; petScore: number }) => {
         return sortMode === 'streak' ? `${user.streak}` : `${user.petScore}`;
     };
-
-    const petProgressDays = useMemo(() => new Set(meals.map((meal) => meal.date)).size, [meals]);
-    const effectivePetDays = Math.max(0, __DEV__ ? petProgressDays + devBoostDays : petProgressDays);
-    const petStreak = effectivePetDays;
-    const petScore = effectivePetDays * 20;
 
     const petLevel = effectivePetDays <= 0
         ? 1
@@ -156,7 +178,10 @@ export default function BattleScreen() {
 
             {tab === 'friends' ? (
                 <>
-                    <ScrollView showsVerticalScrollIndicator={false}>
+                    <ScrollView 
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ paddingBottom: 180 }}
+                    >
                 {/* Sort badge */}
                 <View style={styles.sortBadgeRow}>
                     <View style={styles.sortBadge}>
@@ -246,36 +271,42 @@ export default function BattleScreen() {
                     ))}
                 </View>
 
-                <View style={{ height: 140 }} />
                     </ScrollView>
 
                     {/* You bar - sticky at bottom */}
-                    <View style={styles.youBar}>
-                        <View style={[styles.rankRow, styles.rankRowYou, Shadows.medium]}>
-                            <Text style={[styles.rankNum, { color: Colors.accent }]}>42</Text>
-                            <View style={[styles.rankAvatar, { backgroundColor: Colors.accentLight }]}>
-                                <Text>👤</Text>
-                            </View>
-                            <View style={styles.rankInfo}>
-                                <Text style={[styles.rankName, { color: Colors.accent }]}>{t('battle.you')}</Text>
-                                <Text style={styles.rankStreak}>
-                                    {sortMode === 'streak'
-                                        ? t('battle.streakWithEmoji', { count: petStreak })
-                                        : t('battle.petScoreWithEmoji', { score: petScore })}
+                    {userRankInfo && (
+                        <View style={styles.youBar}>
+                            <View style={[styles.rankRow, styles.rankRowYou, Shadows.medium]}>
+                                <Text style={[styles.rankNum, { color: Colors.accent }]}>
+                                    {userRankInfo.rank}
                                 </Text>
-                            </View>
-                            <Text style={[styles.rankScore, { color: Colors.accent }]}>
-                                {sortMode === 'streak' ? String(petStreak) : String(petScore)}
-                            </Text>
-                            <View style={styles.rankChangeRow}>
-                                <ArrowUp size={12} />
-                                <Text style={[styles.rankChange, styles.rankUp]}>4</Text>
+                                <View style={[styles.rankAvatar, { backgroundColor: Colors.accentLight }]}>
+                                    <Text>👤</Text>
+                                </View>
+                                <View style={styles.rankInfo}>
+                                    <Text style={[styles.rankName, { color: Colors.accent }]}>{t('battle.you')}</Text>
+                                    <Text style={styles.rankStreak}>
+                                        {sortMode === 'streak'
+                                            ? t('battle.streakWithEmoji', { count: petStreak })
+                                            : t('battle.petScoreWithEmoji', { score: petScore })}
+                                    </Text>
+                                </View>
+                                <Text style={[styles.rankScore, { color: Colors.accent }]}>
+                                    {sortMode === 'streak' ? String(petStreak) : String(petScore)}
+                                </Text>
+                                <View style={styles.rankChangeRow}>
+                                    <ArrowUp size={12} />
+                                    <Text style={[styles.rankChange, styles.rankUp]}>0</Text>
+                                </View>
                             </View>
                         </View>
-                    </View>
+                    )}
                 </>
             ) : (
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.achievementsContent}>
+                <ScrollView 
+                    showsVerticalScrollIndicator={false} 
+                    contentContainerStyle={styles.achievementsContent}
+                >
                     <View style={styles.petStatRow}>
                         <View style={styles.petStatCard}>
                             <Text style={styles.petStatLabel}>{t('battle.currentStreak')}</Text>
@@ -301,6 +332,9 @@ export default function BattleScreen() {
                                 isLooping
                                 isMuted
                                 useNativeControls={false}
+                                usePoster={true}
+                                posterSource={require('../../assets/images/welcome0.jpg')} // Fallback poster
+                                posterStyle={styles.dragonVideo}
                             />
                         </View>
                     </View>
@@ -526,7 +560,7 @@ const styles = StyleSheet.create({
     },
     youBar: {
         position: 'absolute',
-        bottom: 0,
+        bottom: 85,
         left: 0,
         right: 0,
         paddingHorizontal: 16,
@@ -555,7 +589,7 @@ const styles = StyleSheet.create({
 
     achievementsContent: {
         paddingHorizontal: 16,
-        paddingBottom: 32,
+        paddingBottom: 160,
     },
     petStatRow: {
         flexDirection: 'row',
