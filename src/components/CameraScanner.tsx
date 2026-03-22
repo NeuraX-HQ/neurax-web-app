@@ -8,7 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import { analyzeFoodImage, NutritionInfo } from '../services/geminiService';
+import { NutritionInfo } from '../services/geminiService';
+import { analyzeFoodAPI, scanBarcodeAPI, analyzeLabelAPI } from '../services/aiService';
 import { useRouter } from 'expo-router';
 import { useAppLanguage } from '../i18n/LanguageProvider';
 import { BlurView } from 'expo-blur';
@@ -31,7 +32,7 @@ interface CameraScannerProps {
 export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerProps) {
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { t } = useAppLanguage();
+    const { t, language } = useAppLanguage();
     const cameraRef = useRef<any>(null);
     const webVideoRef = useRef<HTMLVideoElement | null>(null);
     const webStreamRef = useRef<MediaStream | null>(null);
@@ -153,7 +154,15 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
 
             if (!base64Data) throw new Error(t('camera.error.readData'));
 
-            const analysisResult = await analyzeFoodImage(base64Data);
+            let analysisResult;
+            if (mode === 'FOOD') {
+                analysisResult = await analyzeFoodAPI(imageUri || '', base64Data);
+            } else if (mode === 'BARCODE') {
+                analysisResult = await scanBarcodeAPI(imageUri || '', base64Data);
+            } else {
+                // LABEL
+                analysisResult = await analyzeLabelAPI(imageUri || '', base64Data);
+            }
             if (analysisResult.success && analysisResult.data) {
                 onClose();
                 router.push({
@@ -206,7 +215,15 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
 
             if (!base64Data) throw new Error(t('camera.error.readData'));
 
-            const analysisResult = await analyzeFoodImage(base64Data);
+            let analysisResult;
+            if (mode === 'FOOD') {
+                analysisResult = await analyzeFoodAPI(imageUri || '', base64Data);
+            } else if (mode === 'BARCODE') {
+                analysisResult = await scanBarcodeAPI(imageUri || '', base64Data);
+            } else {
+                // LABEL
+                analysisResult = await analyzeLabelAPI(imageUri || '', base64Data);
+            }
             if (analysisResult.success && analysisResult.data) {
                 onClose();
                 router.push({

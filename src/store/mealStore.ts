@@ -6,6 +6,8 @@ export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
 export interface Meal {
     id: string;
     name: string;
+    name_en?: string;
+    name_vi?: string;
     type: MealType;
     calories: number;
     protein: number;
