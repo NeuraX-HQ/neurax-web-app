@@ -35,7 +35,11 @@ function getClient() {
 }
 
 export interface IngredientItem {
-    name: string;
+    name: string; // Keep legacy name for backward compatibility
+    name_en?: string;
+    name_vi?: string;
+    note_en?: string;
+    note_vi?: string;
     amount?: string;
     estimated_g?: number;
     calories?: number;
@@ -48,7 +52,15 @@ export interface IngredientItem {
 }
 
 export interface NutritionInfo {
-    name: string;
+    name: string; // Keep legacy name for backward compatibility
+    name_en?: string;
+    name_vi?: string;
+    category_en?: string;
+    category_vi?: string;
+    cooking_method_en?: string;
+    cooking_method_vi?: string;
+    allergens_en?: string[];
+    allergens_vi?: string[];
     calories: number;
     protein: number;
     carbs: number;

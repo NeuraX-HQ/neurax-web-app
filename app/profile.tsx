@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { signOut } from 'aws-amplify/auth';
 import { useAuthStore } from '../src/store/authStore';
 import { getOnboardingData, getUserData, UserData } from '../src/store/userStore';
@@ -100,30 +100,32 @@ export default function ProfileScreen() {
     const [profileName, setProfileName] = React.useState('Admin');
     const [activityLevel, setActivityLevel] = React.useState('');
 
-    React.useEffect(() => {
-        const fetchUserData = async () => {
-            const [onboarding, storedUser] = await Promise.all([getOnboardingData(), getUserData()]);
+    useFocusEffect(
+        useCallback(() => {
+            const fetchUserData = async () => {
+                const [onboarding, storedUser] = await Promise.all([getOnboardingData(), getUserData()]);
 
-            if (onboarding?.gender) {
-                setGender(onboarding.gender.toLowerCase());
-            }
+                if (onboarding?.gender) {
+                    setGender(onboarding.gender.toLowerCase());
+                }
 
-            if (storedUser) {
-                setUserData(storedUser);
-            }
+                if (storedUser) {
+                    setUserData(storedUser);
+                }
 
-            if (onboarding?.name?.trim()) {
-                setProfileName(onboarding.name.trim());
-            } else if (storedUser?.name?.trim()) {
-                setProfileName(storedUser.name.trim());
-            }
+                if (onboarding?.name?.trim()) {
+                    setProfileName(onboarding.name.trim());
+                } else if (storedUser?.name?.trim()) {
+                    setProfileName(storedUser.name.trim());
+                }
 
-            if (onboarding?.activityLevel?.trim()) {
-                setActivityLevel(onboarding.activityLevel);
-            }
-        };
-        fetchUserData();
-    }, []);
+                if (onboarding?.activityLevel?.trim()) {
+                    setActivityLevel(onboarding.activityLevel);
+                }
+            };
+            fetchUserData();
+        }, [])
+    );
 
     const handleSignOut = async () => {
         Alert.alert(t('settings.logoutTitle'), t('settings.logoutMessage'), [

@@ -8,10 +8,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import { analyzeFoodImage, NutritionInfo } from '../services/geminiService';
+import { NutritionInfo } from '../services/geminiService';
+import { analyzeFoodAPI, scanBarcodeAPI, analyzeLabelAPI } from '../services/aiService';
 import { useRouter } from 'expo-router';
 import { useAppLanguage } from '../i18n/LanguageProvider';
 import { BlurView } from 'expo-blur';
+import { useAuthStore } from '../store/authStore';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -30,10 +32,11 @@ interface CameraScannerProps {
 export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerProps) {
     const router = useRouter();
     const insets = useSafeAreaInsets();
-    const { t } = useAppLanguage();
+    const { t, language } = useAppLanguage();
     const cameraRef = useRef<any>(null);
     const webVideoRef = useRef<HTMLVideoElement | null>(null);
     const webStreamRef = useRef<MediaStream | null>(null);
+    const isAuthenticated = useAuthStore(state => state.isAuthenticated);
 
     const [mode, setMode] = useState<ScanMode>('FOOD');
     const [analyzing, setAnalyzing] = useState(false);
@@ -123,6 +126,10 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
     };
 
     const handleGallery = async () => {
+        if (!isAuthenticated) {
+            Alert.alert(t('common.error'), "Phiên làm việc đã hết hạn hoặc chưa đăng nhập. Vui lòng đăng nhập lại để sử dụng AI Scanner.");
+            return;
+        }
         if (analyzing) return;
         setAnalyzing(true);
         onAnalyzing?.(true);
@@ -147,7 +154,15 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
 
             if (!base64Data) throw new Error(t('camera.error.readData'));
 
-            const analysisResult = await analyzeFoodImage(base64Data);
+            let analysisResult;
+            if (mode === 'FOOD') {
+                analysisResult = await analyzeFoodAPI(imageUri || '', base64Data);
+            } else if (mode === 'BARCODE') {
+                analysisResult = await scanBarcodeAPI(imageUri || '', base64Data);
+            } else {
+                // LABEL
+                analysisResult = await analyzeLabelAPI(imageUri || '', base64Data);
+            }
             if (analysisResult.success && analysisResult.data) {
                 onClose();
                 router.push({
@@ -166,6 +181,10 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
     };
 
     const handleCapture = async () => {
+        if (!isAuthenticated) {
+            Alert.alert(t('common.error'), "Phiên làm việc đã hết hạn hoặc chưa đăng nhập. Vui lòng đăng nhập lại để sử dụng AI Scanner.");
+            return;
+        }
         if (analyzing) return;
         setAnalyzing(true);
         onAnalyzing?.(true);
@@ -196,7 +215,15 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
 
             if (!base64Data) throw new Error(t('camera.error.readData'));
 
-            const analysisResult = await analyzeFoodImage(base64Data);
+            let analysisResult;
+            if (mode === 'FOOD') {
+                analysisResult = await analyzeFoodAPI(imageUri || '', base64Data);
+            } else if (mode === 'BARCODE') {
+                analysisResult = await scanBarcodeAPI(imageUri || '', base64Data);
+            } else {
+                // LABEL
+                analysisResult = await analyzeLabelAPI(imageUri || '', base64Data);
+            }
             if (analysisResult.success && analysisResult.data) {
                 onClose();
                 router.push({

@@ -20,6 +20,9 @@ class Settings:
     # Gemini AI
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 
+    # AI Service Team
+    AI_SERVICE_URL: str = os.getenv("AI_SERVICE_URL", "http://127.0.0.1:8000")
+
     # S3
     S3_UPLOADS_BUCKET: str = os.getenv("S3_UPLOADS_BUCKET", "nutritrack-uploads")
 
