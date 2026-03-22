@@ -192,10 +192,19 @@ export default function FoodDetailScreen() {
     };
 
     const handleAddToFridge = () => {
+        const updatedFoodData = {
+            ...foodData,
+            servingSize: `${portionCount} ${t(selectedPortionUnit.labelKey)}`,
+            calories: Math.round(foodData.calories * nutritionMultiplier),
+            protein: Math.round(foodData.protein * nutritionMultiplier),
+            carbs: Math.round(foodData.carbs * nutritionMultiplier),
+            fat: Math.round(foodData.fat * nutritionMultiplier),
+        };
+
         router.push({
             pathname: '/add-to-fridge',
             params: {
-                foodData: params.foodData,
+                foodData: JSON.stringify(updatedFoodData),
                 image: params.image,
                 source: params.source
             }

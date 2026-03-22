@@ -43,7 +43,7 @@ export default function AiCoachScreen() {
     const [userData, setUserData] = useState<UserData | null>(null);
     const scrollViewRef = useRef<ScrollView>(null);
 
-    const { getTodayStats, getTodayMeals } = useMealStore();
+    const { getStatsByDate, getTodayMeals } = useMealStore();
     const { items: fridgeItems } = useFridgeStore();
     const insets = useSafeAreaInsets();
 
@@ -63,7 +63,7 @@ export default function AiCoachScreen() {
     }, [language]);
 
     const constructContext = () => {
-        const stats = getTodayStats();
+        const stats = getStatsByDate(new Date().toISOString().split('T')[0]);
         const meals = getTodayMeals();
         const fridge = fridgeItems.map(i => `${i.name} (${i.amount})`).join(', ');
 

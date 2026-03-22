@@ -54,7 +54,7 @@ interface MealState {
     getActivitiesByDate: (date: string) => Activity[];
     getTodayMeals: () => Meal[];
     getTodayActivities: () => Activity[];
-    getTodayStats: () => {
+    getStatsByDate: (date: string) => {
         totalCalories: number;
         totalProtein: number;
         totalCarbs: number;
@@ -222,11 +222,11 @@ export const useMealStore = create<MealState>((set, get) => ({
         return get().activities.filter(activity => activity.date === today);
     },
 
-    getTodayStats: () => {
-        const todayMeals = get().getTodayMeals();
-        const todayActivities = get().getTodayActivities();
+    getStatsByDate: (date) => {
+        const dateMeals = get().getMealsByDate(date);
+        const dateActivities = get().getActivitiesByDate(date);
 
-        const mealStats = todayMeals.reduce(
+        const mealStats = dateMeals.reduce(
             (acc, meal) => ({
                 totalCalories: acc.totalCalories + meal.calories,
                 totalProtein: acc.totalProtein + meal.protein,
@@ -236,7 +236,7 @@ export const useMealStore = create<MealState>((set, get) => ({
             { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 }
         );
 
-        const totalBurnedCalories = todayActivities.reduce((sum, act) => sum + act.caloriesBurned, 0);
+        const totalBurnedCalories = dateActivities.reduce((sum, act) => sum + act.caloriesBurned, 0);
 
         return {
             ...mealStats,

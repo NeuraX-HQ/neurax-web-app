@@ -12,6 +12,7 @@ import { CalorieGauge } from '../../src/components/CalorieGauge';
 import { useMealStore, Meal } from '../../src/store/mealStore';
 import { getOnboardingData, getUserData } from '../../src/store/userStore';
 import { useAuthStore } from '../../src/store/authStore';
+import { useNotificationStore } from '../../src/store/notificationStore';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 import { getCurrentStreak } from '../../src/utils/streak';
 import Svg, { Path } from 'react-native-svg';
@@ -62,11 +63,13 @@ export default function HomeScreen() {
 
     const [refreshing, setRefreshing] = useState(false);
     const [gender, setGender] = useState<string>('');
+    const [userName, setUserName] = useState<string>('');
     const [dailyCalorieTarget, setDailyCalorieTarget] = useState(1800);
     const [showCaloriesEaten, setShowCaloriesEaten] = useState(false);
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
     const userEmail = useAuthStore((state) => state.email);
+    const { unreadCount } = useNotificationStore();
 
     // Meal store
     const {
@@ -77,6 +80,8 @@ export default function HomeScreen() {
         setAddMenuOpen,
     } = useMealStore();
     const selectedDateStr = storeSelectedDateStr || todayIso;
+    const [stripBaseDateStr, setStripBaseDateStr] = useState(selectedDateStr);
+    
     const hasAnyMeals = meals && meals.length > 0;
     const displayedMeals = getMealsByDate(selectedDateStr);
     const usedMealDates = useMemo(() => new Set(meals.map((meal) => meal.date)), [meals]);
@@ -107,10 +112,10 @@ export default function HomeScreen() {
     }, [meals, activities, todayIso]);
 
     const dateStrip = useMemo(() => {
-        const today = new Date();
-        const dayOfWeek = (today.getDay() + 6) % 7; 
-        const currentMonday = new Date(today);
-        currentMonday.setDate(today.getDate() - dayOfWeek);
+        const baseDate = fromIsoDate(stripBaseDateStr);
+        const dayOfWeek = (baseDate.getDay() + 6) % 7; 
+        const currentMonday = new Date(baseDate);
+        currentMonday.setDate(baseDate.getDate() - dayOfWeek);
 
         const weeks = [];
         for (let weekOffset = -2; weekOffset <= 2; weekOffset++) {
@@ -127,7 +132,7 @@ export default function HomeScreen() {
             weeks.push(week);
         }
         return weeks;
-    }, []);
+    }, [stripBaseDateStr]);
 
     const selectedDate = useMemo(() => fromIsoDate(selectedDateStr), [selectedDateStr]);
     const monthName = useMemo(
@@ -144,10 +149,11 @@ export default function HomeScreen() {
     }, [locale, selectedDate]);
 
     const greetingName = useMemo(() => {
+        if (userName) return userName;
         if (!userEmail) return t('home.greetingFallback');
         const localPart = userEmail.split('@')[0];
         return localPart || t('home.greetingFallback');
-    }, [t, userEmail]);
+    }, [t, userEmail, userName]);
 
     const mealTypeLabel = (type: Meal['type']) => {
         if (type === 'BREAKFAST') return t('home.mealType.breakfast');
@@ -296,19 +302,25 @@ export default function HomeScreen() {
     const exerciseKcalTarget = 400;
 
     // Load meals on mount
-    useEffect(() => {
-        loadMeals();
-        const fetchUserData = async () => {
-            const [onboarding, user] = await Promise.all([getOnboardingData(), getUserData()]);
-            if (onboarding?.gender) {
-                setGender(onboarding.gender.toLowerCase());
-            }
-            if (user?.dailyCalories && Number.isFinite(user.dailyCalories)) {
-                setDailyCalorieTarget(Math.max(1, Math.round(user.dailyCalories)));
-            }
-        };
-        fetchUserData();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            loadMeals();
+            const fetchUserData = async () => {
+                const [onboarding, user] = await Promise.all([getOnboardingData(), getUserData()]);
+                if (onboarding?.gender) {
+                    setGender(onboarding.gender.toLowerCase());
+                }
+                if (user?.dailyCalories && Number.isFinite(user.dailyCalories)) {
+                    setDailyCalorieTarget(Math.max(1, Math.round(user.dailyCalories)));
+                }
+                const name = onboarding?.name?.trim() || user?.name?.trim();
+                if (name) {
+                    setUserName(name);
+                }
+            };
+            fetchUserData();
+        }, [loadMeals])
+    );
 
     // Hydration modal state
     const [showHydration, setShowHydration] = useState(false);
@@ -504,8 +516,9 @@ export default function HomeScreen() {
                         <Text style={styles.greeting}>{t('home.greeting', { name: greetingName })}</Text>
                     </View>
                     <View style={styles.headerRight}>
-                        <TouchableOpacity onPress={withAutoClose(() => router.push('/notifications'))}>
+                        <TouchableOpacity style={{ position: 'relative' }} onPress={withAutoClose(() => router.push('/notifications'))}>
                             <NotificationIcon size={20} color="#000" />
+                            {unreadCount > 0 && <View style={styles.notificationBadge} />}
                         </TouchableOpacity>
                         {/* Settings icon removed as requested */}
                     </View>
@@ -986,7 +999,11 @@ export default function HomeScreen() {
                                                 ]}
                                                 onPress={() => {
                                                     setSelectedDateStr(cell.iso);
+                                                    setStripBaseDateStr(cell.iso);
                                                     setShowMonthPicker(false);
+                                                    setTimeout(() => {
+                                                        flatListRef.current?.scrollToIndex({ index: 2, animated: true });
+                                                    }, 100);
                                                 }}
                                             >
                                                 <Text
@@ -1188,6 +1205,17 @@ const styles = StyleSheet.create({
         height: 10,
         borderRadius: 5,
         backgroundColor: '#000000',
+        borderWidth: 1.5,
+        borderColor: '#FFFFFF',
+    },
+    notificationBadge: {
+        position: 'absolute',
+        top: -2,
+        right: -2,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: Colors.danger,
         borderWidth: 1.5,
         borderColor: '#FFFFFF',
     },

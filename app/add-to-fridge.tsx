@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, Modal, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -124,9 +124,11 @@ export default function AddToFridgeScreen() {
         expiryDate.setDate(expiryDate.getDate() + days);
 
         try {
+            const finalAmount = foodData.servingSize || '1 phần';
+
             await addItem({
                 name: foodData.name,
-                amount: foodData.servingSize || '1 phần',
+                amount: finalAmount,
                 location: t('addToFridge.location'),
                 daysLeft: days,
                 expiryDate: expiryDate.toISOString(),
@@ -160,7 +162,7 @@ export default function AddToFridgeScreen() {
                     <View style={styles.foodInfo}>
                         <Text style={styles.foodName}>{foodData ? foodData.name : t('addToFridge.defaultFoodName')}</Text>
                         <Text style={styles.foodCalories}>
-                            {foodData ? `${Math.round(foodData.calories)} kcal • ${t('addToFridge.portion')}` : `450 kcal • ${t('addToFridge.defaultServing')}`}
+                            {foodData ? `${Math.round(foodData.calories)} kcal • ${foodData.servingSize || t('addToFridge.portion')}` : `450 kcal • ${t('addToFridge.defaultServing')}`}
                         </Text>
                     </View>
                 </View>

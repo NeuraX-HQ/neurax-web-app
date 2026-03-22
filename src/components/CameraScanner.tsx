@@ -12,6 +12,7 @@ import { analyzeFoodImage, NutritionInfo } from '../services/geminiService';
 import { useRouter } from 'expo-router';
 import { useAppLanguage } from '../i18n/LanguageProvider';
 import { BlurView } from 'expo-blur';
+import { useAuthStore } from '../store/authStore';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
@@ -34,6 +35,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
     const cameraRef = useRef<any>(null);
     const webVideoRef = useRef<HTMLVideoElement | null>(null);
     const webStreamRef = useRef<MediaStream | null>(null);
+    const isAuthenticated = useAuthStore(state => state.isAuthenticated);
 
     const [mode, setMode] = useState<ScanMode>('FOOD');
     const [analyzing, setAnalyzing] = useState(false);
@@ -123,6 +125,10 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
     };
 
     const handleGallery = async () => {
+        if (!isAuthenticated) {
+            Alert.alert(t('common.error'), "Phiên làm việc đã hết hạn hoặc chưa đăng nhập. Vui lòng đăng nhập lại để sử dụng AI Scanner.");
+            return;
+        }
         if (analyzing) return;
         setAnalyzing(true);
         onAnalyzing?.(true);
@@ -166,6 +172,10 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
     };
 
     const handleCapture = async () => {
+        if (!isAuthenticated) {
+            Alert.alert(t('common.error'), "Phiên làm việc đã hết hạn hoặc chưa đăng nhập. Vui lòng đăng nhập lại để sử dụng AI Scanner.");
+            return;
+        }
         if (analyzing) return;
         setAnalyzing(true);
         onAnalyzing?.(true);

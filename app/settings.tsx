@@ -178,27 +178,6 @@ export default function SettingsScreen() {
                     onPress: () => setPickerType('language'),
                     showArrow: true,
                 },
-                {
-                    key: 'units',
-                    icon: '📏',
-                    label: t('settings.units'),
-                    value: units === 'Metric (kg, cm)' ? t('settings.units.metric') : t('settings.units.imperial'),
-                    onPress: () => setPickerType('units'),
-                    showArrow: true,
-                },
-                {
-                    key: 'dark-mode',
-                    icon: '🌙',
-                    label: t('settings.darkMode'),
-                    trailing: (
-                        <Switch
-                            value={darkMode}
-                            onValueChange={handleDarkModeChange}
-                            trackColor={{ false: '#E0E0E0', true: Colors.accent }}
-                            thumbColor="#FFFFFF"
-                        />
-                    ),
-                },
             ],
         },
         {

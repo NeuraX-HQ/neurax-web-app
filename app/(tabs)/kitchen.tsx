@@ -14,7 +14,9 @@ export default function KitchenScreen() {
     const { t } = useAppLanguage();
     const [tab, setTab] = useState<'fridge' | 'recipes'>('fridge');
     const [search, setSearch] = useState('');
+    const searchRef = useRef<TextInput>(null);
     const { items, loadItems, removeItem, isLoading } = useFridgeStore();
+    const addMeal = useMealStore((state) => state.addMeal);
 
     useEffect(() => {
         loadItems();
@@ -31,6 +33,26 @@ export default function KitchenScreen() {
     const handleOpenAddMenu = () => {
         // Use the global FAB menu instead of local modal
         useMealStore.setState({ isAddMenuOpen: true });
+    };
+
+    const handleUseItem = async (item: FridgeItem) => {
+        try {
+            // Thêm vào meal log mặc định là SNACK
+            await addMeal({
+                name: item.name,
+                type: 'SNACK',
+                calories: 150, // Ước lượng
+                protein: 5,
+                carbs: 15,
+                fat: 5,
+                servingSize: item.amount,
+                image: item.emoji,
+            });
+            // Xoá khỏi tủ lạnh
+            await removeItem(item.id);
+        } catch (error) {
+            console.error('Lỗi khi dùng thực phẩm:', error);
+        }
     };
 
 
@@ -110,7 +132,7 @@ export default function KitchenScreen() {
                                 {useSoon.length === 0
                                     ? <EmptyHint text={t('kitchen.empty.useSoon')} />
                                     : useSoon.map((item) => (
-                                        <UseSoonCard key={item.id} item={item} onRemove={removeItem} t={t} />
+                                        <UseSoonCard key={item.id} item={item} onRemove={removeItem} onUse={handleUseItem} t={t} />
                                     ))
                                 }
 
@@ -199,10 +221,12 @@ export default function KitchenScreen() {
 function UseSoonCard({
     item,
     onRemove,
+    onUse,
     t,
 }: {
     item: FridgeItem;
     onRemove: (id: string) => Promise<void>;
+    onUse: (item: FridgeItem) => Promise<void>;
     t: (key: string, params?: Record<string, string | number>) => string;
 }) {
     return (
@@ -223,7 +247,7 @@ function UseSoonCard({
                     <Text style={styles.fridgeName}>{item.name}</Text>
                     <Text style={styles.fridgeDetail}>{item.amount} • {item.location}</Text>
                     <View style={styles.actionRow}>
-                        <TouchableOpacity style={styles.btnUseNow}>
+                        <TouchableOpacity style={styles.btnUseNow} onPress={() => onUse(item)}>
                             <Text style={styles.btnUseNowText}>{t('kitchen.useNow')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.btnRemove} onPress={() => onRemove(item.id)}>
