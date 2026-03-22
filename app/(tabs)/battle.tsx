@@ -8,7 +8,7 @@ import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 import { Video, ResizeMode } from 'expo-av';
 import { useMealStore } from '../../src/store/mealStore';
 import { getUserData, UserData } from '../../src/store/userStore';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useCallback } from 'react';
 
 type SortMode = 'streak' | 'petScore';
@@ -62,6 +62,7 @@ export default function BattleScreen() {
     const [showSortMenu, setShowSortMenu] = useState(false);
     const [devBoostDays, setDevBoostDays] = useState(0);
     const [userData, setUserData] = useState<UserData | null>(null);
+    const isFocused = useIsFocused();
 
     useFocusEffect(
         useCallback(() => {
@@ -325,16 +326,15 @@ export default function BattleScreen() {
                             ]}
                         >
                             <Video
+                                key={`dragon-${petStageIndex}`}
                                 source={dragonVideoSource}
                                 style={styles.dragonVideo}
                                 resizeMode={ResizeMode.COVER}
-                                shouldPlay
+                                shouldPlay={isFocused} // Chỉ play khi tab này đang được mở, tránh lỗi treo video khi thu nhỏ hoặc sang tab khác
                                 isLooping
                                 isMuted
                                 useNativeControls={false}
-                                usePoster={true}
-                                posterSource={require('../../assets/images/welcome0.jpg')} // Fallback poster
-                                posterStyle={styles.dragonVideo}
+                                usePoster={false} // Bỏ usePoster do Expo AV trên Android thường bị kẹt poster không chịu load video local
                             />
                         </View>
                     </View>
