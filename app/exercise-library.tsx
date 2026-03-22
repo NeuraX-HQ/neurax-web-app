@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { Colors, Shadows } from '../src/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
+import { useWorkoutStore } from '../src/store/workoutStore';
 
 interface Exercise {
     id: string;
@@ -189,6 +190,7 @@ export default function ExerciseLibraryScreen() {
     const [sets, setSets] = useState(3);
     const [reps, setReps] = useState(12);
     const [durationMinutes, setDurationMinutes] = useState(30);
+    const { addRoutine } = useWorkoutStore();
 
     const openExerciseDetail = (exercise: Exercise) => {
         setSelectedExercise(exercise);
@@ -200,7 +202,21 @@ export default function ExerciseLibraryScreen() {
 
     const addToWorkout = () => {
         if (selectedExercise) {
-            setWorkoutList([...workoutList, { ...selectedExercise, sets, reps, durationMinutes }]);
+            const existingIndex = workoutList.findIndex(ex => ex.id === selectedExercise.id);
+            if (existingIndex > -1) {
+                // Update existing exercise with new values
+                const newWorkoutList = [...workoutList];
+                newWorkoutList[existingIndex] = {
+                    ...newWorkoutList[existingIndex],
+                    sets: sets || newWorkoutList[existingIndex].sets,
+                    reps: reps || newWorkoutList[existingIndex].reps,
+                    durationMinutes: durationMinutes || newWorkoutList[existingIndex].durationMinutes
+                };
+                setWorkoutList(newWorkoutList);
+            } else {
+                // Add as new entry
+                setWorkoutList([...workoutList, { ...selectedExercise, sets, reps, durationMinutes }]);
+            }
             setShowDetail(false);
         }
     };
@@ -216,6 +232,16 @@ export default function ExerciseLibraryScreen() {
             pathname: '/workout-session',
             params: { workoutList: JSON.stringify(workoutList) }
         });
+    };
+
+    const saveAsRoutine = () => {
+        if (workoutList.length > 0) {
+            const routineName = language === 'vi' 
+                ? `Bài tập ngày ${new Date().toLocaleDateString('vi-VN')}` 
+                : `Workout ${new Date().toLocaleDateString()}`;
+            addRoutine(routineName, workoutList);
+            alert(language === 'vi' ? 'Đã lưu vào Bài tập mẫu!' : 'Saved to Routines!');
+        }
     };
 
     const adjustValue = (value: number, delta: number, min: number = 1) => {
@@ -470,6 +496,15 @@ export default function ExerciseLibraryScreen() {
                         {/* Start Workout Button */}
                         {workoutList.length > 0 && (
                             <View style={styles.startWorkoutContainer}>
+                                <TouchableOpacity
+                                    style={styles.saveRoutineButton}
+                                    onPress={saveAsRoutine}
+                                >
+                                    <Ionicons name="bookmark-outline" size={20} color={Colors.primary} />
+                                    <Text style={styles.saveRoutineText}>
+                                        {language === 'vi' ? 'Lưu bài tập mẫu' : 'Save as Routine'}
+                                    </Text>
+                                </TouchableOpacity>
                                 <TouchableOpacity
                                     style={styles.startWorkoutButton}
                                     onPress={startWorkout}
@@ -741,18 +776,34 @@ const styles = StyleSheet.create({
         color: Colors.textSecondary,
     },
     startWorkoutContainer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
         backgroundColor: '#FFFFFF',
         paddingHorizontal: 20,
         paddingTop: 16,
-        paddingBottom: 20,
+        paddingBottom: 24,
         borderTopWidth: 1,
         borderTopColor: '#F0F0F0',
+        flexDirection: 'row',
+        gap: 12,
+    },
+    saveRoutineButton: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 16,
+        backgroundColor: '#E8F5E9',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        borderWidth: 1,
+        borderColor: Colors.primary,
+    },
+    saveRoutineText: {
+        color: Colors.primary,
+        fontSize: 14,
+        fontWeight: '700',
     },
     startWorkoutButton: {
+        flex: 1,
         flexDirection: 'row',
         backgroundColor: Colors.primary,
         borderRadius: 16,
