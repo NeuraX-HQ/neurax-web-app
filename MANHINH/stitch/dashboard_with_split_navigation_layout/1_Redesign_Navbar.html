@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Mobile Dashboard</title>
+<!-- Tailwind CSS v3 CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts for a modern look -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<style data-purpose="global-styles">
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: contain;
+    }
+    /* Custom Glow for AI Bubble */
+    .ai-glow {
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.6);
+      animation: pulse-glow 3s infinite ease-in-out;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); }
+      50% { box-shadow: 0 0 25px rgba(99, 102, 241, 0.8); }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 h-screen flex flex-col overflow-hidden">
+<!-- BEGIN: Header -->
+<header class="px-6 pt-12 pb-4 bg-white border-b border-gray-100" data-purpose="main-header">
+<div class="flex justify-between items-center">
+<div>
+<h1 class="text-2xl font-bold tracking-tight">Dashboard</h1>
+<p class="text-sm text-gray-500">Welcome back, Hero!</p>
+</div>
+<div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center border-2 border-white shadow-sm">
+<span class="text-indigo-600 font-semibold">JD</span>
+</div>
+</div>
+</header>
+<!-- END: Header -->
+<!-- BEGIN: MainContent -->
+<main class="flex-1 overflow-y-auto px-6 py-6 pb-40" data-purpose="scrollable-content">
+<!-- Hero/Status Card -->
+<section class="mb-8" data-purpose="status-overview">
+<div class="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-3xl p-6 text-white shadow-lg">
+<h2 class="text-lg font-medium opacity-90">Daily Summary</h2>
+<div class="mt-4 flex justify-between items-end">
+<div>
+<p class="text-3xl font-bold">85%</p>
+<p class="text-xs opacity-75 mt-1">Completion Rate</p>
+</div>
+<div class="text-right">
+<p class="text-sm font-medium">3200 pts</p>
+<p class="text-xs opacity-75 mt-1">Total Score</p>
+</div>
+</div>
+<div class="mt-6 w-full bg-white/20 h-2 rounded-full overflow-hidden">
+<div class="bg-white h-full w-[85%] rounded-full"></div>
+</div>
+</div>
+</section>
+<!-- Content Grid -->
+<section class="grid grid-cols-2 gap-4" data-purpose="feature-grid">
+<!-- Activity Card -->
+<div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-3">
+<div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<div>
+<h3 class="font-semibold text-gray-800">Activity</h3>
+<p class="text-xs text-gray-500">45 mins today</p>
+</div>
+</div>
+<!-- Inventory Card -->
+<div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-3">
+<div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<div>
+<h3 class="font-semibold text-gray-800">Inventory</h3>
+<p class="text-xs text-gray-500">12 items</p>
+</div>
+</div>
+</section>
+<!-- Recent Activity List -->
+<section class="mt-8" data-purpose="activity-feed">
+<h3 class="text-lg font-bold mb-4">Recent Updates</h3>
+<div class="space-y-4">
+<div class="flex items-center gap-4 bg-white p-3 rounded-xl border border-gray-50">
+<div class="w-2 h-2 rounded-full bg-indigo-500"></div>
+<div class="flex-1">
+<p class="text-sm font-medium">Battle quest completed</p>
+<p class="text-xs text-gray-400">2 hours ago</p>
+</div>
+<span class="text-indigo-600 text-xs font-bold">+50xp</span>
+</div>
+<div class="flex items-center gap-4 bg-white p-3 rounded-xl border border-gray-50">
+<div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+<div class="flex-1">
+<p class="text-sm font-medium">Fridge restocked</p>
+<p class="text-xs text-gray-400">5 hours ago</p>
+</div>
+<span class="text-emerald-600 text-xs font-bold">New Item</span>
+</div>
+</div>
+</section>
+</main>
+<!-- END: MainContent -->
+<!-- BEGIN: AI Chat Bubble -->
+<div class="fixed right-6 bottom-28 z-50" data-purpose="ai-assistant">
+<!-- Bubble Container positioned above the + button area -->
+<button class="ai-glow w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-105 active:scale-95 transition-all" id="ai-trigger">
+<svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+<circle cx="9" cy="9" r="1"></circle>
+<circle cx="15" cy="9" r="1"></circle>
+</svg>
+</button>
+</div>
+<!-- END: AI Chat Bubble -->
+<!-- BEGIN: NavigationBar -->
+<nav class="fixed bottom-6 left-0 right-0 px-4 z-40" data-purpose="bottom-navigation">
+<div class="max-w-md mx-auto flex items-center gap-3">
+<!-- Main Navigation Pill -->
+<div class="flex-1 bg-white rounded-full shadow-lg border border-gray-100 flex justify-around items-center py-2 px-2 h-16">
+<!-- Home Icon -->
+<button class="flex flex-col items-center gap-1 group" data-purpose="nav-home">
+<div class="text-indigo-600 group-active:scale-90 transition-transform bg-indigo-50 p-2 rounded-full">
+<svg class="h-5 w-5" fill="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path>
+</svg>
+</div>
+<span class="text-[10px] font-semibold text-indigo-600">Home</span>
+</button>
+<!-- Progress Icon -->
+<button class="flex flex-col items-center gap-1 group" data-purpose="nav-progress">
+<div class="text-gray-400 group-active:scale-90 transition-transform p-2">
+<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+</svg>
+</div>
+<span class="text-[10px] font-medium text-gray-500">Progress</span>
+</button>
+<!-- Fridge Icon -->
+<button class="flex flex-col items-center gap-1 group" data-purpose="nav-fridge">
+<div class="text-gray-400 group-active:scale-90 transition-transform p-2">
+<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<rect height="18" rx="2" ry="2" width="14" x="5" y="3"></rect>
+<line x1="5" x2="19" y1="10" y2="10"></line>
+<line x1="12" x2="12" y1="5" y2="8"></line>
+<line x1="9" x2="9" y1="14" y2="14.01"></line>
+</svg>
+</div>
+<span class="text-[10px] font-medium text-gray-500">Fridge</span>
+</button>
+<!-- Battle Icon -->
+<button class="flex flex-col items-center gap-1 group" data-purpose="nav-battle">
+<div class="text-gray-400 group-active:scale-90 transition-transform p-2">
+<svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path>
+<path d="M13 19l6-6"></path>
+<path d="M16 22l5-5"></path>
+<circle cx="20" cy="4" r="2"></circle>
+</svg>
+</div>
+<span class="text-[10px] font-medium text-gray-500">Battle</span>
+</button>
+</div>
+<!-- Floating Action Button -->
+<button class="w-16 h-16 bg-neutral-900 rounded-full flex items-center justify-center text-white shadow-xl group active:scale-95 transition-transform" data-purpose="nav-plus">
+<svg class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="2.5" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+</button>
+</div>
+</nav>
+<!-- END: NavigationBar -->
+<script data-purpose="ios-tap-fix">
+    // Script to ensure responsive feeling on mobile devices
+    document.addEventListener('touchstart', function() {}, true);
+    
+    // Simple click handler for the AI bubble to show interactivity
+    const aiBubble = document.getElementById('ai-trigger');
+    aiBubble.addEventListener('click', () => {
+      console.log('AI Assistant triggered');
+      // Potential UI feedback
+      aiBubble.classList.add('scale-125');
+      setTimeout(() => aiBubble.classList.remove('scale-125'), 200);
+    });
+  </script>
+</body></html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dashboard - Action Menu</title>
+<!-- Tailwind CSS v3 with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style data-purpose="custom-animations">
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-slide-up {
+      animation: slideUp 0.3s ease-out forwards;
+    }
+    .blur-overlay {
+      backdrop-filter: blur(4px);
+      background-color: rgba(255, 255, 255, 0.6);
+    }
+  </style>
+</head>
+<body class="bg-gray-50 font-sans text-slate-900 overflow-hidden">
+<!-- BEGIN: BackgroundDashboard -->
+<!-- This section mimics the previous dashboard screen (SCREEN_6) but in a dimmed/blurred state -->
+<main class="relative w-full h-screen overflow-hidden filter blur-[2px] opacity-70">
+<header class="p-6 flex justify-between items-center bg-white">
+<div>
+<h1 class="text-3xl font-bold">Dashboard</h1>
+<p class="text-slate-500">Welcome back, Hero!</p>
+</div>
+<div class="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold">
+        JD
+      </div>
+</header>
+<div class="p-6 space-y-6">
+<!-- Daily Summary Card -->
+<section class="bg-indigo-600 rounded-3xl p-6 text-white shadow-xl">
+<h2 class="text-lg opacity-90">Daily Summary</h2>
+<div class="flex justify-between items-end mt-4">
+<div>
+<span class="text-5xl font-bold">85%</span>
+<p class="text-sm opacity-80 mt-1">Completion Rate</p>
+</div>
+<div class="text-right">
+<span class="text-xl font-semibold">3200 pts</span>
+<p class="text-sm opacity-80 mt-1">Total Score</p>
+</div>
+</div>
+<div class="mt-6 h-2 bg-indigo-400 rounded-full overflow-hidden">
+<div class="bg-white h-full w-[85%]"></div>
+</div>
+</section>
+<!-- Stats Grid -->
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+<div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center mb-4">
+<svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<h3 class="font-bold">Activity</h3>
+<p class="text-xs text-slate-400">45 mins today</p>
+</div>
+<div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+<div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center mb-4">
+<svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<h3 class="font-bold">Inventory</h3>
+<p class="text-xs text-slate-400">12 items</p>
+</div>
+</div>
+<!-- Recent Updates -->
+<section>
+<h2 class="text-xl font-bold mb-4">Recent Updates</h2>
+<div class="space-y-3">
+<div class="bg-white p-4 rounded-2xl flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-indigo-500"></div>
+<div>
+<p class="font-medium text-sm">Battle quest completed</p>
+<p class="text-xs text-slate-400">2 hours ago</p>
+</div>
+</div>
+<span class="text-indigo-600 font-bold text-xs">+50xp</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Bottom Nav (Faded) -->
+<nav class="absolute bottom-6 left-6 right-6 h-16 bg-white rounded-full flex items-center justify-around shadow-lg px-4 border border-slate-100">
+<div class="text-center text-indigo-600">
+<svg class="w-6 h-6 mx-auto" fill="currentColor" viewbox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path></svg>
+<span class="text-[10px] font-bold">Home</span>
+</div>
+<div class="text-center text-slate-400">
+<svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-[10px]">Progress</span>
+</div>
+<div class="text-center text-slate-400">
+<svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-[10px]">Fridge</span>
+</div>
+<div class="text-center text-slate-400">
+<svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span class="text-[10px]">Battle</span>
+</div>
+</nav>
+</main>
+<!-- END: BackgroundDashboard -->
+<!-- BEGIN: ModalOverlay -->
+<!-- Darkens and blurs background, handles the close interaction -->
+<div class="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-10 transition-opacity duration-300" data-purpose="dim-overlay"></div>
+<!-- END: ModalOverlay -->
+<!-- BEGIN: FloatingActionMenu -->
+<div class="fixed bottom-0 right-0 p-6 z-20 flex flex-col items-end gap-4 pointer-events-none">
+<!-- AI Chat Bubble (Repositioned) -->
+<div class="pointer-events-auto bg-indigo-600 text-white w-14 h-14 rounded-3xl flex items-center justify-center shadow-2xl mb-2 animate-slide-up" data-purpose="ai-chat-bubble" style="animation-delay: 150ms;">
+<svg class="w-7 h-7" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<!-- Menu Items -->
+<div class="flex flex-col items-end gap-4 pointer-events-auto">
+<!-- Food Database Button -->
+<div class="flex items-center gap-3 animate-slide-up" style="animation-delay: 100ms;">
+<span class="bg-white px-4 py-2 rounded-xl shadow-lg text-sm font-bold text-slate-700">Food Database</span>
+<button class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg text-indigo-600">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+<!-- Scan Camera Button -->
+<div class="flex items-center gap-3 animate-slide-up" style="animation-delay: 50ms;">
+<span class="bg-white px-4 py-2 rounded-xl shadow-lg text-sm font-bold text-slate-700">Scan Camera</span>
+<button class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg text-indigo-600">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+<!-- Voice Button -->
+<div class="flex items-center gap-3 animate-slide-up">
+<span class="bg-white px-4 py-2 rounded-xl shadow-lg text-sm font-bold text-slate-700">Voice</span>
+<button class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg text-indigo-600">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</button>
+</div>
+<!-- Main Plus/Close Toggle Button -->
+<button class="w-16 h-16 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-2xl transition-transform duration-300 transform rotate-45 mt-2" id="toggle-menu">
+<!-- Using rotate-45 on the container or icon to turn + into X -->
+<svg class="w-8 h-8" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M12 6v6m0 0v6m0-6h6m-6 0H6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+<!-- END: FloatingActionMenu -->
+<script data-purpose="toggle-logic">
+    // Simplified logic for presentation purposes: 
+    // This script would normally handle the transition back to the dashboard.
+    const closeBtn = document.getElementById('toggle-menu');
+    const overlay = document.querySelector('[data-purpose="dim-overlay"]');
+
+    function closeMenu() {
+      // In a real app, this would trigger exit animations and route/state change
+      window.history.back();
+    }
+
+    closeBtn.addEventListener('click', closeMenu);
+    overlay.addEventListener('click', closeMenu);
+  </script>
+</body></html>

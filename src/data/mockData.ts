@@ -8,7 +8,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn mát',
         daysLeft: 2,
         expiryDate: '2026-03-18T23:59:59.000Z',
-        emoji: '🍗',
+        // emoji: '🍗',
         addedDate: '2026-03-14T08:30:00.000Z',
     },
     {
@@ -18,7 +18,7 @@ export const mockFridgeItems: any[] = [
         location: 'Cửa tủ lạnh',
         daysLeft: 1,
         expiryDate: '2026-03-17T23:59:59.000Z',
-        emoji: '🥛',
+        // emoji: '🥛',
         addedDate: '2026-03-12T07:10:00.000Z',
     },
     {
@@ -28,7 +28,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn rau',
         daysLeft: 3,
         expiryDate: '2026-03-19T23:59:59.000Z',
-        emoji: '🥬',
+        // emoji: '🥬',
         addedDate: '2026-03-15T09:00:00.000Z',
     },
     {
@@ -38,7 +38,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn mát',
         daysLeft: 2,
         expiryDate: '2026-03-18T23:59:59.000Z',
-        emoji: '🐟',
+        // emoji: '🐟',
         addedDate: '2026-03-15T10:15:00.000Z',
     },
     {
@@ -48,7 +48,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn rau',
         daysLeft: 3,
         expiryDate: '2026-03-19T23:59:59.000Z',
-        emoji: '🍄',
+        // emoji: '🍄',
         addedDate: '2026-03-14T18:20:00.000Z',
     },
     {
@@ -58,7 +58,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn mát',
         daysLeft: 4,
         expiryDate: '2026-03-20T23:59:59.000Z',
-        emoji: '🧈',
+        // emoji: '🧈',
         addedDate: '2026-03-13T11:30:00.000Z',
     },
     {
@@ -68,7 +68,7 @@ export const mockFridgeItems: any[] = [
         location: 'Cửa tủ lạnh',
         daysLeft: 5,
         expiryDate: '2026-03-21T23:59:59.000Z',
-        emoji: '🥣',
+        // emoji: '🥣',
         addedDate: '2026-03-11T06:40:00.000Z',
     },
     {
@@ -78,7 +78,7 @@ export const mockFridgeItems: any[] = [
         location: 'Cửa tủ lạnh',
         daysLeft: 7,
         expiryDate: '2026-03-23T23:59:59.000Z',
-        emoji: '🥚',
+        // emoji: '🥚',
         addedDate: '2026-03-10T07:00:00.000Z',
     },
     {
@@ -88,7 +88,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn rau',
         daysLeft: 6,
         expiryDate: '2026-03-22T23:59:59.000Z',
-        emoji: '🥦',
+        // emoji: '🥦',
         addedDate: '2026-03-13T17:45:00.000Z',
     },
     {
@@ -98,7 +98,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn rau',
         daysLeft: 7,
         expiryDate: '2026-03-23T23:59:59.000Z',
-        emoji: '🥕',
+        // emoji: '🥕',
         addedDate: '2026-03-09T09:12:00.000Z',
     },
     {
@@ -108,7 +108,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn rau',
         daysLeft: 10,
         expiryDate: '2026-03-26T23:59:59.000Z',
-        emoji: '🍏',
+        // emoji: '🍏',
         addedDate: '2026-03-07T14:00:00.000Z',
     },
     {
@@ -118,7 +118,7 @@ export const mockFridgeItems: any[] = [
         location: 'Cửa tủ lạnh',
         daysLeft: 15,
         expiryDate: '2026-03-31T23:59:59.000Z',
-        emoji: '🧈',
+        // emoji: '🧈',
         addedDate: '2026-03-05T08:25:00.000Z',
     },
     {
@@ -128,7 +128,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn mát',
         daysLeft: 12,
         expiryDate: '2026-03-28T23:59:59.000Z',
-        emoji: '🧀',
+        // emoji: '🧀',
         addedDate: '2026-03-06T16:00:00.000Z',
     },
     {
@@ -138,7 +138,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn rau',
         daysLeft: 4,
         expiryDate: '2026-03-20T23:59:59.000Z',
-        emoji: '🍓',
+        // emoji: '🍓',
         addedDate: '2026-03-14T11:05:00.000Z',
     },
     {
@@ -148,7 +148,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn rau',
         daysLeft: 6,
         expiryDate: '2026-03-22T23:59:59.000Z',
-        emoji: '🥒',
+        // emoji: '🥒',
         addedDate: '2026-03-12T12:35:00.000Z',
     },
     {
@@ -158,7 +158,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn mát',
         daysLeft: 20,
         expiryDate: '2026-04-05T23:59:59.000Z',
-        emoji: '🥬',
+        // emoji: '🥬',
         addedDate: '2026-03-01T10:10:00.000Z',
     },
     {
@@ -168,7 +168,7 @@ export const mockFridgeItems: any[] = [
         location: 'Cửa tủ lạnh',
         daysLeft: 5,
         expiryDate: '2026-03-21T23:59:59.000Z',
-        emoji: '🍊',
+        // emoji: '🍊',
         addedDate: '2026-03-13T19:00:00.000Z',
     },
     {
@@ -178,7 +178,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn đông',
         daysLeft: 14,
         expiryDate: '2026-03-30T23:59:59.000Z',
-        emoji: '🥩',
+        // emoji: '🥩',
         addedDate: '2026-03-05T15:55:00.000Z',
     },
     {
@@ -188,7 +188,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn đông',
         daysLeft: 11,
         expiryDate: '2026-03-27T23:59:59.000Z',
-        emoji: '🍤',
+        // emoji: '🍤',
         addedDate: '2026-03-06T08:42:00.000Z',
     },
     {
@@ -198,7 +198,7 @@ export const mockFridgeItems: any[] = [
         location: 'Ngăn rau',
         daysLeft: 9,
         expiryDate: '2026-03-25T23:59:59.000Z',
-        emoji: '🌽',
+        // emoji: '🌽',
         addedDate: '2026-03-08T09:18:00.000Z',
     },
 ];
@@ -244,7 +244,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '25g',
         time: '45 min',
         match: 98,
-        emoji: '🍜',
+        // emoji: '🍜',
         image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDw5PNRD9pR_jQUxmTrEnN-3MIjSO9Ksp_17HmLhAh14hu1M7qmqL13SurGrKsI-GYgdg9ggfxRYsLq7IEnvJQAF3QNiJSAY56UxkJ0I2k5r5xqbWv1gM0JKX59Xiqdon7FgTeFyBLy6ptt3bfjVACpyV0W8OmB0psWmyu4gcGYIf56lyY6dEKH7zKO-jJ292PrXTQFahgmPWxIYiY9yFXkd__o1g_GMQj1_pdOs16PjfhPOfpy7YUntpUXfAOgl6xoOMcjOHspNQ',
         shortMeta: '15 phút',
         ingredients: [
@@ -303,7 +303,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '31g',
         time: '35 min',
         match: 96,
-        emoji: '🍚',
+        // emoji: '🍚',
         image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '20 phút',
         ingredients: [
@@ -345,7 +345,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '27g',
         time: '30 min',
         match: 94,
-        emoji: '🍜',
+        // emoji: '🍜',
         image: 'https://images.unsplash.com/photo-1526318896980-cf78c088247c?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '18 phút',
         ingredients: [
@@ -387,7 +387,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '29g',
         time: '50 min',
         match: 91,
-        emoji: '🍲',
+        // emoji: '🍲',
         image: 'https://images.unsplash.com/photo-1543353071-10c8ba85a904?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '25 phút',
         ingredients: [
@@ -411,7 +411,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '26g',
         time: '35 min',
         match: 90,
-        emoji: '🍜',
+        // emoji: '🍜',
         image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '16 phút',
         ingredients: [
@@ -435,7 +435,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '21g',
         time: '20 min',
         match: 88,
-        emoji: '🥬',
+        // emoji: '🥬',
         image: 'https://images.unsplash.com/photo-1529563021893-cc83c992d75d?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '12 phút',
         ingredients: [
@@ -459,7 +459,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '22g',
         time: '20 min',
         match: 92,
-        emoji: '🥖',
+        // emoji: '🥖',
         image: 'https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '10 phút',
         ingredients: [
@@ -483,7 +483,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '34g',
         time: '18 min',
         match: 93,
-        emoji: '🐟',
+        // emoji: '🐟',
         image: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '12 phút',
         ingredients: [
@@ -507,7 +507,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '32g',
         time: '30 min',
         match: 89,
-        emoji: '🍗',
+        // emoji: '🍗',
         image: 'https://images.unsplash.com/photo-1518492104633-130d0cc84637?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '20 phút',
         ingredients: [
@@ -531,7 +531,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '33g',
         time: '25 min',
         match: 90,
-        emoji: '🥩',
+        // emoji: '🥩',
         image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '15 phút',
         ingredients: [
@@ -555,7 +555,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '38g',
         time: '22 min',
         match: 95,
-        emoji: '🍗',
+        // emoji: '🍗',
         image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '14 phút',
         ingredients: [
@@ -579,7 +579,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '24g',
         time: '12 min',
         match: 87,
-        emoji: '🥗',
+        // emoji: '🥗',
         image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '8 phút',
         ingredients: [
@@ -603,7 +603,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '14g',
         time: '8 min',
         match: 86,
-        emoji: '🥣',
+        // emoji: '🥣',
         image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '5 phút',
         ingredients: [
@@ -627,7 +627,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '28g',
         time: '28 min',
         match: 84,
-        emoji: '🍝',
+        // emoji: '🍝',
         image: 'https://images.unsplash.com/photo-1551892374-ecf8754cf8b0?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '20 phút',
         ingredients: [
@@ -651,7 +651,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '35g',
         time: '22 min',
         match: 88,
-        emoji: '🌯',
+        // emoji: '🌯',
         image: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '15 phút',
         ingredients: [
@@ -675,7 +675,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '20g',
         time: '35 min',
         match: 82,
-        emoji: '🍣',
+        // emoji: '🍣',
         image: 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '22 phút',
         ingredients: [
@@ -699,7 +699,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '27g',
         time: '30 min',
         match: 86,
-        emoji: '🍛',
+        // emoji: '🍛',
         image: 'https://images.unsplash.com/photo-1553163147-622ab57be1c7?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '18 phút',
         ingredients: [
@@ -723,7 +723,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '26g',
         time: '24 min',
         match: 83,
-        emoji: '🍤',
+        // emoji: '🍤',
         image: 'https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '15 phút',
         ingredients: [
@@ -747,7 +747,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '30g',
         time: '18 min',
         match: 85,
-        emoji: '🥗',
+        // emoji: '🥗',
         image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '12 phút',
         ingredients: [
@@ -771,7 +771,7 @@ export const mockRecipes: MockRecipe[] = [
         protein: '29g',
         time: '12 min',
         match: 89,
-        emoji: '🥪',
+        // emoji: '🥪',
         image: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=1200&q=80',
         shortMeta: '7 phút',
         ingredients: [
@@ -912,8 +912,4 @@ export const dietaryRestrictions = [
 
 export const drinkTypes = [
     { id: 'water', label: 'Water', emoji: '💧' },
-    { id: 'tea', label: 'Tea', emoji: '🍵' },
-    { id: 'coffee', label: 'Coffee', emoji: '☕' },
-    { id: 'juice', label: 'Juice', emoji: '🍊' },
-    { id: 'beer', label: 'Beer', emoji: '🍺' },
 ];

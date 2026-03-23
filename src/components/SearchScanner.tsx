@@ -93,16 +93,11 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
             onPress={() => handleSearch(item.name)}
             disabled={searching}
         >
-            <View style={searchStyles.foodThumb}>
-                <Text style={searchStyles.foodEmoji}>{item.emoji}</Text>
-            </View>
-
             <View style={searchStyles.foodMainInfo}>
                 <Text style={searchStyles.foodName}>{item.name}</Text>
                 <Text style={searchStyles.foodKcal}>{item.kcal} kcal • {item.serving}</Text>
                 <Text style={searchStyles.foodMacro}>P: {item.protein}g • C: {item.carbs}g • F: {item.fat}g</Text>
             </View>
-
             <TouchableOpacity
                 style={searchStyles.addBtn}
                 activeOpacity={0.8}
@@ -213,7 +208,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
                                             const mapped = mergedSuggestions.find((x) => x.name === name);
                                             const item = mapped || {
                                                 name,
-                                                emoji: '🍽️',
+                                                emoji: '',
                                                 kcal: 300,
                                                 serving: `1 ${DEFAULT_PORTION_UNIT}`,
                                                 protein: 18,
@@ -270,7 +265,7 @@ const mapRecipeToFoodTemplateItem = (recipe: typeof mockRecipes[number]): FoodTe
 
     return {
         name: recipe.name,
-        emoji: recipe.emoji || '🍽️',
+        emoji: '',
         kcal: recipe.calories,
         serving: `1 ${DEFAULT_PORTION_UNIT}`,
         protein,
@@ -376,26 +371,38 @@ const searchStyles = StyleSheet.create({
     },
     foodCard: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'center', // căn giữa theo chiều dọc
         gap: 12,
-        backgroundColor: '#FFFFFF',
         borderRadius: 12,
         padding: 12,
         marginBottom: 10,
-        borderWidth: 1,
-        borderColor: '#F1F5F9',
-        ...Shadows.small,
+        // No background, border, or shadow
     },
     foodThumb: {
         width: 64,
         height: 64,
         borderRadius: 10,
-        backgroundColor: '#F1F5F9',
+        // backgroundColor: '#F1F5F9', // Removed thumb background
         justifyContent: 'center',
         alignItems: 'center',
     },
     foodEmoji: { fontSize: 30 },
-    foodMainInfo: { flex: 1 },
+    foodMainInfo: {
+        flex: 1,
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        display: 'flex',
+    },
+    addBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        // backgroundColor: '#10B9811A',
+        justifyContent: 'center',
+        alignItems: 'center',
+        alignSelf: 'flex-end', // đẩy nút + sát bên phải
+        marginLeft: 0,
+    },
     foodName: {
         fontSize: 16,
         fontWeight: '700',
