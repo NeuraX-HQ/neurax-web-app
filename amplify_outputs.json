@@ -685,6 +685,26 @@
             }
           }
         },
+        "askBedrock": {
+          "name": "askBedrock",
+          "isArray": false,
+          "type": "String",
+          "isRequired": false,
+          "arguments": {
+            "action": {
+              "name": "action",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true
+            },
+            "payload": {
+              "name": "payload",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false
+            }
+          }
+        },
         "processNutrition": {
           "name": "processNutrition",
           "isArray": false,
