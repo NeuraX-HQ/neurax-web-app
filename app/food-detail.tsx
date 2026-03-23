@@ -116,6 +116,9 @@ export default function FoodDetailScreen() {
     // Use global state as source of truth if available, otherwise fallback to params
     const foodData: NutritionInfo | null = currentFoodItem || (params.foodData ? JSON.parse(params.foodData as string) : null);
 
+    const { language } = useAppLanguage();
+    const displayFoodName = foodData ? (language === 'vi' ? (foodData.name_vi || foodData.name) : (foodData.name_en || foodData.name)) : '';
+
     if (!foodData) {
         return (
             <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -172,6 +175,8 @@ export default function FoodDetailScreen() {
 
             await addMeal({
                 name: foodData.name,
+                name_en: foodData.name_en,
+                name_vi: foodData.name_vi,
                 type: selectedMealType,
                 calories: Math.round(foodData.calories * nutritionMultiplier),
                 protein: Math.round(foodData.protein * nutritionMultiplier),
@@ -179,7 +184,7 @@ export default function FoodDetailScreen() {
                 fat: Math.round(foodData.fat * nutritionMultiplier),
                 servingSize: `${portionCount} ${t(selectedPortionUnit.labelKey)}`,
                 ingredients: foodData.ingredients,
-                image: savedImageUri || getEmojiForFood(foodData.name),
+                image: savedImageUri || getEmojiForFood(foodData.name_en || foodData.name),
             });
 
             // Navigate back to home
@@ -192,10 +197,19 @@ export default function FoodDetailScreen() {
     };
 
     const handleAddToFridge = () => {
+        const updatedFoodData = {
+            ...foodData,
+            servingSize: `${portionCount} ${t(selectedPortionUnit.labelKey)}`,
+            calories: Math.round(foodData.calories * nutritionMultiplier),
+            protein: Math.round(foodData.protein * nutritionMultiplier),
+            carbs: Math.round(foodData.carbs * nutritionMultiplier),
+            fat: Math.round(foodData.fat * nutritionMultiplier),
+        };
+
         router.push({
             pathname: '/add-to-fridge',
             params: {
-                foodData: params.foodData,
+                foodData: JSON.stringify(updatedFoodData),
                 image: params.image,
                 source: params.source
             }
@@ -239,7 +253,7 @@ export default function FoodDetailScreen() {
                         />
                     ) : (
                         <View style={styles.foodImagePlaceholder}>
-                            <Text style={styles.foodEmojiLarge}>{getEmojiForFood(foodData.name)}</Text>
+                            <Text style={styles.foodEmojiLarge}>{getEmojiForFood(foodData.name_en || foodData.name)}</Text>
                         </View>
                     )}
 
@@ -255,7 +269,7 @@ export default function FoodDetailScreen() {
 
                     {/* Gradient name overlay at bottom of image */}
                     <View style={styles.nameOverlay}>
-                        <Text style={styles.foodNameLarge}>{foodData.name}</Text>
+                        <Text style={styles.foodNameLarge}>{displayFoodName}</Text>
                     </View>
                 </View>
 
@@ -354,7 +368,12 @@ export default function FoodDetailScreen() {
                         </View>
                         {ingredientItems.map((ingredient, index) => {
                             const isStringIngredient = typeof ingredient === 'string';
-                            const ingredientName = isStringIngredient ? ingredient : ingredient.name;
+                            let ingredientName = '';
+                            if (isStringIngredient) {
+                                ingredientName = ingredient;
+                            } else {
+                                ingredientName = language === 'vi' ? (ingredient.name_vi || ingredient.name) : (ingredient.name_en || ingredient.name);
+                            }
                             const ingredientAmount = isStringIngredient
                                 ? ''
                                 : ingredient.estimated_g

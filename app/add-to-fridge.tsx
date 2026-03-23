@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, Modal, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -12,7 +12,7 @@ export default function AddToFridgeScreen() {
     const router = useRouter();
     const { t } = useAppLanguage();
     const params = useLocalSearchParams();
-    const addItem = useFridgeStore((state) => state.addItem);
+    const { addItem, updateItem } = useFridgeStore();
 
     const [selectedDuration, setSelectedDuration] = useState('7');
     const [reminder, setReminder] = useState(true);
@@ -21,9 +21,23 @@ export default function AddToFridgeScreen() {
     const [customDays, setCustomDays] = useState(1);
     const [selectionStep, setSelectionStep] = useState<'start' | 'end'>('start');
 
-    const foodData: NutritionInfo | null = params.foodData
-        ? JSON.parse(params.foodData as string)
+    const editItemData = params.editItemData
+        ? JSON.parse(params.editItemData as string)
         : null;
+
+    const foodData: NutritionInfo | null = editItemData
+        ? {
+            name: editItemData.name,
+            servingSize: editItemData.amount,
+            calories: 0,
+            protein: '0',
+            carbs: '0',
+            fat: '0',
+            image: ''
+        }
+        : params.foodData
+            ? JSON.parse(params.foodData as string)
+            : null;
 
     const getEmojiForFood = (name: string): string => {
         const lowerName = name.toLowerCase();
@@ -69,9 +83,22 @@ export default function AddToFridgeScreen() {
         t('calendar.weekday.sun'),
     ];
 
-    const initialDuration = 7;
+    const initialDuration = editItemData ? editItemData.daysLeft : 7;
     const [selectedStartDay, setSelectedStartDay] = useState(currentDay);
     const [selectedEndDay, setSelectedEndDay] = useState(Math.min(daysInMonth, currentDay + initialDuration - 1));
+
+    // For selectedDuration, we should check if initialDuration matches predefined options
+    useEffect(() => {
+        if (editItemData) {
+            const d = editItemData.daysLeft;
+            if (d === 1 || d === 3 || d === 7) {
+                setSelectedDuration(d.toString());
+            } else {
+                setSelectedDuration('custom');
+                setCustomDays(d);
+            }
+        }
+    }, []);
 
     const durations = [
         { id: '1', label: t('addToFridge.duration.1') },
@@ -124,14 +151,27 @@ export default function AddToFridgeScreen() {
         expiryDate.setDate(expiryDate.getDate() + days);
 
         try {
-            await addItem({
-                name: foodData.name,
-                amount: foodData.servingSize || '1 phần',
-                location: t('addToFridge.location'),
-                daysLeft: days,
-                expiryDate: expiryDate.toISOString(),
-                emoji: getEmojiForFood(foodData.name),
-            });
+            const finalAmount = foodData.servingSize || '1 phần';
+
+            if (editItemData) {
+                await updateItem(editItemData.id, {
+                    name: foodData.name,
+                    amount: finalAmount,
+                    location: t('addToFridge.location'),
+                    daysLeft: days,
+                    expiryDate: expiryDate.toISOString(),
+                    emoji: getEmojiForFood(foodData.name),
+                });
+            } else {
+                await addItem({
+                    name: foodData.name,
+                    amount: finalAmount,
+                    location: t('addToFridge.location'),
+                    daysLeft: days,
+                    expiryDate: expiryDate.toISOString(),
+                    emoji: getEmojiForFood(foodData.name),
+                });
+            }
             setSuccessModalVisible(true);
         } catch (error) {
             Alert.alert(t('common.error'), t('addToFridge.errorAdd'));
@@ -144,7 +184,7 @@ export default function AddToFridgeScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color="#111827" />
                 </TouchableOpacity>
-                <Text style={styles.title}>{t('addToFridge.title')}</Text>
+                <Text style={styles.title}>{editItemData ? (t('common.edit') || "Sửa vật phẩm") : t('addToFridge.title')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -160,7 +200,7 @@ export default function AddToFridgeScreen() {
                     <View style={styles.foodInfo}>
                         <Text style={styles.foodName}>{foodData ? foodData.name : t('addToFridge.defaultFoodName')}</Text>
                         <Text style={styles.foodCalories}>
-                            {foodData ? `${Math.round(foodData.calories)} kcal • ${t('addToFridge.portion')}` : `450 kcal • ${t('addToFridge.defaultServing')}`}
+                            {foodData ? `${Math.round(foodData.calories)} kcal • ${foodData.servingSize || t('addToFridge.portion')}` : `450 kcal • ${t('addToFridge.defaultServing')}`}
                         </Text>
                     </View>
                 </View>
@@ -259,8 +299,8 @@ export default function AddToFridgeScreen() {
 
                 <View style={styles.footer}>
                     <TouchableOpacity style={styles.addBtn} onPress={handleConfirmAdd}>
-                        <Ionicons name="cube-outline" size={20} color="#FFFFFF" />
-                        <Text style={styles.addBtnText}>{t('addToFridge.confirmAdd')}</Text>
+                        <Ionicons name={editItemData ? "save-outline" : "cube-outline"} size={20} color="#FFFFFF" />
+                        <Text style={styles.addBtnText}>{editItemData ? (t('common.save') || "Lưu thay đổi") : t('addToFridge.confirmAdd')}</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>

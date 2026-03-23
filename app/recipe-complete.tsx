@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Shadows } from '../src/constants/colors';
 import { getRecipeById } from '../src/data/mockData';
-import { useMealStore } from '../src/store/mealStore';
+import { useMealStore, MealType } from '../src/store/mealStore';
 import { useFridgeStore } from '../src/store/fridgeStore';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
@@ -38,12 +38,14 @@ export default function RecipeCompleteScreen() {
     const fridgeItems = useFridgeStore((state) => state.items);
     const loadItems = useFridgeStore((state) => state.loadItems);
     const removeItem = useFridgeStore((state) => state.removeItem);
+    const globalSelectedMealType = useMealStore((state) => state.selectedMealType);
 
     const [isSavingMeal, setIsSavingMeal] = useState(false);
     const [isUpdatingFridge, setIsUpdatingFridge] = useState(false);
     const [mealSaved, setMealSaved] = useState(false);
     const [fridgeUpdated, setFridgeUpdated] = useState(false);
     const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+    const [mealType, setMealType] = useState<MealType>(globalSelectedMealType || 'LUNCH');
 
     const showToast = (message: string, type: 'success' | 'error') => {
         setToast({ message, type });
@@ -86,7 +88,7 @@ export default function RecipeCompleteScreen() {
         try {
             await addMeal({
                 name: recipe.name,
-                type: 'LUNCH',
+                type: mealType,
                 calories: recipe.calories,
                 protein: toNumber(recipe.protein),
                 carbs: Math.round(recipe.calories * 0.11),
@@ -162,6 +164,33 @@ export default function RecipeCompleteScreen() {
                             <Text style={styles.statLabel}>{t('recipeComplete.ingredientsPicked')}</Text>
                             <Text style={styles.statValue}>{selectedIngredients.length}/{recipe.ingredients.length}</Text>
                         </View>
+                    </View>
+                </View>
+
+                {/* Meal Type Selector */}
+                <View style={styles.mealTypeContainer}>
+                    <Text style={styles.sectionTitle}>{t('recipeComplete.selectMealType') || 'Chọn bữa ăn'}</Text>
+                    <View style={styles.mealTypeRow}>
+                        {(['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'] as MealType[]).map((type) => {
+                            let label: string = type;
+                            if (type === 'BREAKFAST') label = 'Sáng';
+                            if (type === 'LUNCH') label = 'Trưa';
+                            if (type === 'DINNER') label = 'Tối';
+                            if (type === 'SNACK') label = 'Phụ';
+
+                            return (
+                                <TouchableOpacity
+                                    key={type}
+                                    style={[styles.mealTypeBtn, mealType === type && styles.mealTypeBtnActive]}
+                                    onPress={() => setMealType(type)}
+                                    disabled={mealSaved}
+                                >
+                                    <Text style={[styles.mealTypeBtnText, mealType === type && styles.mealTypeBtnTextActive]}>
+                                        {label}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
                 </View>
 
@@ -243,6 +272,30 @@ const styles = StyleSheet.create({
     },
     statLabel: { fontSize: 11, color: Colors.textSecondary, textTransform: 'uppercase', fontWeight: '700' },
     statValue: { marginTop: 4, fontSize: 18, color: Colors.text, fontWeight: '800' },
+    mealTypeContainer: { marginTop: 4 },
+    sectionTitle: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
+    mealTypeRow: { flexDirection: 'row', gap: 8 },
+    mealTypeBtn: {
+        flex: 1,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#DDE5EC',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    mealTypeBtnActive: {
+        backgroundColor: Colors.accent,
+        borderColor: Colors.accent,
+        shadowColor: Colors.accent,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    mealTypeBtnText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+    mealTypeBtnTextActive: { color: '#FFFFFF' },
     actionBtn: {
         height: 52,
         borderRadius: 12,

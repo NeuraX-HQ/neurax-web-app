@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal,
 } from 'react-native';
@@ -115,6 +115,73 @@ export default function WorkoutSessionScreen() {
     
     const [totalBurnedKcal, setTotalBurnedKcal] = useState(0);
 
+    // Generate Rounds for Circuit mode
+    const rounds = useMemo(() => {
+        if (workoutMode !== 'circuit') return [];
+        
+        const maxSets = Math.max(...exercises.map(ex => ex.type === 'reps' ? (ex.sets || 1) : 1));
+        const circuitRounds = [];
+        
+        for (let s = 1; s <= maxSets; s++) {
+            const items = [];
+            for (let i = 0; i < exercises.length; i++) {
+                const ex = exercises[i];
+                const totalExSets = ex.type === 'reps' ? (ex.sets || 1) : 1;
+                if (s <= totalExSets) {
+                    items.push({
+                        exercise: ex,
+                        originalIndex: i,
+                        setNumber: s,
+                        isCompleted: ex.completedSets.includes(s)
+                    });
+                }
+            }
+            if (items.length > 0) {
+                circuitRounds.push({ roundNumber: s, items });
+            }
+        }
+        return circuitRounds;
+    }, [exercises, workoutMode]);
+
+    // Find next target for auto-advance
+    const getNextStep = (currentIdx: number, completedSet: number) => {
+        if (workoutMode === 'traditional') {
+            const currentEx = exercises[currentIdx];
+            const totalExSets = currentEx.type === 'reps' ? (currentEx.sets || 1) : 1;
+            
+            // If still has sets in current exercise, stay there
+            if (currentEx.completedSets.length < totalExSets) {
+                return { nextIdx: currentIdx };
+            }
+
+            // Otherwise, find next incomplete exercise
+            for (let i = 1; i < exercises.length; i++) {
+                const nextIdx = (currentIdx + i) % exercises.length;
+                const nextEx = exercises[nextIdx];
+                const nextTotal = nextEx.type === 'reps' ? (nextEx.sets || 1) : 1;
+                if (nextEx.completedSets.length < nextTotal) {
+                    return { nextIdx };
+                }
+            }
+        } else {
+            // Circuit mode: use the flat list of rounds/items
+            const flatItems = rounds.flatMap(r => r.items);
+            const currentItemIndex = flatItems.findIndex(
+                item => item.originalIndex === currentIdx && item.setNumber === completedSet
+            );
+            
+            if (currentItemIndex !== -1 && currentItemIndex < flatItems.length - 1) {
+                // Find next incomplete item in circuit
+                for (let i = currentItemIndex + 1; i < flatItems.length; i++) {
+                    if (!flatItems[i].isCompleted) {
+                        return { nextIdx: flatItems[i].originalIndex };
+                    }
+                }
+            }
+        }
+        return null; // All done or no specific next step
+    };
+
     // Timer effect
     useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -135,8 +202,15 @@ export default function WorkoutSessionScreen() {
 
     const completeSet = (exerciseIndex: number, setNumber: number) => {
         const newExercises = [...exercises];
-        if (!newExercises[exerciseIndex].completedSets.includes(setNumber)) {
-            newExercises[exerciseIndex].completedSets.push(setNumber);
+        const targetEx = newExercises[exerciseIndex];
+
+        // Bug 3 Fix: Enforce sequential set completion
+        if (setNumber > 1 && !targetEx.completedSets.includes(setNumber - 1)) {
+            return;
+        }
+
+        if (!targetEx.completedSets.includes(setNumber)) {
+            targetEx.completedSets.push(setNumber);
             setExercises(newExercises);
 
             // Check if all exercises are complete
@@ -148,8 +222,15 @@ export default function WorkoutSessionScreen() {
             if (allComplete) {
                 calculateAndShowCompleteModal(newExercises);
             } else {
-                // If this specific exercise is fully complete, don't start break if we just do circuit?
-                // For simplicity, just start break as usual
+                // Auto-advance logic
+                const nextStep = getNextStep(exerciseIndex, setNumber);
+                if (nextStep) {
+                    // We'll actually switch indices AFTER the break or immediately?
+                    // Let's set it now so the "Next" experience is smooth
+                    setTimeout(() => {
+                        setCurrentExerciseIndex(nextStep.nextIdx);
+                    }, 100);
+                }
                 startBreak();
             }
         }
@@ -206,7 +287,20 @@ export default function WorkoutSessionScreen() {
     };
 
     const finishWorkout = async () => {
-        if (totalBurnedKcal > 0) {
+        // Ensure we calculate latest calories if not already done
+        const finalCalories = totalBurnedKcal > 0 ? totalBurnedKcal : Math.round(exercises.reduce((sum, ex) => {
+            if (ex.completedSets.length === 0) return sum;
+            const weight = 65;
+            let timeInHours = 0;
+            if (ex.type === 'reps') {
+                timeInHours = (ex.completedSets.length * 1) / 60;
+            } else {
+                timeInHours = (ex.durationMinutes || 0) / 60;
+            }
+            return sum + (ex.metValue * weight * timeInHours);
+        }, 0));
+
+        if (finalCalories > 0) {
             const totalLoggedDuration = exercises.reduce((sum, ex) => {
                 if (ex.completedSets.length === 0) return sum;
                 if (ex.type === 'reps') return sum + ex.completedSets.length;
@@ -215,7 +309,7 @@ export default function WorkoutSessionScreen() {
 
             await addActivity({
                 name: language === 'vi' ? 'Buổi tập' : 'Workout Session',
-                caloriesBurned: totalBurnedKcal,
+                caloriesBurned: finalCalories,
                 durationMinutes: Math.max(1, totalLoggedDuration),
             });
         }
@@ -223,26 +317,23 @@ export default function WorkoutSessionScreen() {
         router.back();
     };
 
+    const finishEarly = () => {
+        calculateAndShowCompleteModal(exercises);
+    };
+
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                    <Ionicons name="close" size={28} color={Colors.text} />
+                    <Ionicons name="close" size={24} color={Colors.text} />
                 </TouchableOpacity>
                 <View style={styles.headerCenter}>
-                    <Text style={styles.headerTitle}>{t('workout.title')}</Text>
-                    <TouchableOpacity onPress={() => setShowModeSettings(true)}>
-                        <Text style={styles.headerSubtitle}>
-                            {workoutMode === 'circuit' ? t('workout.mode.circuit') : t('workout.mode.traditional')} • {completedSets}/{totalSets} Hiệp
-                        </Text>
-                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>{t('workout.sessionTitle')}</Text>
+                    <Text style={styles.headerSubtitle}>{getTotalWorkoutTime()}</Text>
                 </View>
-                <TouchableOpacity 
-                    onPress={() => setShowBreakSettings(true)}
-                    style={styles.settingsButton}
-                >
-                    <Ionicons name="settings-outline" size={24} color={Colors.text} />
+                <TouchableOpacity onPress={finishEarly} style={styles.finishEarlyButton}>
+                    <Text style={styles.finishEarlyText}>{language === 'vi' ? 'Kết thúc' : 'Finish'}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -379,70 +470,127 @@ export default function WorkoutSessionScreen() {
                 {/* All Exercises List */}
                 <View style={styles.exercisesSection}>
                     <Text style={styles.sectionTitle}>{t('workout.allExercises')}</Text>
-                    {exercises.map((exercise, index) => {
-                        const isActive = index === currentExerciseIndex;
-                        const isCompleted = exercise.type === 'reps' 
-                            ? exercise.completedSets.length === (exercise.sets || 1)
-                            : exercise.completedSets.length > 0;
-                        const progress = exercise.type === 'reps'
-                            ? (exercise.completedSets.length / (exercise.sets || 1)) * 100
-                            : (exercise.completedSets.length > 0 ? 100 : 0);
+                    
+                    {workoutMode === 'circuit' ? (
+                        // Circuit Mode Rendering (Grouped by Rounds)
+                        rounds.map((round) => (
+                            <View key={`round-${round.roundNumber}`} style={styles.roundGroup}>
+                                <Text style={styles.roundTitle}>Vòng {round.roundNumber}</Text>
+                                {round.items.map((item, idx) => {
+                                    const isActive = item.originalIndex === currentExerciseIndex && !item.isCompleted;
+                                    const isCurrentEx = item.originalIndex === currentExerciseIndex;
+                                    
+                                    return (
+                                        <TouchableOpacity
+                                            key={`${item.exercise.id}-r${round.roundNumber}-${idx}`}
+                                            style={[
+                                                styles.exerciseItem,
+                                                isCurrentEx && styles.exerciseItemActive,
+                                                item.isCompleted && styles.exerciseItemCompleted,
+                                            ]}
+                                            onPress={() => switchExercise(item.originalIndex)}
+                                            disabled={item.isCompleted}
+                                        >
+                                            <View style={styles.exerciseItemLeft}>
+                                                <View style={[
+                                                    styles.exerciseItemIcon,
+                                                    item.isCompleted && styles.exerciseItemIconCompleted
+                                                ]}>
+                                                    {item.isCompleted ? (
+                                                        <Ionicons name="checkmark" size={20} color="#FFFFFF" />
+                                                    ) : (
+                                                        <Text style={styles.exerciseItemIconText}>{item.exercise.icon}</Text>
+                                                    )}
+                                                </View>
+                                                <View style={styles.exerciseItemInfo}>
+                                                    <Text style={[
+                                                        styles.exerciseItemName,
+                                                        item.isCompleted && styles.exerciseItemNameCompleted
+                                                    ]}>
+                                                        {language === 'vi' ? item.exercise.nameVi : item.exercise.name}
+                                                    </Text>
+                                                    <Text style={styles.exerciseItemSets}>
+                                                        Hiệp {item.setNumber} • {item.exercise.reps} lần
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                            {isCurrentEx && !item.isCompleted && (
+                                                <View style={styles.activeIndicator}>
+                                                    <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
+                                                </View>
+                                            )}
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </View>
+                        ))
+                    ) : (
+                        // Traditional Mode Rendering (Current existing logic)
+                        exercises.map((exercise, index) => {
+                            const isActive = index === currentExerciseIndex;
+                            const isCompleted = exercise.type === 'reps' 
+                                ? exercise.completedSets.length === (exercise.sets || 1)
+                                : exercise.completedSets.length > 0;
+                            const progress = exercise.type === 'reps'
+                                ? (exercise.completedSets.length / (exercise.sets || 1)) * 100
+                                : (exercise.completedSets.length > 0 ? 100 : 0);
 
-                        return (
-                            <TouchableOpacity
-                                key={`${exercise.id}-${index}`}
-                                style={[
-                                    styles.exerciseItem,
-                                    isActive && styles.exerciseItemActive,
-                                    isCompleted && styles.exerciseItemCompleted,
-                                ]}
-                                onPress={() => switchExercise(index)}
-                                disabled={isCompleted}
-                            >
-                                <View style={styles.exerciseItemLeft}>
-                                    <View style={[
-                                        styles.exerciseItemIcon,
-                                        isCompleted && styles.exerciseItemIconCompleted
-                                    ]}>
-                                        {isCompleted ? (
-                                            <Ionicons name="checkmark" size={20} color="#FFFFFF" />
-                                        ) : (
-                                            <Text style={styles.exerciseItemIconText}>{exercise.icon}</Text>
-                                        )}
-                                    </View>
-                                    <View style={styles.exerciseItemInfo}>
-                                        <Text style={[
-                                            styles.exerciseItemName,
-                                            isCompleted && styles.exerciseItemNameCompleted
+                            return (
+                                <TouchableOpacity
+                                    key={`${exercise.id}-${index}`}
+                                    style={[
+                                        styles.exerciseItem,
+                                        isActive && styles.exerciseItemActive,
+                                        isCompleted && styles.exerciseItemCompleted,
+                                    ]}
+                                    onPress={() => switchExercise(index)}
+                                    disabled={isCompleted}
+                                >
+                                    <View style={styles.exerciseItemLeft}>
+                                        <View style={[
+                                            styles.exerciseItemIcon,
+                                            isCompleted && styles.exerciseItemIconCompleted
                                         ]}>
-                                            {language === 'vi' ? exercise.nameVi : exercise.name}
-                                        </Text>
-                                        <Text style={styles.exerciseItemSets}>
-                                            {exercise.type === 'reps' ? t('workout.progressSetReps', {
-                                                completed: exercise.completedSets.length,
-                                                sets: exercise.sets || 0,
-                                                reps: exercise.reps || 0,
-                                            }) : `${exercise.durationMinutes || 0} phút`}
-                                        </Text>
-                                    </View>
-                                </View>
-                                <View style={styles.exerciseItemProgress}>
-                                    {isActive && !isCompleted && (
-                                        <View style={styles.activeIndicator}>
-                                            <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
+                                            {isCompleted ? (
+                                                <Ionicons name="checkmark" size={20} color="#FFFFFF" />
+                                            ) : (
+                                                <Text style={styles.exerciseItemIconText}>{exercise.icon}</Text>
+                                            )}
                                         </View>
-                                    )}
-                                    {!isActive && !isCompleted && (
-                                        <View style={styles.progressCircle}>
-                                            <Text style={styles.progressCircleText}>
-                                                {Math.round(progress)}%
+                                        <View style={styles.exerciseItemInfo}>
+                                            <Text style={[
+                                                styles.exerciseItemName,
+                                                isCompleted && styles.exerciseItemNameCompleted
+                                            ]}>
+                                                {language === 'vi' ? exercise.nameVi : exercise.name}
+                                            </Text>
+                                            <Text style={styles.exerciseItemSets}>
+                                                {exercise.type === 'reps' ? t('workout.progressSetReps', {
+                                                    completed: exercise.completedSets.length,
+                                                    sets: exercise.sets || 0,
+                                                    reps: exercise.reps || 0,
+                                                }) : `${exercise.durationMinutes || 0} phút`}
                                             </Text>
                                         </View>
-                                    )}
-                                </View>
-                            </TouchableOpacity>
-                        );
-                    })}
+                                    </View>
+                                    <View style={styles.exerciseItemProgress}>
+                                        {isActive && !isCompleted && (
+                                            <View style={styles.activeIndicator}>
+                                                <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
+                                            </View>
+                                        )}
+                                        {!isActive && !isCompleted && (
+                                            <View style={styles.progressCircle}>
+                                                <Text style={styles.progressCircleText}>
+                                                    {Math.round(progress)}%
+                                                </Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                </TouchableOpacity>
+                            );
+                        })
+                    )}
                 </View>
 
                 <View style={{ height: 100 }} />
@@ -1030,6 +1178,34 @@ const styles = StyleSheet.create({
     durationCompleteButtonText: {
         color: '#FFFFFF',
         fontSize: 16,
+        fontWeight: '700',
+    },
+    roundGroup: {
+        marginBottom: 24,
+    },
+    roundTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: Colors.primary,
+        marginBottom: 12,
+        backgroundColor: '#E8F5E9',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+        overflow: 'hidden',
+    },
+    finishEarlyButton: {
+        backgroundColor: '#FFF0F0',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#FFCACA',
+    },
+    finishEarlyText: {
+        color: Colors.danger,
+        fontSize: 12,
         fontWeight: '700',
     },
 });
