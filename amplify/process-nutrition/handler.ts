@@ -20,7 +20,7 @@ async function discoverTableName(): Promise<string> {
   // Ưu tiên env variable nếu có
   if (process.env.FOOD_TABLE_NAME) {
     cachedTableName = process.env.FOOD_TABLE_NAME;
-    return cachedTableName;
+    return cachedTableName as string;
   }
 
   const result = await client.send(new ListTablesCommand({}));
@@ -29,7 +29,7 @@ async function discoverTableName(): Promise<string> {
 
   cachedTableName = foodTable;
   console.log(`Discovered Food table: ${cachedTableName}`);
-  return foodTable;
+  return cachedTableName as string;
 }
 
 // Cache danh sách Food để tránh scan DB nhiều lần trong cùng 1 invocation
