@@ -30,7 +30,7 @@ export default function VerifyOtpScreen() {
             });
 
             if (isSignUpComplete) {
-                Alert.alert(t('common.success'), t('verify.success'));
+                Alert.alert("Thành công", "Xác thực thành công! Vui lòng đăng nhập.");
                 router.replace('/login');
             }
 

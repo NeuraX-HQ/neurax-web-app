@@ -1,14 +1,16 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { saveOnboardingData, getOnboardingData, OnboardingData } from '../../src/store/userStore';
+import { useAuthStore } from '../../src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 export default function Step9() {
     const router = useRouter();
+    const { isAuthenticated } = useAuthStore();
     const { t } = useAppLanguage();
     const [data, setData] = useState<OnboardingData | null>(null);
     const fadeAnim = useState(new Animated.Value(0))[0];
@@ -28,7 +30,13 @@ export default function Step9() {
 
     const handleStart = async () => {
         await saveOnboardingData({ completed: true });
-        router.replace('/login');
+        
+        if (isAuthenticated) {
+            router.replace('/(tabs)/home');
+        } else {
+            // Nếu chưa login, yêu cầu tạo tài khoản để lưu lộ trình
+            router.replace('/login');
+        }
     };
 
     if (!data) return null;

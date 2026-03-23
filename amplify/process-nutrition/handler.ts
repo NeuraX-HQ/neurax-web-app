@@ -29,7 +29,7 @@ async function discoverTableName(): Promise<string> {
 
   cachedTableName = foodTable;
   console.log(`Discovered Food table: ${cachedTableName}`);
-  return cachedTableName;
+  return foodTable;
 }
 
 // Cache danh sách Food để tránh scan DB nhiều lần trong cùng 1 invocation

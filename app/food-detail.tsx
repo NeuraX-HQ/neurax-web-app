@@ -227,7 +227,7 @@ export default function FoodDetailScreen() {
     return (
         <View style={styles.container}>
             <ScrollView showsVerticalScrollIndicator={false}>
-                {/* ── Hero: Full-bleed image with gradient name overlay ── */}
+                {/* Food Image with overlay */}
                 <View style={styles.imageSection}>
                     {imageUri ? (
                         <Image
@@ -379,10 +379,11 @@ export default function FoodDetailScreen() {
                     </View>
                 )}
 
+                {/* Extra space at bottom so content isn't hidden by the absolute bottom bar */}
                 <View style={{ height: 140 }} />
             </ScrollView>
 
-            {/* Bottom Buttons — unchanged */}
+            {/* Bottom Buttons */}
             <View style={[styles.bottomButtons, { paddingBottom: Math.max(insets.bottom, 24) }]}>
                 <TouchableOpacity style={styles.fridgeButton} onPress={handleAddToFridge}>
                     <Ionicons name="cube-outline" size={20} color="#111827" />
@@ -833,13 +834,9 @@ const styles = StyleSheet.create({
         fontWeight: '700',
     },
     bottomButtons: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
         flexDirection: 'row',
         gap: 12,
-        padding: 24,
+        padding: 16,
         backgroundColor: '#FFF',
         borderTopWidth: 1,
         borderTopColor: '#F3F4F6',

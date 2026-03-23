@@ -1,0 +1,163 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "UserData",
+    "description": "NutriTrack User Profile and Settings DynamoDB table schema",
+    "type": "object",
+    "required": [
+        "user_id",
+        "email",
+        "created_at",
+        "onboarding_completed"
+    ],
+    "properties": {
+        "user_id": {
+            "type": "string",
+            "description": "Cognito sub (partition key)"
+        },
+        "email": {
+            "type": "string",
+            "format": "email"
+        },
+        "display_name": {
+            "type": "string"
+        },
+        "avatar_url": {
+            "type": "string",
+            "format": "uri"
+        },
+        "created_at": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "last_active_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Used for analytics and identifying inactive users"
+        },
+        "onboarding_completed": {
+            "type": "boolean",
+            "default": false
+        },
+        "ai_context_summary": {
+            "type": "string",
+            "description": "A concise summary of the user's profile for AI prompts to reduce token costs (e.g., '24yo male, weight loss goal, allergic peanuts, prefers high protein')"
+        },
+        "biometrics": {
+            "type": "object",
+            "properties": {
+                "age": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female",
+                        "other"
+                    ]
+                },
+                "height_cm": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "weight_kg": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "activity_level": {
+                    "type": "string",
+                    "enum": [
+                        "sedentary",
+                        "lightly_active",
+                        "moderately_active",
+                        "very_active",
+                        "extra_active"
+                    ]
+                }
+            }
+        },
+        "goals": {
+            "type": "object",
+            "properties": {
+                "daily_calories": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "daily_protein_g": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "daily_carbs_g": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "daily_fat_g": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "target_weight_kg": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
+        "dietary_profile": {
+            "type": "object",
+            "properties": {
+                "allergies": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "e.g., ['peanuts', 'shellfish']"
+                },
+                "preferences": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "e.g., ['vegetarian', 'keto', 'low_carb']"
+                }
+            }
+        },
+        "gamification": {
+            "type": "object",
+            "properties": {
+                "current_streak": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 0
+                },
+                "longest_streak": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 0
+                },
+                "last_log_date": {
+                    "type": "string",
+                    "format": "date"
+                },
+                "total_points": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 0
+                }
+            }
+        },
+        "ai_preferences": {
+            "type": "object",
+            "properties": {
+                "coach_tone": {
+                    "type": "string",
+                    "enum": [
+                        "friendly_genz",
+                        "strict",
+                        "analytical"
+                    ],
+                    "default": "friendly_genz"
+                }
+            }
+        }
+    }
+}

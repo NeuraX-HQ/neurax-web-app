@@ -4,4 +4,5 @@ export const processNutrition = defineFunction({
   name: 'process-nutrition',
   entry: './handler.ts',
   timeoutSeconds: 30,
+  resourceGroupName: 'data',
 });
