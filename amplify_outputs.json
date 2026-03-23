@@ -702,5 +702,33 @@
       }
     }
   },
+  "storage": {
+    "aws_region": "ap-southeast-1",
+    "bucket_name": "amplify-nutritrack-tdtp2--nutritrackmediabucketbuc-j5mqd0znytip",
+    "buckets": [
+      {
+        "name": "nutritrack_media_bucket",
+        "bucket_name": "amplify-nutritrack-tdtp2--nutritrackmediabucketbuc-j5mqd0znytip",
+        "aws_region": "ap-southeast-1",
+        "paths": {
+          "incoming/*": {
+            "authenticated": [
+              "get",
+              "list",
+              "write",
+              "delete"
+            ]
+          },
+          "media/*": {
+            "authenticated": [
+              "get",
+              "list",
+              "delete"
+            ]
+          }
+        }
+      }
+    ]
+  },
   "version": "1.4"
 }

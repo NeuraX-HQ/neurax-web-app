@@ -1,0 +1,49 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Fridge Inventory",
+    "description": "NutriTrack Smart Fridge (Inventory) DynamoDB schema",
+    "type": "object",
+    "required": ["user_id", "item_id"],
+    "properties": {
+        "user_id": {
+            "type": "string",
+            "description": "Partition Key (Cognito sub)"
+        },
+        "item_id": {
+            "type": "string",
+            "description": "Sort Key (Mã nguyên liệu duy nhất - UUID)"
+        },
+        "name": {
+            "type": "string",
+            "description": "Tên nguyên liệu (Ví dụ: Trứng gà, Thịt bò)"
+        },
+        "food_id": {
+            "type": "string",
+            "description": "(Trường Tuỳ Chọn) ID tham chiếu FoodDatabase. Dùng làm linkage nếu app tự map tên Tủ Lạnh với DB"
+        },
+        "quantity": {
+            "type": "number"
+        },
+        "unit": {
+            "type": "string",
+            "description": "Đơn vị (gram, quả, lít, phần, v.v.)"
+        },
+        "added_date": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "expiry_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Ngày hết hạn sản phẩm (Dùng làm SK cho Global Secondary Index tìm thức ăn sửa hỏng)"
+        },
+        "category": {
+            "type": "string",
+            "enum": ["meat", "vegetable", "fruit", "dairy", "pantry", "other"]
+        },
+        "price": {
+            "type": "number",
+            "description": "Giá tiền (Dùng cho module tính chi tiêu chợ tương lai)"
+        }
+    }
+}

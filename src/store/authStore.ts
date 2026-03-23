@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as authService from '../services/authService';
+import * as userService from '../services/userService';
 
 interface AuthState {
     isAuthenticated: boolean;
@@ -35,6 +36,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         };
 
         await authService.saveSession(session);
+
+        // Sync data with DB after login
+        await userService.syncOnboardingWithDB(userId, email);
 
         set({
             isAuthenticated: true,

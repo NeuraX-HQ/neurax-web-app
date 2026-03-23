@@ -1,0 +1,83 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "FoodLogs",
+    "description": "NutriTrack Food Logs DynamoDB schema (Event Sourcing Pattern)",
+    "type": "object",
+    "required": [
+        "user_id",
+        "timestamp"
+    ],
+    "properties": {
+        "user_id": {
+            "type": "string",
+            "description": "Partition Key (Cognito sub)"
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Sort Key (ISO 8601 YYYY-MM-DDTHH:MM:SSZ)"
+        },
+        "food_id": {
+            "type": "string"
+        },
+        "log_id": {
+            "type": "string",
+            "description": "Unique ID của lần log này"
+        },
+        "meal_type": {
+            "type": "string",
+            "enum": [
+                "breakfast",
+                "lunch",
+                "dinner",
+                "snack"
+            ]
+        },
+        "portion": {
+            "type": "number"
+        },
+        "additions": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "ingredients": {
+            "type": "array",
+            "description": "Danh sách thành phần chi tiết (thường dùng cho luồng AI Gen).",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string" },
+                    "weight_g": { "type": "number" }
+                }
+            }
+        },
+        "macros": {
+            "type": "object",
+            "properties": {
+                "calories": { "type": "number" },
+                "protein_g": { "type": "number" },
+                "carbs_g": { "type": "number" },
+                "fat_g": { "type": "number" },
+                "fiber_g": { "type": "number" },
+                "sugar_g": { "type": "number" },
+                "sodium_mg": { "type": "number" }
+            },
+            "description": "Macro luôn luôn có để lưu lịch sử (Immutable Record)"
+        },
+        "micronutrients": {
+            "type": "object",
+            "description": "CHỈ CÓ NẾU là luồng Search (lấy từ FoodData). Luồng Voice/Scan Gen sẽ KHÔNG CÓ khối này."
+        },
+        "input_method": {
+            "type": "string",
+            "enum": [
+                "voice",
+                "photo",
+                "manual",
+                "barcode"
+            ]
+        }
+    }
+}
