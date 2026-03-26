@@ -59,3 +59,10 @@ infrastructure/
 .amplify
 amplifyconfiguration*
 amplify.yml
+
+# Project docs & tooling (local only)
+CLAUDE.md
+planning.md
+suggested_features.md
+seed.js
+seed.ts
