@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import { analyzeFoodImage, NutritionInfo } from '../services/geminiService';
+import { analyzeFoodImage, NutritionInfo } from '../services/aiService';
 import { useRouter } from 'expo-router';
 import { useAppLanguage } from '../i18n/LanguageProvider';
 import { BlurView } from 'expo-blur';

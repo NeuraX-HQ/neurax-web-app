@@ -1,7 +1,6 @@
 import { defineBackend } from '@aws-amplify/backend';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
-import { askGemini } from './ask-gemini/resource';
 import { askBedrock } from './ask-bedrock/resource';
 import { processNutrition } from './process-nutrition/resource';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -17,7 +16,6 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 const backend = defineBackend({
   auth,
   data,
-  askGemini,
   askBedrock,
   processNutrition,
   storage,
@@ -79,6 +77,25 @@ askBedrockLambda.addToRolePolicy(
   new iam.PolicyStatement({
     effect: iam.Effect.ALLOW,
     actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
+    resources: [
+      "arn:aws:bedrock:ap-southeast-2::foundation-model/qwen.qwen3-vl-235b-a22b",
+    ],
+  })
+);
+
+// Grant askBedrock access to S3 (read voice files) + Transcribe
+s3Bucket.grantRead(askBedrockLambda);
+s3Bucket.grantDelete(askBedrockLambda);
+askBedrockLambda.addToRolePolicy(
+  new iam.PolicyStatement({
+    effect: iam.Effect.ALLOW,
+    actions: [
+      "transcribe:StartTranscriptionJob",
+      "transcribe:GetTranscriptionJob",
+    ],
     resources: ["*"],
   })
 );
+
+// Pass S3 bucket name to askBedrock Lambda
+askBedrockLambda.addEnvironment('STORAGE_BUCKET_NAME', s3Bucket.bucketName);

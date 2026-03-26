@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, Shadows } from '../constants/colors';
-import { searchFoodNutrition, NutritionInfo } from '../services/geminiService';
+import { searchFoodNutrition, NutritionInfo } from '../services/aiService';
 import { useAppLanguage } from '../i18n/LanguageProvider';
 import { mockRecipes } from '../data/mockData';
 

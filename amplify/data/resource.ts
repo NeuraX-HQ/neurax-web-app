@@ -1,5 +1,4 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
-import { askGemini } from '../ask-gemini/resource';
 import { askBedrock } from '../ask-bedrock/resource';
 import { processNutrition } from '../process-nutrition/resource';
 
@@ -114,18 +113,8 @@ const schema = a.schema({
 
 
   //========================================
-  // Gemini
+  // Bedrock AI
   //========================================
-  askGemini: a
-    .query()
-    .arguments({
-      action: a.string().required(),
-      payload: a.string(),
-    })
-    .returns(a.string())
-    .handler(a.handler.function(askGemini))
-    .authorization((allow) => [allow.authenticated()]),
-
   askBedrock: a
     .query()
     .arguments({

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, Platform,
-    Pressable, Animated, PanResponder,
+    Pressable, Animated, PanResponder, Alert,
     type GestureResponderEvent, type PanResponderGestureState,
 } from 'react-native';
 import { BlurView } from 'expo-blur';

@@ -1,6 +1,8 @@
 import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../amplify/data/resource';
+import { uploadData } from 'aws-amplify/storage';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
+import type { Schema } from '../../amplify/data/resource';
 
 function extractAndParseJSON(text: string): any {
     // Try to find code block first
@@ -13,7 +15,7 @@ function extractAndParseJSON(text: string): any {
     const endObj = text.lastIndexOf('}');
     const startArr = text.indexOf('[');
     const endArr = text.lastIndexOf(']');
-    
+
     if (startObj !== -1 && endObj !== -1 && (startArr === -1 || startObj < startArr)) {
         return JSON.parse(text.substring(startObj, endObj + 1));
     }
@@ -101,12 +103,85 @@ export interface CoachResponse {
     error?: string;
 }
 
+export interface OllieTipResponse {
+    success: boolean;
+    data?: {
+        tip_vi: string;
+        tip_en: string;
+        mood: 'celebrate' | 'encourage' | 'suggest' | 'neutral';
+        suggested_food_vi?: string;
+        suggested_food_en?: string;
+    };
+    error?: string;
+}
+
+export interface RecipeItem {
+    dish_name_vi: string;
+    dish_name_en: string;
+    why_this_vi: string;
+    why_this_en: string;
+    cooking_time_min: number;
+    difficulty: 'easy' | 'medium' | 'hard';
+    ingredients_from_fridge: { name: string; weight_g: number }[];
+    need_to_buy: string[];
+    macros: { calories: number; protein_g: number; carbs_g: number; fat_g: number };
+    steps_vi: string[];
+    steps_en: string[];
+    tip_vi: string;
+    tip_en: string;
+}
+
+export interface RecipeResponse {
+    success: boolean;
+    data?: {
+        recipes: RecipeItem[];
+        overall_tip_vi: string;
+        overall_tip_en: string;
+    };
+    error?: string;
+}
+
+export interface MacroTargets {
+    daily_calories: number;
+    daily_protein_g: number;
+    daily_carbs_g: number;
+    daily_fat_g: number;
+    reasoning_vi: string;
+    reasoning_en: string;
+}
+
+export interface MacroResponse {
+    success: boolean;
+    data?: MacroTargets;
+    error?: string;
+}
+
+export interface ChallengeSummaryResponse {
+    success: boolean;
+    data?: {
+        summary: string;
+        leader: string | null;
+        mood: 'celebrate' | 'encourage' | 'neutral';
+    };
+    error?: string;
+}
+
+export interface WeeklyInsightResponse {
+    success: boolean;
+    data?: {
+        insight_vi: string;
+        insight_en: string;
+        status: 'success' | 'insufficient_data';
+    };
+    error?: string;
+}
+
 /**
- * Analyze food image using Gemini Vision through AWS Lambda
+ * Analyze food image using Bedrock Vision through AWS Lambda
  */
 export async function analyzeFoodImage(imageBase64: string): Promise<FoodAnalysisResult> {
     try {
-        const result = await getClient().queries.askGemini({
+        const result = await getClient().queries.askBedrock({
             action: 'analyzeFoodImage',
             payload: JSON.stringify({ imageBase64 })
         });
@@ -121,7 +196,6 @@ export async function analyzeFoodImage(imageBase64: string): Promise<FoodAnalysi
             return { success: false, error: responseObj.error };
         }
 
-        // Robust JSON extraction
         const rawData = extractAndParseJSON(responseObj.text);
 
         return {
@@ -129,7 +203,7 @@ export async function analyzeFoodImage(imageBase64: string): Promise<FoodAnalysi
             data: convertAiToNutritionInfo(rawData),
         };
     } catch (error) {
-        console.error('Gemini image analysis error:', error);
+        console.error('Bedrock image analysis error:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to analyze image',
@@ -138,47 +212,40 @@ export async function analyzeFoodImage(imageBase64: string): Promise<FoodAnalysi
 }
 
 /**
- * Transcribe audio to text using Gemini through AWS Lambda
+ * Upload audio to S3, transcribe with AWS Transcribe, parse with Qwen on Bedrock.
+ * Returns transcript + nutrition data in one call.
  */
-export async function transcribeAudio(audioBase64: string): Promise<{ success: boolean; text?: string; error?: string }> {
+export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult & { transcript?: string }> {
     try {
-        const mimeType = Platform.OS === 'web' ? 'audio/webm' : 'audio/m4a';
-        const result = await getClient().queries.askGemini({
-            action: 'transcribeAudio',
-            payload: JSON.stringify({ audioBase64, mimeType })
-        });
-
-        if (result.errors || !result.data) {
-            console.error('Amplify GraphQL Errors:', result.errors);
-            return { success: false, error: 'GraphQL error occurred' };
+        // Step 1: Read audio file as base64 (fetch() doesn't work with file:// on RN)
+        let base64: string;
+        if (Platform.OS === 'web' && audioUri.startsWith('blob:')) {
+            const response = await fetch(audioUri);
+            const blob = await response.blob();
+            base64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve((reader.result as string).split(',')[1] || '');
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } else {
+            base64 = await FileSystem.readAsStringAsync(audioUri, { encoding: 'base64' as any });
         }
 
-        const responseObj = JSON.parse(result.data);
-        if (!responseObj.success) {
-            return { success: false, error: responseObj.error };
-        }
+        // Step 2: Upload to S3 with {entity_id} path (Amplify resolves identity ID)
+        const fileName = `${Date.now()}.m4a`;
+        const uploadResult = await uploadData({
+            path: `voice/{entity_id}/${fileName}`,
+            data: Uint8Array.from(atob(base64), c => c.charCodeAt(0)),
+            options: { contentType: 'audio/mp4' },
+        }).result;
 
-        return {
-            success: true,
-            text: responseObj.text.trim(),
-        };
-    } catch (error) {
-        console.error('Gemini audio transcription error:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Failed to transcribe audio',
-        };
-    }
-}
+        const resolvedKey = (uploadResult as any).path || `voice/${fileName}`;
 
-/**
- * Parse voice text to extract food information through AWS Lambda
- */
-export async function parseVoiceToFood(transcript: string): Promise<FoodAnalysisResult> {
-    try {
-        const result = await getClient().queries.askGemini({
-            action: 'parseVoiceToFood',
-            payload: JSON.stringify({ transcript })
+        // Step 3: Call Lambda — Transcribe + Qwen in one shot
+        const result = await getClient().queries.askBedrock({
+            action: 'voiceToFood',
+            payload: JSON.stringify({ s3Key: resolvedKey }),
         });
 
         if (result.errors || !result.data) {
@@ -192,7 +259,7 @@ export async function parseVoiceToFood(transcript: string): Promise<FoodAnalysis
         }
 
         const rawData = extractAndParseJSON(responseObj.text);
-        
+
         let aiData = rawData;
         if (rawData.items && Array.isArray(rawData.items) && rawData.items.length > 0) {
             aiData = rawData.items[0];
@@ -200,24 +267,25 @@ export async function parseVoiceToFood(transcript: string): Promise<FoodAnalysis
 
         return {
             success: true,
+            transcript: responseObj.transcript,
             data: convertAiToNutritionInfo(aiData),
         };
     } catch (error) {
-        console.error('Gemini voice parsing error:', error);
+        console.error('Voice to food error:', error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to parse voice input',
+            error: error instanceof Error ? error.message : 'Failed to process voice input',
         };
     }
 }
 
 /**
  * Search for food and get enriched nutrition info through AI + DB verification
- * Tối ưu Fast Path: Thử query trực tiếp trong Food DB trước khi gọi suy luận AI (Gemini).
+ * Fast Path: query Food DB first, fallback to Bedrock AI.
  */
 export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysisResult> {
     try {
-        // Step 1: FAST PATH - Search DB directly (Tránh delay 3-5s của AI)
+        // Step 1: FAST PATH - Search DB directly
         try {
             const fastResult = await getClient().queries.processNutrition({
                 payload: JSON.stringify({ action: 'directSearch', query: foodName })
@@ -225,9 +293,8 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
 
             if (!fastResult.errors && fastResult.data) {
                 const fastResponse = JSON.parse(fastResult.data);
-                // Nếu tìm thấy mờ / chính xác trong DB, convert và return luôn
                 if (fastResponse.success && fastResponse.items?.length > 0) {
-                    console.log(`⚡ Fast path: Found "${foodName}" in DB directly.`);
+                    console.log(`Fast path: Found "${foodName}" in DB directly.`);
                     return formatProcessedResult(fastResponse.items[0]);
                 }
             }
@@ -235,10 +302,10 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
             console.warn('Fast DB search failed, falling back to AI.', fastErr);
         }
 
-        console.log(`🐢 Slow path: "${foodName}" not found exactly in DB, asking AI...`);
+        console.log(`Slow path: "${foodName}" not found in DB, asking Bedrock...`);
 
-        // Step 2: NORMAL PATH - Ask Gemini for ingredient breakdown + estimated nutrition
-        const aiResult = await getClient().queries.askGemini({
+        // Step 2: Ask Bedrock for ingredient breakdown + estimated nutrition
+        const aiResult = await getClient().queries.askBedrock({
             action: 'searchFoodNutrition',
             payload: JSON.stringify({ foodName })
         });
@@ -255,7 +322,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
 
         const aiData = extractAndParseJSON(aiResponse.text);
 
-        // Step 2: Send AI data to processNutrition Lambda for DB verification
+        // Step 3: Send AI data to processNutrition Lambda for DB verification
         const processResult = await getClient().queries.processNutrition({
             payload: JSON.stringify(aiData)
         });
@@ -276,7 +343,6 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
             };
         }
 
-        // Convert processed data to NutritionInfo format
         return formatProcessedResult(processedResponse.items[0]);
     } catch (error) {
         console.error('Search food nutrition error:', error);
@@ -343,7 +409,192 @@ function convertAiToNutritionInfo(aiData: any): NutritionInfo {
 }
 
 /**
- * Generate AI Coach response through AWS Lambda
+ * Fix/correct a logged food item based on user instructions
+ */
+export async function fixFood(currentFoodJson: any, correctionQuery: string): Promise<FoodAnalysisResult> {
+    try {
+        const result = await getClient().queries.askBedrock({
+            action: 'fixFood',
+            payload: JSON.stringify({ currentFoodJson, correctionQuery }),
+        });
+
+        if (result.errors || !result.data) {
+            console.error('Amplify GraphQL Errors:', result.errors);
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const rawData = extractAndParseJSON(responseObj.text);
+        if (rawData.error === 'not_food') {
+            return { success: false, error: rawData.message_en || rawData.message_vi };
+        }
+
+        return { success: true, data: convertAiToNutritionInfo(rawData) };
+    } catch (error) {
+        console.error('Fix food error:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to fix food' };
+    }
+}
+
+/**
+ * Get a quick Ollie coach tip based on user context
+ */
+export async function getOllieTip(context: string): Promise<OllieTipResponse> {
+    try {
+        const result = await getClient().queries.askBedrock({
+            action: 'ollieCoachTip',
+            payload: JSON.stringify({ context }),
+        });
+
+        if (result.errors || !result.data) {
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const data = extractAndParseJSON(responseObj.text);
+        return { success: true, data };
+    } catch (error) {
+        console.error('Ollie tip error:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to get tip' };
+    }
+}
+
+/**
+ * Generate recipes from fridge inventory and nutrition goals
+ */
+export async function generateRecipe(
+    inventoryText: string,
+    expiringText: string,
+    nutritionGoal: string,
+    servings: number
+): Promise<RecipeResponse> {
+    try {
+        const result = await getClient().queries.askBedrock({
+            action: 'generateRecipe',
+            payload: JSON.stringify({ inventoryText, expiringText, nutritionGoal, servings }),
+        });
+
+        if (result.errors || !result.data) {
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const data = extractAndParseJSON(responseObj.text);
+        return { success: true, data };
+    } catch (error) {
+        console.error('Generate recipe error:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to generate recipes' };
+    }
+}
+
+/**
+ * Calculate daily macro targets from user profile
+ */
+export async function calculateMacros(userProfileJson: any): Promise<MacroResponse> {
+    try {
+        const result = await getClient().queries.askBedrock({
+            action: 'calculateMacros',
+            payload: JSON.stringify({ userProfileJson }),
+        });
+
+        if (result.errors || !result.data) {
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const data = extractAndParseJSON(responseObj.text);
+        return { success: true, data };
+    } catch (error) {
+        console.error('Calculate macros error:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to calculate macros' };
+    }
+}
+
+/**
+ * Summarize group challenge progress
+ */
+export async function getChallengeSummary(params: {
+    title: string;
+    challengeType: string;
+    targetValue: number;
+    unit: string;
+    daysLeft: number;
+    language: 'vi' | 'en';
+    leaderboard: string;
+    userDisplayName: string;
+}): Promise<ChallengeSummaryResponse> {
+    try {
+        const result = await getClient().queries.askBedrock({
+            action: 'challengeSummary',
+            payload: JSON.stringify(params),
+        });
+
+        if (result.errors || !result.data) {
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const data = extractAndParseJSON(responseObj.text);
+        return { success: true, data };
+    } catch (error) {
+        console.error('Challenge summary error:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to get challenge summary' };
+    }
+}
+
+/**
+ * Generate weekly nutrition insight
+ */
+export async function getWeeklyInsight(
+    userProfileJson: any,
+    weeklySummaryJson: any,
+    notablePatterns: string
+): Promise<WeeklyInsightResponse> {
+    try {
+        const result = await getClient().queries.askBedrock({
+            action: 'weeklyInsight',
+            payload: JSON.stringify({ userProfileJson, weeklySummaryJson, notablePatterns }),
+        });
+
+        if (result.errors || !result.data) {
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const data = extractAndParseJSON(responseObj.text);
+        return { success: true, data };
+    } catch (error) {
+        console.error('Weekly insight error:', error);
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to get weekly insight' };
+    }
+}
+
+/**
+ * Generate AI Coach response through Bedrock Lambda
  */
 export async function generateCoachResponse(
     userMessage: string,
@@ -351,7 +602,7 @@ export async function generateCoachResponse(
     contextString: string
 ): Promise<CoachResponse> {
     try {
-        const result = await getClient().queries.askGemini({
+        const result = await getClient().queries.askBedrock({
             action: 'generateCoachResponse',
             payload: JSON.stringify({ userMessage, chatHistory, contextString })
         });
@@ -417,7 +668,7 @@ export async function generateCoachResponse(
             foodSuggestion: foodSuggestions[0], // backward compat
         };
     } catch (error) {
-        console.error('Gemini coach error:', error);
+        console.error('Bedrock coach error:', error);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to get coach response',
