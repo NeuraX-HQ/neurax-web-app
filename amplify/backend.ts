@@ -97,5 +97,6 @@ askBedrockLambda.addToRolePolicy(
   })
 );
 
-// Pass S3 bucket name to askBedrock Lambda
-askBedrockLambda.addEnvironment('STORAGE_BUCKET_NAME', s3Bucket.bucketName);
+// Pass S3 bucket name to askBedrock Lambda via escape hatch
+const cfnAskBedrockFn = askBedrockLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;
+cfnAskBedrockFn.addPropertyOverride('Environment.Variables.STORAGE_BUCKET_NAME', s3Bucket.bucketName);
