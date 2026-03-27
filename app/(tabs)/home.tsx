@@ -62,6 +62,7 @@ export default function HomeScreen() {
 
     const [refreshing, setRefreshing] = useState(false);
     const [gender, setGender] = useState<string>('');
+    const [userName, setUserName] = useState<string>('');
     const [dailyCalorieTarget, setDailyCalorieTarget] = useState(1800);
     const [showCaloriesEaten, setShowCaloriesEaten] = useState(false);
     const [showMonthPicker, setShowMonthPicker] = useState(false);
@@ -145,10 +146,11 @@ export default function HomeScreen() {
     }, [locale, selectedDate]);
 
     const greetingName = useMemo(() => {
+        if (userName) return userName;
         if (!userEmail) return t('home.greetingFallback');
         const localPart = userEmail.split('@')[0];
         return localPart || t('home.greetingFallback');
-    }, [t, userEmail]);
+    }, [t, userName, userEmail]);
 
     const mealTypeLabel = (type: Meal['type']) => {
         if (type === 'BREAKFAST') return t('home.mealType.breakfast');
@@ -306,6 +308,9 @@ export default function HomeScreen() {
         });
         const fetchUserData = async () => {
             const [onboarding, user] = await Promise.all([getOnboardingData(), getUserData()]);
+            if (onboarding?.name) {
+                setUserName(onboarding.name);
+            }
             if (onboarding?.gender) {
                 setGender(onboarding.gender.toLowerCase());
             }

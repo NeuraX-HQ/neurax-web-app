@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
+import { getCurrentUser, fetchAuthSession, fetchUserAttributes } from 'aws-amplify/auth';
 import { View, StyleSheet, Platform, AppState, AppStateStatus, ActivityIndicator, Text } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -78,11 +78,16 @@ function RootLayoutShell() {
 
             if (userId && token) {
                 const { login } = useAuthStore.getState();
-                await login(
-                    currentUser.signInDetails?.loginId || currentUser.userId || 'User',
-                    userId,
-                    token
-                );
+                let email = currentUser.signInDetails?.loginId || '';
+                if (!email || email === currentUser.userId) {
+                    try {
+                        const attrs = await fetchUserAttributes();
+                        email = attrs.email || attrs.name || 'User';
+                    } catch {
+                        email = 'User';
+                    }
+                }
+                await login(email, userId, token);
                 return true;
             }
         } catch (e) {
