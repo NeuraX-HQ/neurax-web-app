@@ -71,6 +71,7 @@ export default function HomeScreen() {
     // Meal store
     const {
         meals, activities, loadMeals, getMealsByDate, removeMeal,
+        syncWithCloud, syncPendingMeals,
         selectedDateStr: storeSelectedDateStr,
         setSelectedDateStr,
         setSelectedMealType,
@@ -174,10 +175,12 @@ export default function HomeScreen() {
         setRefreshing(true);
         try {
             await loadMeals();
+            await syncPendingMeals();
+            await syncWithCloud();
         } finally {
             setRefreshing(false);
         }
-    }, [loadMeals]);
+    }, [loadMeals, syncPendingMeals, syncWithCloud]);
 
     const withAutoClose = (action: () => void) => () => {
         if (closeOpenRow()) return;
@@ -295,9 +298,12 @@ export default function HomeScreen() {
     const exerciseKcal = Math.round(burnedByDate[selectedDateStr] ?? 0);
     const exerciseKcalTarget = 400;
 
-    // Load meals on mount
+    // Load meals on mount + sync with cloud
     useEffect(() => {
-        loadMeals();
+        loadMeals().then(() => {
+            syncPendingMeals();
+            syncWithCloud();
+        });
         const fetchUserData = async () => {
             const [onboarding, user] = await Promise.all([getOnboardingData(), getUserData()]);
             if (onboarding?.gender) {

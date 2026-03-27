@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback, Animated } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback, Animated, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,11 +14,26 @@ export default function KitchenScreen() {
     const { t } = useAppLanguage();
     const [tab, setTab] = useState<'fridge' | 'recipes'>('fridge');
     const [search, setSearch] = useState('');
-    const { items, loadItems, removeItem, isLoading } = useFridgeStore();
+    const { items, loadItems, removeItem, isLoading, syncWithCloud, syncPendingItems } = useFridgeStore();
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
-        loadItems();
+        loadItems().then(() => {
+            syncPendingItems();
+            syncWithCloud();
+        });
     }, []);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            await loadItems();
+            await syncPendingItems();
+            await syncWithCloud();
+        } finally {
+            setRefreshing(false);
+        }
+    }, [loadItems, syncPendingItems, syncWithCloud]);
 
     const filtered = items.filter(i =>
         search.trim() === '' || i.name.toLowerCase().includes(search.toLowerCase())
@@ -69,7 +84,7 @@ export default function KitchenScreen() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
                 {tab === 'fridge' ? (
                     <View style={styles.content}>
                         {/* Search */}
