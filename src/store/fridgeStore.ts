@@ -10,6 +10,10 @@ export interface FridgeItem {
     expiryDate: string; // ISO string
     emoji: string;
     addedDate: string; // ISO string
+    calories?: number;
+    protein?: number;
+    carbs?: number;
+    fat?: number;
 }
 
 interface FridgeState {

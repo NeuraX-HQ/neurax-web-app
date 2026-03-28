@@ -191,6 +191,10 @@ export default function AddToFridgeScreen() {
                     daysLeft: days,
                     expiryDate: expiryDate.toISOString(),
                     emoji: getEmojiForFood(foodData.name),
+                    calories: foodData.calories,
+                    protein: typeof foodData.protein === 'string' ? parseFloat(foodData.protein) : foodData.protein,
+                    carbs: typeof foodData.carbs === 'string' ? parseFloat(foodData.carbs) : foodData.carbs,
+                    fat: typeof foodData.fat === 'string' ? parseFloat(foodData.fat) : foodData.fat,
                 });
             } else {
                 await addItem({
@@ -200,6 +204,10 @@ export default function AddToFridgeScreen() {
                     daysLeft: days,
                     expiryDate: expiryDate.toISOString(),
                     emoji: getEmojiForFood(foodData.name),
+                    calories: foodData.calories,
+                    protein: typeof foodData.protein === 'string' ? parseFloat(foodData.protein) : foodData.protein,
+                    carbs: typeof foodData.carbs === 'string' ? parseFloat(foodData.carbs) : foodData.carbs,
+                    fat: typeof foodData.fat === 'string' ? parseFloat(foodData.fat) : foodData.fat,
                 });
             }
             setSuccessModalVisible(true);

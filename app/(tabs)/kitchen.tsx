@@ -16,6 +16,8 @@ export default function KitchenScreen() {
     const [tab, setTab] = useState<'fridge' | 'recipes'>('fridge');
     const [search, setSearch] = useState('');
     const [recipeSearch, setRecipeSearch] = useState('');
+    const [showMealModal, setShowMealModal] = useState(false);
+    const [pendingItem, setPendingItem] = useState<FridgeItem | null>(null);
     const searchRef = useRef<TextInput>(null);
     const { items, loadItems, removeItem, isLoading } = useFridgeStore();
     const addMeal = useMealStore((state) => state.addMeal);
@@ -75,21 +77,28 @@ export default function KitchenScreen() {
         useMealStore.setState({ isAddMenuOpen: true });
     };
 
-    const handleUseItem = async (item: FridgeItem) => {
+    const handleUseItem = (item: FridgeItem) => {
+        setPendingItem(item);
+        setShowMealModal(true);
+    };
+
+    const confirmUseItem = async (mealType: string) => {
+        if (!pendingItem) return;
+        
         try {
-            // Thêm vào meal log mặc định là SNACK
             await addMeal({
-                name: item.name,
-                type: 'SNACK',
-                calories: 150, // Ước lượng
-                protein: 5,
-                carbs: 15,
-                fat: 5,
-                servingSize: item.amount,
-                image: item.emoji,
+                name: pendingItem.name,
+                type: mealType as any,
+                calories: pendingItem.calories || 150,
+                protein: pendingItem.protein || 5,
+                carbs: pendingItem.carbs || 15,
+                fat: pendingItem.fat || 5,
+                servingSize: pendingItem.amount,
+                image: pendingItem.emoji,
             });
-            // Xoá khỏi tủ lạnh
-            await removeItem(item.id);
+            await removeItem(pendingItem.id);
+            setShowMealModal(false);
+            setPendingItem(null);
         } catch (error) {
             console.error('Lỗi khi dùng thực phẩm:', error);
         }
@@ -217,7 +226,7 @@ export default function KitchenScreen() {
                                 {thisWeek.length === 0
                                     ? <EmptyHint text={t('kitchen.empty.thisWeek')} />
                                     : thisWeek.map((item) => (
-                                        <ThisWeekCard key={item.id} item={item} onRemove={removeItem} onCardPress={handleCardPress} t={t} />
+                                        <ThisWeekCard key={item.id} item={item} onRemove={removeItem} onUse={handleUseItem} onCardPress={handleCardPress} t={t} />
                                     ))
                                 }
 
@@ -230,7 +239,7 @@ export default function KitchenScreen() {
                                     : (
                                         <View style={{ gap: 8 }}>
                                             {longTerm.map((item) => (
-                                                <LongTermCard key={item.id} item={item} onRemove={removeItem} onCardPress={handleCardPress} t={t} />
+                                                <LongTermCard key={item.id} item={item} onRemove={removeItem} onUse={handleUseItem} onCardPress={handleCardPress} t={t} />
                                             ))}
                                         </View>
                                     )
@@ -304,6 +313,44 @@ export default function KitchenScreen() {
                 <View style={{ height: 100 }} />
             </ScrollView>
             <View style={{ height: 100 }} />
+
+            {/* Meal Type Selection Modal */}
+            <Modal transparent visible={showMealModal} animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.mealModalContent}>
+                        <Text style={styles.mealModalTitle}>{t('kitchen.selectMeal') || "Dùng cho bữa nào?"}</Text>
+                        <Text style={styles.mealModalSub}>{pendingItem?.name}</Text>
+                        
+                        <View style={styles.mealOptions}>
+                            {[
+                                { id: 'BREAKFAST', label: t('foodDetail.mealType.breakfast'), icon: '🌅' },
+                                { id: 'LUNCH', label: t('foodDetail.mealType.lunch'), icon: '☀️' },
+                                { id: 'DINNER', label: t('foodDetail.mealType.dinner'), icon: '🌙' },
+                                { id: 'SNACK', label: t('foodDetail.mealType.snack'), icon: '🍎' },
+                            ].map((opt) => (
+                                <TouchableOpacity 
+                                    key={opt.id} 
+                                    style={styles.mealOptionBtn}
+                                    onPress={() => confirmUseItem(opt.id)}
+                                >
+                                    <Text style={styles.mealOptionIcon}>{opt.icon}</Text>
+                                    <Text style={styles.mealOptionText}>{opt.label}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <TouchableOpacity 
+                            style={styles.cancelBtn} 
+                            onPress={() => {
+                                setShowMealModal(false);
+                                setPendingItem(null);
+                            }}
+                        >
+                            <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -319,7 +366,7 @@ function UseSoonCard({
 }: {
     item: FridgeItem;
     onRemove: (id: string) => Promise<void>;
-    onUse: (item: FridgeItem) => Promise<void>;
+    onUse: (item: FridgeItem) => void | Promise<void>;
     onCardPress: (item: FridgeItem) => void;
     t: (key: string, params?: Record<string, string | number>) => string;
 }) {
@@ -368,11 +415,13 @@ function UseSoonCard({
 function ThisWeekCard({
     item,
     onRemove,
+    onUse,
     onCardPress,
     t,
 }: {
     item: FridgeItem;
     onRemove: (id: string) => Promise<void>;
+    onUse: (item: FridgeItem) => void | Promise<void>;
     onCardPress: (item: FridgeItem) => void;
     t: (key: string, params?: Record<string, string | number>) => string;
 }) {
@@ -396,6 +445,11 @@ function ThisWeekCard({
             <View style={styles.thisWeekInfo}>
                 <Text style={styles.fridgeName}>{item.name}</Text>
                 <Text style={styles.fridgeDetail}>{item.amount} • {t('kitchen.remainingDays', { days: item.daysLeft })}</Text>
+                <View style={styles.actionRow}>
+                    <TouchableOpacity style={styles.btnUseNowSmall} onPress={() => onUse(item)}>
+                        <Text style={styles.btnUseNowTextSmall}>{t('kitchen.useNow')}</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
             <View style={[styles.expiryBadge, { backgroundColor: Colors.accentLight }]}>
                 <Text style={[styles.expiryText, { color: Colors.accent }]}>{item.daysLeft}d</Text>
@@ -409,11 +463,13 @@ function ThisWeekCard({
 function LongTermCard({
     item,
     onRemove,
+    onUse,
     onCardPress,
     t,
 }: {
     item: FridgeItem;
     onRemove: (id: string) => Promise<void>;
+    onUse: (item: FridgeItem) => void | Promise<void>;
     onCardPress: (item: FridgeItem) => void;
     t: (key: string, params?: Record<string, string | number>) => string;
 }) {
@@ -437,6 +493,11 @@ function LongTermCard({
                 <View style={styles.thisWeekInfo}>
                     <Text style={styles.fridgeName}>{item.name}</Text>
                     <Text style={styles.fridgeDetail}>{item.amount} • {t('kitchen.remainingDays', { days: item.daysLeft })}</Text>
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity style={styles.btnUseNowSmall} onPress={() => onUse(item)}>
+                            <Text style={styles.btnUseNowTextSmall}>{t('kitchen.useNow')}</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
                 <View style={[styles.expiryBadge, { backgroundColor: Colors.accentLight }]}>
                     <Text style={[styles.expiryText, { color: Colors.accent }]}>{item.daysLeft}d</Text>
@@ -552,6 +613,12 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     tabActive: { backgroundColor: '#FFFFFF' },
     tabText: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
     tabTextActive: { color: Colors.primary, fontWeight: '700' },
@@ -736,4 +803,39 @@ const styles = StyleSheet.create({
     recipeEmoji: { fontSize: 48, marginBottom: 10 },
     recipeName: { fontSize: 14, fontWeight: '600', color: Colors.text, textAlign: 'center', marginBottom: 6 },
     recipeMeta: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center' },
+
+    /* ── Meal Modal ── */
+    mealModalContent: {
+        width: '90%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 24,
+        padding: 24,
+        alignItems: 'center',
+        ...Shadows.medium,
+    },
+    mealModalTitle: { fontSize: 20, fontWeight: '800', color: Colors.primary, marginBottom: 4 },
+    mealModalSub: { fontSize: 15, color: Colors.textSecondary, marginBottom: 24 },
+    mealOptions: { width: '100%', gap: 12 },
+    mealOptionBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F9FAFB',
+        borderRadius: 16,
+        padding: 16,
+        gap: 16,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+    },
+    mealOptionIcon: { fontSize: 24 },
+    mealOptionText: { fontSize: 16, fontWeight: '700', color: Colors.primary },
+    cancelBtn: { marginTop: 20, padding: 10 },
+    cancelBtnText: { fontSize: 15, color: Colors.textLight, fontWeight: '600' },
+
+    btnUseNowSmall: {
+        backgroundColor: Colors.accent,
+        borderRadius: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+    },
+    btnUseNowTextSmall: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
 });
