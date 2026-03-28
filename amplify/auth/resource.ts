@@ -12,11 +12,13 @@ export const auth = defineAuth({
       },
       callbackUrls: [
         'nutritrack://',
+        'http://localhost:8081/',
         'https://nutri-track.link/',
         'https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/'
       ],
       logoutUrls: [
         'nutritrack://',
+        'http://localhost:8081/',
         'https://nutri-track.link/',
         'https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/'
       ]

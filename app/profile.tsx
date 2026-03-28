@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { signOut } from 'aws-amplify/auth';
 import { useAuthStore } from '../src/store/authStore';
 import { getOnboardingData, getUserData, UserData } from '../src/store/userStore';
 import { Colors, Shadows } from '../src/constants/colors';
@@ -88,16 +87,16 @@ export default function ProfileScreen() {
     const { logout, email } = useAuthStore();
     const [gender, setGender] = React.useState<string>('');
     const [userData, setUserData] = React.useState<UserData>({
-        name: 'Admin',
-        email: 'admin@nutritrack.com',
-        weight: 75,
-        goalWeight: 70,
-        streak: 14,
-        dailyCalories: 1800,
-        waterIntake: 800,
+        name: '',
+        email: email || '',
+        weight: 0,
+        goalWeight: 0,
+        streak: 0,
+        dailyCalories: 0,
+        waterIntake: 0,
         waterGoal: 2500,
     });
-    const [profileName, setProfileName] = React.useState('Admin');
+    const [profileName, setProfileName] = React.useState(email || '');
     const [activityLevel, setActivityLevel] = React.useState('');
 
     React.useEffect(() => {
@@ -133,7 +132,6 @@ export default function ProfileScreen() {
                 style: 'destructive',
                 onPress: async () => {
                     try {
-                        await signOut();
                         await logout();
                         router.replace('/welcome');
                     } catch (error) {

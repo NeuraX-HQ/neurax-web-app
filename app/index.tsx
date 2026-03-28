@@ -1,18 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Colors } from '../src/constants/colors';
 
+// Static splash — _layout.tsx handles all auth routing via initializeAuth
 export default function SplashScreen() {
-    const router = useRouter();
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            router.replace('/welcome');
-        }, 2000);
-        return () => clearTimeout(timer);
-    }, []);
-
     return (
         <View style={styles.container}>
             <View style={styles.logoContainer}>

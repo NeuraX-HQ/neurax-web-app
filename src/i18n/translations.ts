@@ -417,7 +417,7 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'foodDetail.aiEstimated': '{{count}} AI ước tính',
         'foodDetail.ingredients': 'Thành phần',
         'foodDetail.edit': 'Sửa',
-        'foodDetail.addToFridge': 'Thêm vào tủ lạnh',
+        'foodDetail.addToFridge': 'Tủ lạnh',
         'foodDetail.logMeal': 'Ghi bữa ăn',
         'foodDetail.selectMealType': 'Chọn bữa ăn',
         'foodDetail.selectUnit': 'Chọn đơn vị',

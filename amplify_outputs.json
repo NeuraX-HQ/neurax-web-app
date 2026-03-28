@@ -29,13 +29,15 @@
       ],
       "redirect_sign_in_uri": [
         "nutritrack://",
-        "https://nutri-track.link/home",
-        "https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/home"
+        "http://localhost:8081/",
+        "https://nutri-track.link/",
+        "https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/"
       ],
       "redirect_sign_out_uri": [
         "nutritrack://",
-        "https://nutri-track.link/welcome",
-        "https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/welcome"
+        "http://localhost:8081/",
+        "https://nutri-track.link/",
+        "https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/"
       ],
       "response_type": "code",
       "scopes": [

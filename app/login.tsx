@@ -1,10 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
-import { signIn, fetchAuthSession, signInWithRedirect, signOut, resendSignUpCode } from "aws-amplify/auth";
+import { signIn, fetchAuthSession, signInWithRedirect, resendSignUpCode } from "aws-amplify/auth";
 import { useAuthStore } from '../src/store/authStore';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
@@ -36,7 +35,6 @@ export default function LoginScreen() {
     const [email, setEmail] = useState(params.email as string || "");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
-    const googleRetried = useRef(false);
 
     const handleEmailLogin = async () => {
         if (!email.trim() || !password) {
@@ -132,28 +130,34 @@ export default function LoginScreen() {
     const handleGoogleLogin = async () => {
         try {
             setLoading(true);
-            googleRetried.current = false;
+
+            // Patch Amplify's internal browser module to inject prompt=login
+            // into the Cognito authorize URL → forces Google account picker on mobile
+            try {
+                const rtnWebBrowser = require('@aws-amplify/rtn-web-browser');
+                if (rtnWebBrowser?.module?.openAuthSessionAsync) {
+                    const originalOpen = rtnWebBrowser.module.openAuthSessionAsync;
+                    rtnWebBrowser.module.openAuthSessionAsync = async (
+                        url: string,
+                        redirectUrls: string[],
+                        prefersEphemeral?: boolean,
+                    ) => {
+                        const modifiedUrl =
+                            url.includes('/oauth2/authorize') && !url.includes('prompt=')
+                                ? url + '&prompt=login'
+                                : url;
+                        return originalOpen(modifiedUrl, redirectUrls, prefersEphemeral);
+                    };
+                }
+            } catch (_) {
+                // Fallback: proceed without patch
+            }
+
             await signInWithRedirect({ provider: 'Google' });
         } catch (error: any) {
-            if (error?.name === 'UserAlreadyAuthenticatedException' && !googleRetried.current) {
-                googleRetried.current = true;
-                console.log("Stale session detected. Clearing all sessions before retry...");
-                try {
-                    // Clear BOTH Amplify tokens AND AsyncStorage session
-                    await useAuthStore.getState().logout();
-                } catch (_) {}
-                try {
-                    await signInWithRedirect({ provider: 'Google' });
-                } catch (retryError: any) {
-                    console.log("Google login retry error:", retryError);
-                    Alert.alert(t('common.error'), t('login.googleError'));
-                    setLoading(false);
-                }
-            } else {
-                console.log("Google login error:", error);
-                Alert.alert(t('common.error'), t('login.googleError'));
-                setLoading(false);
-            }
+            console.log("Google login error:", error);
+            Alert.alert(t('common.error'), t('login.googleError'));
+            setLoading(false);
         }
     };
 
@@ -163,17 +167,22 @@ export default function LoginScreen() {
 
                 <Text style={styles.title}>{t('login.title')}</Text>
 
+                <Text style={styles.label}>Email</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder={t('login.email')}
+                    placeholder="example@email.com"
+                    placeholderTextColor="#9CA3AF"
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
+                    keyboardType="email-address"
                 />
 
+                <Text style={styles.label}>{t('login.password')}</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder={t('login.password')}
+                    placeholder="••••••••"
+                    placeholderTextColor="#9CA3AF"
                     secureTextEntry
                     value={password}
                     onChangeText={setPassword}
@@ -231,7 +240,8 @@ const styles = StyleSheet.create({
 
     safeArea: {
         flex: 1,
-        padding: 24
+        padding: 24,
+        justifyContent: 'center'
     },
 
     title: {
@@ -240,12 +250,21 @@ const styles = StyleSheet.create({
         marginBottom: 40
     },
 
+    label: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#374151',
+        marginBottom: 6,
+    },
+
     input: {
         borderWidth: 1,
         borderColor: "#ddd",
         padding: 14,
         borderRadius: 10,
-        marginBottom: 16
+        marginBottom: 16,
+        fontSize: 16,
+        color: '#1F2937',
     },
 
     button: {

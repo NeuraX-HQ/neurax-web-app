@@ -6,6 +6,7 @@ import { Colors, Shadows } from '../src/constants/colors';
 import { useAuthStore } from '../src/store/authStore';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 import { AppLanguage } from '../src/i18n/translations';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSettingsStore, SettingsUnits } from '../src/store/settingsStore';
 
 type PickerType = 'language' | 'units' | null;
@@ -124,6 +125,25 @@ export default function SettingsScreen() {
         }
     };
 
+    const handleResetAllData = () => {
+        Alert.alert(
+            'Reset All Data',
+            'Xóa toàn bộ dữ liệu local (meals, fridge, onboarding, settings). Bạn sẽ bắt đầu lại từ đầu.',
+            [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                    text: 'Reset',
+                    style: 'destructive',
+                    onPress: async () => {
+                        await AsyncStorage.clear();
+                        await logout();
+                        router.replace('/welcome');
+                    },
+                },
+            ]
+        );
+    };
+
     const handleLogout = () => {
         Alert.alert(
             t('settings.logoutTitle'),
@@ -135,7 +155,7 @@ export default function SettingsScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         await logout();
-                        router.replace('/login');
+                        router.replace('/welcome');
                     },
                 },
             ]
@@ -309,6 +329,11 @@ export default function SettingsScreen() {
                 {/* Log Out */}
                 <TouchableOpacity style={[styles.logoutBtn]} onPress={handleLogout}>
                     <Text style={styles.logoutText}>{t('settings.logout')}</Text>
+                </TouchableOpacity>
+
+                {/* Dev: Reset All Data */}
+                <TouchableOpacity style={[styles.logoutBtn, { marginTop: 12, borderColor: '#999' }]} onPress={handleResetAllData}>
+                    <Text style={[styles.logoutText, { color: '#999' }]}>Reset All Data (Dev)</Text>
                 </TouchableOpacity>
 
                 <View style={{ height: 40 }} />
