@@ -3,6 +3,7 @@ import {
     View, Text, StyleSheet, TouchableOpacity,
     TextInput, ScrollView, Modal, ActivityIndicator, Alert
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -18,13 +19,43 @@ interface SearchScannerProps {
 
 const DEFAULT_PORTION_UNIT = 'khẩu phần';
 
+const STORAGE_KEY_RECENT = '@nutritrack_recent_search';
+
 export function SearchScanner({ visible, onClose }: SearchScannerProps) {
     const router = useRouter();
     const { t } = useAppLanguage();
     const [query, setQuery] = useState('');
     const [searching, setSearching] = useState(false);
-    const [recent, setRecent] = useState<string[]>(ALL_FOODS.map((item) => item.name));
+    const [recent, setRecent] = useState<string[]>([]);
     const [activeTab, setActiveTab] = useState<'recent' | 'popular' | 'myfoods'>('recent');
+
+    // Load recent searches on mount
+    React.useEffect(() => {
+        const loadRecent = async () => {
+            try {
+                const stored = await AsyncStorage.getItem(STORAGE_KEY_RECENT);
+                if (stored) {
+                    setRecent(JSON.parse(stored));
+                }
+            } catch (err) {
+                console.error('Failed to load recent searches', err);
+            }
+        };
+        loadRecent();
+    }, []);
+
+    const updateRecent = useCallback(async (foodName: string) => {
+        const name = foodName.trim();
+        if (!name) return;
+        
+        setRecent(prev => {
+            const updated = [name, ...prev.filter(r => r !== name)].slice(0, 10);
+            AsyncStorage.setItem(STORAGE_KEY_RECENT, JSON.stringify(updated)).catch(e => 
+                console.error('Failed to save recent search', e)
+            );
+            return updated;
+        });
+    }, []);
 
     const handleSearch = useCallback(async (foodName: string) => {
         if (!foodName.trim() || searching) return;
@@ -35,10 +66,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
 
             if (result.success && result.data) {
                 // Thêm vào lịch sử tìm kiếm
-                setRecent(prev => {
-                    const updated = [foodName.trim(), ...prev.filter(r => r !== foodName.trim())];
-                    return updated.slice(0, 20);
-                });
+                await updateRecent(foodName);
 
                 onClose();
                 router.push({
@@ -75,6 +103,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
 
     const handleQuickAdd = useCallback((item: FoodTemplateItem) => {
         const foodData = buildQuickFoodData(item);
+        updateRecent(item.name); // Add to recent
         onClose();
         router.push({
             pathname: '/food-detail',
@@ -83,7 +112,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
                 source: 'quick_add',
             },
         });
-    }, [buildQuickFoodData, onClose, router]);
+    }, [buildQuickFoodData, onClose, router, updateRecent]);
 
     const renderFoodCard = (item: FoodTemplateItem) => (
         <TouchableOpacity
@@ -397,11 +426,10 @@ const searchStyles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        // backgroundColor: '#10B9811A',
+        backgroundColor: '#10B9811A',
         justifyContent: 'center',
         alignItems: 'center',
-        alignSelf: 'flex-end', // đẩy nút + sát bên phải
-        marginLeft: 0,
+        alignSelf: 'flex-end',
     },
     foodName: {
         fontSize: 16,
@@ -418,14 +446,6 @@ const searchStyles = StyleSheet.create({
         fontSize: 11,
         color: '#94A3B8',
         fontWeight: '600',
-    },
-    addBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#10B9811A',
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     addBtnPlus: {
         color: '#10B981',
