@@ -64,7 +64,7 @@ export default function HomeScreen() {
     const [gender, setGender] = useState<string>('');
     const [userName, setUserName] = useState<string>('');
     const [dailyCalorieTarget, setDailyCalorieTarget] = useState(1800);
-    const [showCaloriesEaten, setShowCaloriesEaten] = useState(false);
+    const [showCaloriesEaten, setShowCaloriesEaten] = useState(true);
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
     const userEmail = useAuthStore((state) => state.email);
@@ -291,7 +291,7 @@ export default function HomeScreen() {
     const carbs = getMacroStatus(Math.round(stats.totalCarbs), 280, 'home.carbs', Colors.carbs);
     const fat = getMacroStatus(Math.round(stats.totalFat), 75, 'home.fat', Colors.fat);
     const [waterByDate, setWaterByDate] = useState<Record<string, number>>({
-        [todayIso]: 800,
+        [todayIso]: 0,
     });
     const waterMax = 2500;
     const waterCurrent = waterByDate[selectedDateStr] ?? 0;
@@ -612,7 +612,7 @@ export default function HomeScreen() {
                             current={showCaloriesEaten ? caloriesEaten : caloriesLeft}
                             max={maxCalories}
                             size={120}
-                            strokeWidth={14}
+                            strokeWidth={10}
                             displayValue={calorieGaugeValue}
                             label={calorieGaugeLabel}
                             accentColor={calorieAccentColor}

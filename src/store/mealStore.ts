@@ -134,37 +134,33 @@ export const useMealStore = create<MealState>((set, get) => ({
             const updatedMeals = [...get().meals, newMeal];
             set({ meals: updatedMeals });
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedMeals));
-            set({ isLoading: false });
 
-            // Background sync to DynamoDB
-            mealService.createFoodLog({
-                date: newMeal.date,
-                food_name: newMeal.name,
-                meal_type: mealTypeToBackend(newMeal.type),
-                macros: {
-                    calories: newMeal.calories,
-                    protein_g: newMeal.protein,
-                    carbs_g: newMeal.carbs,
-                    fat_g: newMeal.fat,
-                },
-                ingredients: newMeal.ingredients,
-            }).then((remote) => {
-                if (remote) {
-                    // Mark as synced + store remote id
-                    const meals = get().meals.map(m =>
-                        m.id === newMeal.id ? { ...m, syncStatus: 'synced' as const, remoteId: remote.id } : m
-                    );
-                    set({ meals });
-                    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(meals));
-                } else {
-                    // Mark as error for retry
-                    const meals = get().meals.map(m =>
-                        m.id === newMeal.id ? { ...m, syncStatus: 'error' as const } : m
-                    );
-                    set({ meals });
-                    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(meals));
-                }
-            });
+            // Sync to DynamoDB — awaited so remoteId is set before navigation
+            // (prevents double-logging when syncWithCloud runs on home screen)
+            try {
+                const remote = await mealService.createFoodLog({
+                    date: newMeal.date,
+                    food_name: newMeal.name,
+                    meal_type: mealTypeToBackend(newMeal.type),
+                    macros: {
+                        calories: newMeal.calories,
+                        protein_g: newMeal.protein,
+                        carbs_g: newMeal.carbs,
+                        fat_g: newMeal.fat,
+                    },
+                    ingredients: newMeal.ingredients,
+                });
+                const status = remote ? 'synced' as const : 'error' as const;
+                const meals = get().meals.map(m =>
+                    m.id === newMeal.id ? { ...m, syncStatus: status, remoteId: remote?.id } : m
+                );
+                set({ meals });
+                await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(meals));
+            } catch {
+                // Leave as pending — will retry via syncPendingMeals
+            }
+
+            set({ isLoading: false });
         } catch (error) {
             console.error('Error adding meal:', error);
             set({

@@ -12,13 +12,15 @@ export const auth = defineAuth({
       },
       callbackUrls: [
         'nutritrack://',
-        'https://nutri-track.link/home',
-        'https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/home'
+        'http://localhost:8081/',
+        'https://nutri-track.link/',
+        'https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/'
       ],
       logoutUrls: [
         'nutritrack://',
-        'https://nutri-track.link/welcome',
-        'https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/welcome'
+        'http://localhost:8081/',
+        'https://nutri-track.link/',
+        'https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/'
       ]
     }
   },

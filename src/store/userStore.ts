@@ -47,7 +47,7 @@ const defaultUser: UserData = {
     goalWeight: 70,
     streak: 14,
     dailyCalories: 1800,
-    waterIntake: 800,
+    waterIntake: 0,
     waterGoal: 2500,
 };
 

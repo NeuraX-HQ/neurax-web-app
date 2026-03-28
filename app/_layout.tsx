@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getCurrentUser, fetchAuthSession, fetchUserAttributes } from 'aws-amplify/auth';
-import { View, StyleSheet, Platform, AppState, AppStateStatus, ActivityIndicator, Text } from 'react-native';
+import { Hub } from 'aws-amplify/utils';
+import { View, StyleSheet, Platform, ActivityIndicator, Text, Animated, Easing } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as NavigationBar from 'expo-navigation-bar';
@@ -27,36 +28,57 @@ function RootLayoutShell() {
     const { isAuthenticated, checkSession, checkBiometricAvailability } = useAuthStore();
     const [showBiometric, setShowBiometric] = useState(false);
     const [isReady, setIsReady] = useState(false);
+    const oauthHandled = useRef(false);
+    const hasNavigated = useRef(false);
+    const pendingRoute = useRef<string | null>(null);
 
+    // Listen for OAuth sign-in completion (e.g. Google redirect back)
     useEffect(() => {
-        const setupNavigationBar = async () => {
-            if (Platform.OS === 'android') {
-                // Set to transparent/absolute for more robust full-screen on Android
-                await NavigationBar.setBackgroundColorAsync('transparent');
-                await NavigationBar.setPositionAsync('absolute');
-                await NavigationBar.setVisibilityAsync('hidden');
-                await NavigationBar.setBehaviorAsync('overlay-swipe');
+        const unsubscribe = Hub.listen('auth', async ({ payload }) => {
+            if (payload.event === 'signInWithRedirect' && !oauthHandled.current) {
+                oauthHandled.current = true;
+                console.log('OAuth signInWithRedirect completed — syncing session...');
+                const result = await checkAndSetAuth();
+                if (result.authenticated) {
+                    hasNavigated.current = true;
+                    router.replace(result.needsOnboarding ? '/onboarding/step1' : '/(tabs)/home');
+                }
             }
-        };
-
-        setupNavigationBar();
-
-        // Re-setup the navigation bar when the app returns from the background
-        const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
-            if (nextAppState === 'active') {
-                setupNavigationBar();
+            if (payload.event === 'signInWithRedirect_failure') {
+                console.log('OAuth signInWithRedirect failed:', payload.data);
+                oauthHandled.current = false;
             }
         });
-
-        return () => {
-            subscription.remove();
-        };
+        return () => unsubscribe();
     }, []);
 
     useEffect(() => {
-        initializeAuth();
+        // Edge-to-edge is enabled — only setVisibilityAsync is supported.
+        // setBackgroundColorAsync, setPositionAsync, setBehaviorAsync are no-ops
+        // with edge-to-edge and spam warnings, so they are removed.
+        if (Platform.OS === 'android') {
+            NavigationBar.setVisibilityAsync('hidden').catch(() => {});
+        }
+    }, []);
+
+    useEffect(() => {
+        initializeAuth().catch((err) => {
+            console.error('[AUTH] initializeAuth crashed:', err);
+            // Fallback: still show the app, go to welcome
+            pendingRoute.current = '/welcome';
+            setIsReady(true);
+        });
         useSettingsStore.getState().loadPreferences();
     }, []);
+
+    // Navigate AFTER Stack is mounted (isReady = true triggers re-render → Stack renders → then navigate)
+    useEffect(() => {
+        if (isReady && pendingRoute.current) {
+            const route = pendingRoute.current;
+            pendingRoute.current = null;
+            router.replace(route as any);
+        }
+    }, [isReady]);
 
     useEffect(() => {
         if (!isReady) return;
@@ -68,7 +90,7 @@ function RootLayoutShell() {
         }
     }, [isAuthenticated, segments, isReady]);
 
-    const checkAndSetAuth = async () => {
+    const checkAndSetAuth = async (): Promise<{ authenticated: boolean; needsOnboarding: boolean }> => {
         try {
             const currentUser = await getCurrentUser();
             const session = await fetchAuthSession();
@@ -88,48 +110,92 @@ function RootLayoutShell() {
                     }
                 }
                 await login(email, userId, token);
-                return true;
+
+                // Check onboarding status
+                const { fetchUserProfile } = require('../src/services/userService');
+                const userProfile = await fetchUserProfile(userId);
+                const needsOnboarding = !userProfile || !userProfile.onboarding_status;
+
+                return { authenticated: true, needsOnboarding };
             }
         } catch (e) {
             // User not authenticated
-            return false;
+            return { authenticated: false, needsOnboarding: false };
         }
-        return false;
+        return { authenticated: false, needsOnboarding: false };
     };
 
     const initializeAuth = async () => {
+        console.log('[AUTH] initializeAuth started');
         await checkBiometricAvailability();
 
         // Handle Google OAuth and standard sessions
         let hasSession = await checkSession();
+        let needsOnboarding = false;
+        console.log('[AUTH] checkSession:', hasSession);
 
         if (hasSession) {
             // Validate that Cognito actually has valid tokens
-            // AsyncStorage session may be stale (e.g. after region change)
-            const isValid = await checkAndSetAuth();
-            if (!isValid) {
-                // Local session exists but Cognito tokens are invalid — clear stale session
-                console.log("Stale local session detected (no valid Cognito tokens). Clearing...");
+            console.log('[AUTH] Validating Cognito tokens...');
+            const result = await checkAndSetAuth();
+            console.log('[AUTH] checkAndSetAuth result:', result);
+            if (!result.authenticated) {
+                console.log('[AUTH] Stale local session detected. Clearing...');
                 await useAuthStore.getState().logout();
                 hasSession = false;
+            } else {
+                needsOnboarding = result.needsOnboarding;
             }
         } else {
             // No local session — check if Amplify has a valid session (e.g. OAuth callback)
-            hasSession = await checkAndSetAuth();
+            console.log('[AUTH] No local session, checking Amplify...');
+            const result = await checkAndSetAuth();
+            console.log('[AUTH] checkAndSetAuth result:', result);
+            hasSession = result.authenticated;
+            needsOnboarding = result.needsOnboarding;
+        }
+
+        // Skip if Hub listener already handled OAuth navigation
+        if (hasNavigated.current) {
+            console.log('[AUTH] Hub already navigated, skipping');
+            setIsReady(true);
+            return;
+        }
+
+        if (hasSession && needsOnboarding) {
+            console.log('[AUTH] → onboarding/step1');
+            hasNavigated.current = true;
+            pendingRoute.current = '/onboarding/step1';
+            setIsReady(true);
+            return;
         }
 
         if (hasSession) {
             const { biometricEnabled } = useAuthStore.getState();
             if (biometricEnabled) {
+                console.log('[AUTH] → biometric prompt');
                 setShowBiometric(true);
+                setIsReady(true);
+                return;
             }
+            console.log('[AUTH] → home');
+            hasNavigated.current = true;
+            pendingRoute.current = '/(tabs)/home';
+            setIsReady(true);
+            return;
         }
 
+        // Not authenticated → welcome
+        console.log('[AUTH] → welcome');
+        hasNavigated.current = true;
+        pendingRoute.current = '/welcome';
         setIsReady(true);
     };
 
     const handleBiometricSuccess = () => {
         setShowBiometric(false);
+        hasNavigated.current = true;
+        router.replace('/(tabs)/home');
     };
 
     const handleBiometricCancel = async () => {
@@ -138,6 +204,25 @@ function RootLayoutShell() {
         await logout();
         router.replace('/login');
     };
+
+    if (!isReady) {
+        return (
+            <GestureHandlerRootView style={{ flex: 1 }}>
+                <View style={styles.splash}>
+                    <StatusBar hidden />
+                    <View style={styles.splashLogoBox}>
+                        <View style={styles.splashLogoInner}>
+                            <View style={styles.barLeft} />
+                            <View style={styles.barCenter} />
+                            <View style={styles.barRight} />
+                        </View>
+                    </View>
+                    <Text style={styles.splashTitle}>NutriTrack 2.0</Text>
+                    <SpinnerRing />
+                </View>
+            </GestureHandlerRootView>
+        );
+    }
 
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
@@ -200,8 +285,87 @@ function RootLayoutShell() {
     );
 }
 
+function SpinnerRing() {
+    const spin = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        Animated.loop(
+            Animated.timing(spin, {
+                toValue: 1,
+                duration: 1000,
+                easing: Easing.linear,
+                useNativeDriver: true,
+            }),
+        ).start();
+    }, []);
+    const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+    return (
+        <Animated.View style={[styles.spinnerRing, { transform: [{ rotate }] }]} />
+    );
+}
+
 const styles = StyleSheet.create({
     root: { flex: 1, backgroundColor: '#FFFFFF' },
+    splash: {
+        flex: 1,
+        backgroundColor: '#F0F0F0',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    splashLogoBox: {
+        width: 120,
+        height: 120,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 28,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 24,
+        elevation: 8,
+    },
+    splashLogoInner: {
+        width: 70,
+        height: 60,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+    },
+    barLeft: {
+        width: 14,
+        height: 50,
+        backgroundColor: '#1B2838',
+        borderRadius: 7,
+    },
+    barCenter: {
+        width: 14,
+        height: 40,
+        backgroundColor: '#2ECC71',
+        borderRadius: 7,
+        transform: [{ rotate: '-30deg' }],
+    },
+    barRight: {
+        width: 14,
+        height: 50,
+        backgroundColor: '#1B2838',
+        borderRadius: 7,
+    },
+    splashTitle: {
+        marginTop: 20,
+        fontSize: 18,
+        fontWeight: '500',
+        color: '#7F8C9B',
+    },
+    spinnerRing: {
+        marginTop: 32,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        borderWidth: 3,
+        borderColor: '#E0E0E0',
+        borderTopColor: '#2ECC71',
+    },
     languageOverlay: {
         ...StyleSheet.absoluteFillObject,
         backgroundColor: 'rgba(17, 24, 39, 0.25)',
