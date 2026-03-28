@@ -26,7 +26,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
     const { t } = useAppLanguage();
     const [query, setQuery] = useState('');
     const [searching, setSearching] = useState(false);
-    const [recent, setRecent] = useState<string[]>([]);
+    const [recent, setRecent] = useState<NutritionInfo[]>([]);
     const [activeTab, setActiveTab] = useState<'recent' | 'popular' | 'myfoods'>('recent');
 
     // Load recent searches on mount
@@ -44,12 +44,11 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
         loadRecent();
     }, []);
 
-    const updateRecent = useCallback(async (foodName: string) => {
-        const name = foodName.trim();
-        if (!name) return;
+    const updateRecent = useCallback(async (foodData: NutritionInfo) => {
+        if (!foodData.name) return;
         
         setRecent(prev => {
-            const updated = [name, ...prev.filter(r => r !== name)].slice(0, 10);
+            const updated = [foodData, ...prev.filter(r => r.name !== foodData.name)].slice(0, 10);
             AsyncStorage.setItem(STORAGE_KEY_RECENT, JSON.stringify(updated)).catch(e => 
                 console.error('Failed to save recent search', e)
             );
@@ -65,8 +64,8 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
             const result = await searchFoodNutrition(foodName.trim());
 
             if (result.success && result.data) {
-                // Thêm vào lịch sử tìm kiếm
-                await updateRecent(foodName);
+                // Thêm vào lịch sử tìm kiếm (Dạng NutritionInfo)
+                await updateRecent(result.data);
 
                 onClose();
                 router.push({
@@ -103,7 +102,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
 
     const handleQuickAdd = useCallback((item: FoodTemplateItem) => {
         const foodData = buildQuickFoodData(item);
-        updateRecent(item.name); // Add to recent
+        updateRecent(foodData); // Add to recent
         onClose();
         router.push({
             pathname: '/food-detail',
@@ -114,19 +113,60 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
         });
     }, [buildQuickFoodData, onClose, router, updateRecent]);
 
+    const handleRecentClick = useCallback((foodData: NutritionInfo) => {
+        updateRecent(foodData); // push to top
+        onClose();
+        router.push({
+            pathname: '/food-detail',
+            params: {
+                foodData: JSON.stringify(foodData),
+                source: 'recent',
+            }
+        });
+    }, [onClose, router, updateRecent]);
+
+    const renderRecentCard = (foodData: NutritionInfo) => (
+        <View key={`recent-${foodData.name}`} style={searchStyles.foodCard}>
+            <TouchableOpacity
+                style={[searchStyles.foodMainInfo, { flex: 1 }]}
+                activeOpacity={0.85}
+                onPress={() => handleRecentClick(foodData)}
+                disabled={searching}
+            >
+                <Text style={searchStyles.foodName}>{foodData.name}</Text>
+                <Text style={searchStyles.foodKcal}>{foodData.calories} kcal • {foodData.servingSize}</Text>
+                <Text style={searchStyles.foodMacro}>P: {foodData.protein}g • C: {foodData.carbs}g • F: {foodData.fat}g</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+                style={searchStyles.addBtn}
+                activeOpacity={0.8}
+                onPress={() => {
+                    updateRecent(foodData);
+                    onClose();
+                    router.push({
+                        pathname: '/food-detail',
+                        params: { foodData: JSON.stringify(foodData), source: 'quick_add' }
+                    });
+                }}
+                disabled={searching}
+            >
+                <Text style={searchStyles.addBtnPlus}>+</Text>
+            </TouchableOpacity>
+        </View>
+    );
+
     const renderFoodCard = (item: FoodTemplateItem) => (
-        <TouchableOpacity
-            key={item.name}
-            style={searchStyles.foodCard}
-            activeOpacity={0.85}
-            onPress={() => handleSearch(item.name)}
-            disabled={searching}
-        >
-            <View style={searchStyles.foodMainInfo}>
+        <View key={item.name} style={searchStyles.foodCard}>
+            <TouchableOpacity
+                style={[searchStyles.foodMainInfo, { flex: 1 }]}
+                activeOpacity={0.85}
+                onPress={() => handleSearch(item.name)}
+                disabled={searching}
+            >
                 <Text style={searchStyles.foodName}>{item.name}</Text>
                 <Text style={searchStyles.foodKcal}>{item.kcal} kcal • {item.serving}</Text>
                 <Text style={searchStyles.foodMacro}>P: {item.protein}g • C: {item.carbs}g • F: {item.fat}g</Text>
-            </View>
+            </TouchableOpacity>
             <TouchableOpacity
                 style={searchStyles.addBtn}
                 activeOpacity={0.8}
@@ -135,7 +175,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
             >
                 <Text style={searchStyles.addBtnPlus}>+</Text>
             </TouchableOpacity>
-        </TouchableOpacity>
+        </View>
     );
 
     const mergedSuggestions: FoodTemplateItem[] = ALL_FOODS;
@@ -233,18 +273,19 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
                                 {activeTab === 'recent' && (
                                     <>
                                         <Text style={searchStyles.sectionTitle}>{t('search.tab.recent')}</Text>
-                                        {recent.map((name) => {
-                                            const mapped = mergedSuggestions.find((x) => x.name === name);
-                                            const item = mapped || {
-                                                name,
-                                                emoji: '',
-                                                kcal: 300,
-                                                serving: `1 ${DEFAULT_PORTION_UNIT}`,
-                                                protein: 18,
-                                                carbs: 38,
-                                                fat: 10,
-                                            };
-                                            return renderFoodCard(item);
+                                        {recent.map((nutritionObj) => {
+                                            // Render directly using our new component
+                                            // The type is expected to be NutritionInfo now (after fix)
+                                            // Handle migration for old string values just in case
+                                            if (typeof nutritionObj === 'string') {
+                                                const mapped = mergedSuggestions.find((x) => x.name === nutritionObj);
+                                                const item = mapped || {
+                                                    name: nutritionObj, emoji: '', kcal: 300, serving: `1 ${DEFAULT_PORTION_UNIT}`,
+                                                    protein: 18, carbs: 38, fat: 10,
+                                                };
+                                                return renderFoodCard(item);
+                                            }
+                                            return renderRecentCard(nutritionObj);
                                         })}
                                     </>
                                 )}

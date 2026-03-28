@@ -78,6 +78,20 @@ export interface FoodAnalysisResult {
     error?: string;
 }
 
+export interface VoiceAnalysisData {
+    intent: 'log_food' | 'ask_coach' | 'log_water' | 'unknown';
+    food_data?: NutritionInfo;
+    water_ml?: number;
+    coach_query?: string;
+    message?: string;
+}
+
+export interface VoiceAnalysisResult {
+    success: boolean;
+    data?: VoiceAnalysisData;
+    error?: string;
+}
+
 export interface FoodSuggestion {
     name: string;
     description: string;
@@ -186,7 +200,7 @@ export async function transcribeAudio(audioBase64: string): Promise<{ success: b
 /**
  * Parse voice text to extract food information through AWS Lambda
  */
-export async function parseVoiceToFood(transcript: string): Promise<FoodAnalysisResult> {
+export async function parseVoiceToFood(transcript: string): Promise<VoiceAnalysisResult> {
     try {
         const result = await getClient().queries.askGemini({
             action: 'parseVoiceToFood',
@@ -205,14 +219,22 @@ export async function parseVoiceToFood(transcript: string): Promise<FoodAnalysis
 
         const rawData = extractAndParseJSON(responseObj.text);
         
-        let aiData = rawData;
-        if (rawData.items && Array.isArray(rawData.items) && rawData.items.length > 0) {
-            aiData = rawData.items[0];
+        let voiceData: VoiceAnalysisData = {
+            intent: rawData.intent || 'unknown',
+            message: rawData.message || ''
+        };
+
+        if (rawData.intent === 'log_food' && rawData.food_items && rawData.food_items.length > 0) {
+            voiceData.food_data = convertAiToNutritionInfo(rawData.food_items[0]);
+        } else if (rawData.intent === 'log_water') {
+            voiceData.water_ml = rawData.water_ml;
+        } else if (rawData.intent === 'ask_coach' || rawData.intent === 'unknown') {
+            voiceData.coach_query = rawData.coach_query || transcript;
         }
 
         return {
             success: true,
-            data: convertAiToNutritionInfo(aiData),
+            data: voiceData,
         };
     } catch (error) {
         console.error('Gemini voice parsing error:', error);
