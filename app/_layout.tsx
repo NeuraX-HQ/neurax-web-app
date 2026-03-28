@@ -99,15 +99,26 @@ function RootLayoutShell() {
 
     const initializeAuth = async () => {
         await checkBiometricAvailability();
-        
+
         // Handle Google OAuth and standard sessions
         let hasSession = await checkSession();
-        if (!hasSession) {
-             hasSession = await checkAndSetAuth();
+
+        if (hasSession) {
+            // Validate that Cognito actually has valid tokens
+            // AsyncStorage session may be stale (e.g. after region change)
+            const isValid = await checkAndSetAuth();
+            if (!isValid) {
+                // Local session exists but Cognito tokens are invalid — clear stale session
+                console.log("Stale local session detected (no valid Cognito tokens). Clearing...");
+                await useAuthStore.getState().logout();
+                hasSession = false;
+            }
+        } else {
+            // No local session — check if Amplify has a valid session (e.g. OAuth callback)
+            hasSession = await checkAndSetAuth();
         }
 
         if (hasSession) {
-            // Check if biometric is required
             const { biometricEnabled } = useAuthStore.getState();
             if (biometricEnabled) {
                 setShowBiometric(true);

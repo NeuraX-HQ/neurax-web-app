@@ -137,9 +137,10 @@ export default function LoginScreen() {
         } catch (error: any) {
             if (error?.name === 'UserAlreadyAuthenticatedException' && !googleRetried.current) {
                 googleRetried.current = true;
-                console.log("Stale session detected. Signing out before retry...");
+                console.log("Stale session detected. Clearing all sessions before retry...");
                 try {
-                    await signOut({ global: true });
+                    // Clear BOTH Amplify tokens AND AsyncStorage session
+                    await useAuthStore.getState().logout();
                 } catch (_) {}
                 try {
                     await signInWithRedirect({ provider: 'Google' });
