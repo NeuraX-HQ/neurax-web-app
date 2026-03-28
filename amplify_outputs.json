@@ -1,9 +1,9 @@
 {
   "auth": {
-    "user_pool_id": "ap-southeast-1_mDyCNINFZ",
-    "aws_region": "ap-southeast-1",
-    "user_pool_client_id": "14tl2bs59injts8duu8l432uk6",
-    "identity_pool_id": "ap-southeast-1:108e98a0-a41d-40f5-9ce1-16192e830bf8",
+    "user_pool_id": "ap-southeast-2_hU4s84YW3",
+    "aws_region": "ap-southeast-2",
+    "user_pool_client_id": "7endeoql4552pelajq1endl846",
+    "identity_pool_id": "ap-southeast-2:2fcf65af-cb3c-4a12-b419-533fdabf6ded",
     "mfa_methods": [],
     "standard_required_attributes": [
       "email"
@@ -29,11 +29,13 @@
       ],
       "redirect_sign_in_uri": [
         "nutritrack://",
-        "https://nutri-track.link/home"
+        "https://nutri-track.link/home",
+        "https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/home"
       ],
       "redirect_sign_out_uri": [
         "nutritrack://",
-        "https://nutri-track.link/welcome"
+        "https://nutri-track.link/welcome",
+        "https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/welcome"
       ],
       "response_type": "code",
       "scopes": [
@@ -43,13 +45,13 @@
         "profile",
         "aws.cognito.signin.user.admin"
       ],
-      "domain": "b0cc913a22616008a12d.auth.ap-southeast-1.amazoncognito.com"
+      "domain": "b0cc913a22616008a12d.auth.ap-southeast-2.amazoncognito.com"
     },
     "unauthenticated_identities_enabled": true
   },
   "data": {
-    "url": "https://nsjtl54yorfndntjbogeydsryy.appsync-api.ap-southeast-1.amazonaws.com/graphql",
-    "aws_region": "ap-southeast-1",
+    "url": "https://ouchp5rz5fgfzjncov77fwphrm.appsync-api.ap-southeast-2.amazonaws.com/graphql",
+    "aws_region": "ap-southeast-2",
     "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
       "AWS_IAM"
@@ -242,10 +244,31 @@
               "isRequired": false,
               "attributes": []
             },
+            "last_active_at": {
+              "name": "last_active_at",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
             "onboarding_status": {
               "name": "onboarding_status",
               "isArray": false,
               "type": "Boolean",
+              "isRequired": false,
+              "attributes": []
+            },
+            "friend_code": {
+              "name": "friend_code",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "ai_context_summary": {
+              "name": "ai_context_summary",
+              "isArray": false,
+              "type": "String",
               "isRequired": false,
               "attributes": []
             },
@@ -285,6 +308,15 @@
               "isRequired": false,
               "attributes": []
             },
+            "ai_preferences": {
+              "name": "ai_preferences",
+              "isArray": false,
+              "type": {
+                "nonModel": "ai_preferences"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
             "createdAt": {
               "name": "createdAt",
               "isArray": false,
@@ -318,6 +350,16 @@
               }
             },
             {
+              "type": "key",
+              "properties": {
+                "name": "usersByFriend_code",
+                "queryField": "listUserByFriend_code",
+                "fields": [
+                  "friend_code"
+                ]
+              }
+            },
+            {
               "type": "auth",
               "properties": {
                 "rules": [
@@ -342,9 +384,858 @@
             "primaryKeyFieldName": "user_id",
             "sortKeyFieldNames": []
           }
+        },
+        "FoodLog": {
+          "name": "FoodLog",
+          "fields": {
+            "id": {
+              "name": "id",
+              "isArray": false,
+              "type": "ID",
+              "isRequired": true,
+              "attributes": []
+            },
+            "date": {
+              "name": "date",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "timestamp": {
+              "name": "timestamp",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": true,
+              "attributes": []
+            },
+            "food_id": {
+              "name": "food_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "food_name": {
+              "name": "food_name",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "meal_type": {
+              "name": "meal_type",
+              "isArray": false,
+              "type": {
+                "enum": "FoodLogMeal_type"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "portion": {
+              "name": "portion",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "portion_unit": {
+              "name": "portion_unit",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "additions": {
+              "name": "additions",
+              "isArray": true,
+              "type": "String",
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true
+            },
+            "ingredients": {
+              "name": "ingredients",
+              "isArray": true,
+              "type": "AWSJSON",
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true
+            },
+            "macros": {
+              "name": "macros",
+              "isArray": false,
+              "type": {
+                "nonModel": "LogMacros"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "micronutrients": {
+              "name": "micronutrients",
+              "isArray": false,
+              "type": {
+                "nonModel": "Micronutrients"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "input_method": {
+              "name": "input_method",
+              "isArray": false,
+              "type": {
+                "enum": "FoodLogInput_method"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "image_key": {
+              "name": "image_key",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "FoodLogs",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "name": "foodLogsByDate",
+                "queryField": "listFoodLogByDate",
+                "fields": [
+                  "date"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "provider": "userPools",
+                    "ownerField": "owner",
+                    "allow": "owner",
+                    "identityClaim": "cognito:username",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": false,
+            "primaryKeyFieldName": "id",
+            "sortKeyFieldNames": []
+          }
+        },
+        "FridgeItem": {
+          "name": "FridgeItem",
+          "fields": {
+            "id": {
+              "name": "id",
+              "isArray": false,
+              "type": "ID",
+              "isRequired": true,
+              "attributes": []
+            },
+            "name": {
+              "name": "name",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "food_id": {
+              "name": "food_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "quantity": {
+              "name": "quantity",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "unit": {
+              "name": "unit",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "added_date": {
+              "name": "added_date",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": []
+            },
+            "expiry_date": {
+              "name": "expiry_date",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "category": {
+              "name": "category",
+              "isArray": false,
+              "type": {
+                "enum": "FridgeItemCategory"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "emoji": {
+              "name": "emoji",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "FridgeItems",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "provider": "userPools",
+                    "ownerField": "owner",
+                    "allow": "owner",
+                    "identityClaim": "cognito:username",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": false,
+            "primaryKeyFieldName": "id",
+            "sortKeyFieldNames": []
+          }
+        },
+        "Challenge": {
+          "name": "Challenge",
+          "fields": {
+            "id": {
+              "name": "id",
+              "isArray": false,
+              "type": "ID",
+              "isRequired": true,
+              "attributes": []
+            },
+            "creator_id": {
+              "name": "creator_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "challenge_type": {
+              "name": "challenge_type",
+              "isArray": false,
+              "type": {
+                "enum": "ChallengeChallenge_type"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "title": {
+              "name": "title",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "description": {
+              "name": "description",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "target_value": {
+              "name": "target_value",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "status": {
+              "name": "status",
+              "isArray": false,
+              "type": {
+                "enum": "ChallengeStatus"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "start_date": {
+              "name": "start_date",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "end_date": {
+              "name": "end_date",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "participants": {
+              "name": "participants",
+              "isArray": true,
+              "type": {
+                "model": "ChallengeParticipant"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "isArrayNullable": true,
+              "association": {
+                "connectionType": "HAS_MANY",
+                "associatedWith": [
+                  "challengeId"
+                ]
+              }
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "Challenges",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "allow": "private",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": false,
+            "primaryKeyFieldName": "id",
+            "sortKeyFieldNames": []
+          }
+        },
+        "ChallengeParticipant": {
+          "name": "ChallengeParticipant",
+          "fields": {
+            "id": {
+              "name": "id",
+              "isArray": false,
+              "type": "ID",
+              "isRequired": true,
+              "attributes": []
+            },
+            "challengeId": {
+              "name": "challengeId",
+              "isArray": false,
+              "type": "ID",
+              "isRequired": true,
+              "attributes": []
+            },
+            "challenge": {
+              "name": "challenge",
+              "isArray": false,
+              "type": {
+                "model": "Challenge"
+              },
+              "isRequired": false,
+              "attributes": [],
+              "association": {
+                "connectionType": "BELONGS_TO",
+                "targetNames": [
+                  "challengeId"
+                ]
+              }
+            },
+            "user_id": {
+              "name": "user_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "display_name": {
+              "name": "display_name",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "progress": {
+              "name": "progress",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "joined_at": {
+              "name": "joined_at",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "ChallengeParticipants",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "name": "challengeParticipantsByUser_id",
+                "queryField": "listChallengeParticipantByUser_id",
+                "fields": [
+                  "user_id"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "allow": "private",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": false,
+            "primaryKeyFieldName": "id",
+            "sortKeyFieldNames": []
+          }
+        },
+        "Friendship": {
+          "name": "Friendship",
+          "fields": {
+            "id": {
+              "name": "id",
+              "isArray": false,
+              "type": "ID",
+              "isRequired": true,
+              "attributes": []
+            },
+            "friend_id": {
+              "name": "friend_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "friend_code": {
+              "name": "friend_code",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "friend_name": {
+              "name": "friend_name",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "friend_avatar": {
+              "name": "friend_avatar",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "status": {
+              "name": "status",
+              "isArray": false,
+              "type": {
+                "enum": "FriendshipStatus"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "direction": {
+              "name": "direction",
+              "isArray": false,
+              "type": {
+                "enum": "FriendshipDirection"
+              },
+              "isRequired": false,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "Friendships",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "name": "friendshipsByFriend_id",
+                "queryField": "listFriendshipByFriend_id",
+                "fields": [
+                  "friend_id"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "provider": "userPools",
+                    "ownerField": "owner",
+                    "allow": "owner",
+                    "identityClaim": "cognito:username",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": false,
+            "primaryKeyFieldName": "id",
+            "sortKeyFieldNames": []
+          }
+        },
+        "UserPublicStats": {
+          "name": "UserPublicStats",
+          "fields": {
+            "user_id": {
+              "name": "user_id",
+              "isArray": false,
+              "type": "String",
+              "isRequired": true,
+              "attributes": []
+            },
+            "display_name": {
+              "name": "display_name",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "avatar_url": {
+              "name": "avatar_url",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "current_streak": {
+              "name": "current_streak",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "longest_streak": {
+              "name": "longest_streak",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "pet_score": {
+              "name": "pet_score",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "pet_level": {
+              "name": "pet_level",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "total_log_days": {
+              "name": "total_log_days",
+              "isArray": false,
+              "type": "Int",
+              "isRequired": false,
+              "attributes": []
+            },
+            "last_log_date": {
+              "name": "last_log_date",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "createdAt": {
+              "name": "createdAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            },
+            "updatedAt": {
+              "name": "updatedAt",
+              "isArray": false,
+              "type": "AWSDateTime",
+              "isRequired": false,
+              "attributes": [],
+              "isReadOnly": true
+            }
+          },
+          "syncable": true,
+          "pluralName": "UserPublicStats",
+          "attributes": [
+            {
+              "type": "model",
+              "properties": {}
+            },
+            {
+              "type": "key",
+              "properties": {
+                "fields": [
+                  "user_id"
+                ]
+              }
+            },
+            {
+              "type": "auth",
+              "properties": {
+                "rules": [
+                  {
+                    "provider": "userPools",
+                    "ownerField": "owner",
+                    "allow": "owner",
+                    "operations": [
+                      "create",
+                      "update",
+                      "delete",
+                      "read"
+                    ],
+                    "identityClaim": "cognito:username"
+                  },
+                  {
+                    "allow": "private",
+                    "operations": [
+                      "read"
+                    ]
+                  }
+                ]
+              }
+            }
+          ],
+          "primaryKeyInfo": {
+            "isCustomPrimaryKey": true,
+            "primaryKeyFieldName": "user_id",
+            "sortKeyFieldNames": []
+          }
         }
       },
-      "enums": {},
+      "enums": {
+        "FoodLogMeal_type": {
+          "name": "FoodLogMeal_type",
+          "values": [
+            "breakfast",
+            "lunch",
+            "dinner",
+            "snack"
+          ]
+        },
+        "FoodLogInput_method": {
+          "name": "FoodLogInput_method",
+          "values": [
+            "voice",
+            "photo",
+            "manual",
+            "barcode"
+          ]
+        },
+        "FridgeItemCategory": {
+          "name": "FridgeItemCategory",
+          "values": [
+            "meat",
+            "vegetable",
+            "fruit",
+            "dairy",
+            "pantry",
+            "other"
+          ]
+        },
+        "ChallengeChallenge_type": {
+          "name": "ChallengeChallenge_type",
+          "values": [
+            "calories",
+            "protein",
+            "steps",
+            "streak",
+            "custom"
+          ]
+        },
+        "ChallengeStatus": {
+          "name": "ChallengeStatus",
+          "values": [
+            "pending",
+            "active",
+            "completed",
+            "expired"
+          ]
+        },
+        "FriendshipStatus": {
+          "name": "FriendshipStatus",
+          "values": [
+            "pending",
+            "accepted",
+            "blocked"
+          ]
+        },
+        "FriendshipDirection": {
+          "name": "FriendshipDirection",
+          "values": [
+            "sent",
+            "received"
+          ]
+        }
+      },
       "nonModels": {
         "Portions": {
           "name": "Portions",
@@ -653,7 +1544,12 @@
               "type": "Int",
               "isRequired": false,
               "attributes": []
-            },
+            }
+          }
+        },
+        "ai_preferences": {
+          "name": "ai_preferences",
+          "fields": {
             "coach_tone": {
               "name": "coach_tone",
               "isArray": false,
@@ -662,29 +1558,82 @@
               "attributes": []
             }
           }
-        }
-      },
-      "queries": {
-        "askGemini": {
-          "name": "askGemini",
-          "isArray": false,
-          "type": "String",
-          "isRequired": false,
-          "arguments": {
-            "action": {
-              "name": "action",
+        },
+        "LogMacros": {
+          "name": "LogMacros",
+          "fields": {
+            "calories": {
+              "name": "calories",
               "isArray": false,
-              "type": "String",
-              "isRequired": true
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
             },
-            "payload": {
-              "name": "payload",
+            "protein_g": {
+              "name": "protein_g",
               "isArray": false,
-              "type": "String",
-              "isRequired": false
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "carbs_g": {
+              "name": "carbs_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "fat_g": {
+              "name": "fat_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "fiber_g": {
+              "name": "fiber_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "sugar_g": {
+              "name": "sugar_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            },
+            "sodium_mg": {
+              "name": "sodium_mg",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
             }
           }
         },
+        "LogIngredient": {
+          "name": "LogIngredient",
+          "fields": {
+            "name": {
+              "name": "name",
+              "isArray": false,
+              "type": "String",
+              "isRequired": false,
+              "attributes": []
+            },
+            "weight_g": {
+              "name": "weight_g",
+              "isArray": false,
+              "type": "Float",
+              "isRequired": false,
+              "attributes": []
+            }
+          }
+        }
+      },
+      "queries": {
         "askBedrock": {
           "name": "askBedrock",
           "isArray": false,
@@ -723,15 +1672,23 @@
     }
   },
   "storage": {
-    "aws_region": "ap-southeast-1",
-    "bucket_name": "amplify-nutritrack-tdtp2--nutritrackmediabucketbuc-j5mqd0znytip",
+    "aws_region": "ap-southeast-2",
+    "bucket_name": "amplify-nutritrack-tdtp2--nutritrackmediabucketbuc-ms2crvsqgvjp",
     "buckets": [
       {
         "name": "nutritrack_media_bucket",
-        "bucket_name": "amplify-nutritrack-tdtp2--nutritrackmediabucketbuc-j5mqd0znytip",
-        "aws_region": "ap-southeast-1",
+        "bucket_name": "amplify-nutritrack-tdtp2--nutritrackmediabucketbuc-ms2crvsqgvjp",
+        "aws_region": "ap-southeast-2",
         "paths": {
           "incoming/*": {
+            "authenticated": [
+              "get",
+              "list",
+              "write",
+              "delete"
+            ]
+          },
+          "voice/*": {
             "authenticated": [
               "get",
               "list",

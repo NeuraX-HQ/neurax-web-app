@@ -3,7 +3,7 @@ import { DynamoDBDocumentClient, ScanCommand, GetCommand } from '@aws-sdk/lib-dy
 // @ts-ignore
 import type { Schema } from '../data/resource';
 
-const REGION = process.env.AWS_REGION || 'ap-southeast-1';
+const REGION = process.env.AWS_REGION || 'ap-southeast-2';
 
 const client = new DynamoDBClient({ region: REGION });
 const docClient = DynamoDBDocumentClient.from(client);

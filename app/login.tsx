@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
-import { signIn, fetchAuthSession, signInWithRedirect } from "aws-amplify/auth";
+import { signIn, fetchAuthSession, signInWithRedirect, signOut } from "aws-amplify/auth";
 import { useAuthStore } from '../src/store/authStore';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
@@ -93,9 +93,20 @@ export default function LoginScreen() {
         try {
             setLoading(true);
             await signInWithRedirect({ provider: 'Google' });
-        } catch (error) {
-            console.log("Google login error:", error);
-            setLoading(false);
+        } catch (error: any) {
+            if (error?.name === 'UserAlreadyAuthenticatedException') {
+                console.log("Phát hiện phiên rác (User already signed in). Đang xóa để login lại...");
+                try {
+                    await signOut();
+                    await signInWithRedirect({ provider: 'Google' });
+                } catch (retryError) {
+                    console.log("Google login retry error:", retryError);
+                    setLoading(false);
+                }
+            } else {
+                console.log("Google login error:", error);
+                setLoading(false);
+            }
         }
     };
 

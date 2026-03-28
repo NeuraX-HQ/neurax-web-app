@@ -146,7 +146,6 @@ function RootLayoutShell() {
                 <Stack.Screen name="verify-otp" />
                 <Stack.Screen name="onboarding" />
                 <Stack.Screen name="(tabs)" options={{ animation: 'fade', contentStyle: { backgroundColor: '#FFFFFF' } }} />
-                <Stack.Screen name="scanner" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
                 <Stack.Screen name="food-detail" options={{ presentation: 'modal' }} />
                 <Stack.Screen name="add-hydration" options={{ presentation: 'modal' }} />
                 <Stack.Screen name="add-to-fridge" options={{ presentation: 'modal' }} />

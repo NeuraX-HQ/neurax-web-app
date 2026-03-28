@@ -3,7 +3,7 @@ import { TranscribeClient, StartTranscriptionJobCommand, GetTranscriptionJobComm
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
 
-const REGION = process.env.AWS_REGION || "ap-southeast-2";
+const REGION = "ap-southeast-2";
 const bedrockClient = new BedrockRuntimeClient({ region: REGION });
 const transcribeClient = new TranscribeClient({ region: REGION });
 const s3Client = new S3Client({ region: REGION });
