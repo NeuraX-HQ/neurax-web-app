@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getCurrentUser, fetchAuthSession, fetchUserAttributes } from 'aws-amplify/auth';
+import { Hub } from 'aws-amplify/utils';
 import { View, StyleSheet, Platform, AppState, AppStateStatus, ActivityIndicator, Text } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -27,6 +28,26 @@ function RootLayoutShell() {
     const { isAuthenticated, checkSession, checkBiometricAvailability } = useAuthStore();
     const [showBiometric, setShowBiometric] = useState(false);
     const [isReady, setIsReady] = useState(false);
+    const oauthHandled = useRef(false);
+
+    // Listen for OAuth sign-in completion (e.g. Google redirect back)
+    useEffect(() => {
+        const unsubscribe = Hub.listen('auth', async ({ payload }) => {
+            if (payload.event === 'signInWithRedirect' && !oauthHandled.current) {
+                oauthHandled.current = true;
+                console.log('OAuth signInWithRedirect completed — syncing session...');
+                const success = await checkAndSetAuth();
+                if (success) {
+                    router.replace('/(tabs)/home');
+                }
+            }
+            if (payload.event === 'signInWithRedirect_failure') {
+                console.log('OAuth signInWithRedirect failed:', payload.data);
+                oauthHandled.current = false;
+            }
+        });
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         const setupNavigationBar = async () => {
