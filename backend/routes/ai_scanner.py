@@ -28,9 +28,9 @@ async def analyze_food(method: Optional[str] = None, file: UploadFile = File(...
     """
     Forward image to AI Server, translate the response to dual-language, and return to frontend.
     """
-    ai_url = f"{settings.AI_SERVICE_URL}/analyze-food"
-    if method:
-        ai_url += f"?method={method}"
+    # Default to 'tools' for highest precision (USDA lookup) unless otherwise specified
+    target_method = method if method else "tools"
+    ai_url = f"{settings.AI_SERVICE_URL}/analyze-food?method={target_method}"
         
     try:
         file_content = await file.read()
@@ -44,6 +44,10 @@ async def analyze_food(method: Optional[str] = None, file: UploadFile = File(...
             raise HTTPException(status_code=response.status_code, detail="Error from AI Server")
             
         data = response.json()
+        print(f"=== [DEBUG] FLY.DEV AI RESPONSE ===")
+        import json
+        print(json.dumps(data, indent=2, ensure_ascii=False))
+        print(f"===================================")
         
         # Attempt to translate the JSON structure based on standard contract
         res_data = data.get("data", {})
@@ -55,12 +59,20 @@ async def analyze_food(method: Optional[str] = None, file: UploadFile = File(...
                 dish["cooking_method_en"] = dish.get("cooking_method")
                 dish["cooking_method_vi"] = safe_translate(dish.get("cooking_method"))
                 
-                for ing in dish.get("ingredients", []):
-                    ing["name_en"] = ing.get("name")
-                    ing["name_vi"] = safe_translate(ing.get("name"))
-                    
-                    ing["note_en"] = ing.get("note")
-                    ing["note_vi"] = safe_translate(ing.get("note"))
+                ingredients = dish.get("ingredients", [])
+                if isinstance(ingredients, list):
+                    for i, ing in enumerate(ingredients):
+                        if isinstance(ing, dict):
+                            ing["name_en"] = ing.get("name")
+                            ing["name_vi"] = safe_translate(ing.get("name"))
+                            ing["note_en"] = ing.get("note")
+                            ing["note_vi"] = safe_translate(ing.get("note"))
+                        elif isinstance(ing, str):
+                            ingredients[i] = {
+                                "name": ing,
+                                "name_en": ing,
+                                "name_vi": safe_translate(ing)
+                            }
                     
         return data
         
@@ -98,7 +110,15 @@ async def analyze_label(file: UploadFile = File(...)):
                 
                 if "allergens" in label and isinstance(label["allergens"], list):
                     label["allergens_en"] = label["allergens"]
-                    label["allergens_vi"] = [safe_translate(a) for a in label["allergens"]]
+                    translated_allergens = []
+                    for a in label["allergens"]:
+                        if isinstance(a, str):
+                            translated_allergens.append(safe_translate(a))
+                        elif isinstance(a, dict):
+                            translated_allergens.append(safe_translate(a.get("name", "")))
+                        else:
+                            translated_allergens.append(str(a))
+                    label["allergens_vi"] = translated_allergens
                     
         return data
         
@@ -136,11 +156,19 @@ async def scan_barcode(file: UploadFile = File(...)):
             
             if "allergens" in food and isinstance(food["allergens"], list):
                 food["allergens_en"] = food["allergens"]
-                food["allergens_vi"] = [safe_translate(a) for a in food["allergens"]]
+                food["allergens_vi"] = [safe_translate(a) if isinstance(a, str) else safe_translate(str(a)) for a in food["allergens"]]
                 
             if "ingredients" in food and isinstance(food["ingredients"], list):
                 food["ingredients_en"] = food["ingredients"]
-                food["ingredients_vi"] = [safe_translate(i) for i in food["ingredients"]]
+                translated_ingredients = []
+                for i in food["ingredients"]:
+                    if isinstance(i, str):
+                        translated_ingredients.append(safe_translate(i))
+                    elif isinstance(i, dict):
+                        translated_ingredients.append(safe_translate(i.get("name", "")))
+                    else:
+                        translated_ingredients.append(str(i))
+                food["ingredients_vi"] = translated_ingredients
                 
         return data
         

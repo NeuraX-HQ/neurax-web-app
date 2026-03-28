@@ -11,7 +11,6 @@ from mangum import Mangum
 from config import settings
 from routes.meals import router as meals_router
 from routes.user import router as user_router
-from routes.food import router as food_router
 from routes.hydration import router as hydration_router
 from routes.ai_scanner import router as ai_scanner_router
 
@@ -33,7 +32,6 @@ app.add_middleware(
 # Register route modules
 app.include_router(meals_router)
 app.include_router(user_router)
-app.include_router(food_router)
 app.include_router(hydration_router)
 app.include_router(ai_scanner_router)
 

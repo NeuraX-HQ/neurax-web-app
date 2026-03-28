@@ -401,50 +401,56 @@ export default function HomeScreen() {
         );
     };
 
-    const renderMealPressable = (meal: Meal) => (
-        <TouchableOpacity
-            style={[styles.mealCard, Shadows.small, { marginHorizontal: 0, marginBottom: 0 }]}
-            onPress={() => {
-                // Ignore accidental tap generated right after a swipe release on web.
-                if (Date.now() - swipeOpenedAtRef.current < 300) {
-                    return;
-                }
-                if (openMealIdRef.current) {
-                    return;
-                }
-
-                router.push({
-                    pathname: '/food-detail',
-                    params: {
-                        foodData: JSON.stringify({
-                            name: meal.name,
-                            calories: meal.calories,
-                            protein: meal.protein,
-                            carbs: meal.carbs,
-                            fat: meal.fat,
-                            servingSize: meal.servingSize,
-                            ingredients: meal.ingredients,
-                        }),
-                        source: 'meal',
-                        mealId: meal.id,
+    const renderMealPressable = (meal: Meal) => {
+        const displayMealName = language === 'vi' ? (meal.name_vi || meal.name) : (meal.name_en || meal.name);
+        return (
+            <TouchableOpacity
+                style={[styles.mealCard, Shadows.small, { marginHorizontal: 0, marginBottom: 0 }]}
+                onPress={() => {
+                    // Ignore accidental tap generated right after a swipe release on web.
+                    if (Date.now() - swipeOpenedAtRef.current < 300) {
+                        return;
                     }
-                });
-            }}
-        >
-            <View style={styles.mealImage}>
-                {meal.image && meal.image.startsWith('file://') ? (
-                    <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
-                ) : (
-                    <Text style={styles.mealEmoji}>{meal.image || '🍽️'}</Text>
-                )}
-            </View>
-            <View style={styles.mealInfo}>
-                <Text style={styles.mealName}>{meal.name}</Text>
-                <Text style={styles.mealTime}>{meal.time}</Text>
-            </View>
-            <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
-        </TouchableOpacity>
-    );
+                    if (openMealIdRef.current) {
+                        return;
+                    }
+
+                    router.push({
+                        pathname: '/food-detail',
+                        params: {
+                            foodData: JSON.stringify({
+                                name: meal.name,
+                                name_vi: meal.name_vi,
+                                name_en: meal.name_en,
+                                calories: meal.calories,
+                                protein: meal.protein,
+                                carbs: meal.carbs,
+                                fat: meal.fat,
+                                servingSize: meal.servingSize,
+                                ingredients: meal.ingredients,
+                            }),
+                            source: 'meal',
+                            mealId: meal.id,
+                            image: meal.image,
+                        }
+                    });
+                }}
+            >
+                <View style={styles.mealImage}>
+                    {meal.image && (meal.image.startsWith('file://') || meal.image.startsWith('http') || meal.image.length > 30) ? (
+                        <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
+                    ) : (
+                        <Text style={styles.mealEmoji}>{(!meal.image || meal.image.length > 10) ? '🍽️' : meal.image}</Text>
+                    )}
+                </View>
+                <View style={styles.mealInfo}>
+                    <Text style={styles.mealName}>{displayMealName}</Text>
+                    <Text style={styles.mealTime}>{meal.time}</Text>
+                </View>
+                <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
+            </TouchableOpacity>
+        );
+    };
 
     const renderMealCard = (meal: Meal) => {
         const canQuickDelete = true;
@@ -1399,6 +1405,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F5F5F5',
         justifyContent: 'center',
         alignItems: 'center',
+        overflow: 'hidden',
     },
     mealEmoji: { fontSize: 26 },
     mealCardImg: { width: '100%', height: '100%', borderRadius: 12 },

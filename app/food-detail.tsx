@@ -240,10 +240,10 @@ export default function FoodDetailScreen() {
 
     return (
         <View style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Food Image with overlay */}
-                <View style={styles.imageSection}>
-                    {imageUri ? (
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
+                {/* Food Image or Compact Header */}
+                {imageUri ? (
+                    <View style={styles.imageSection}>
                         <Image
                             source={{ uri: imageUri }}
                             style={styles.foodImage}
@@ -251,30 +251,38 @@ export default function FoodDetailScreen() {
                             transition={500}
                             cachePolicy="memory-disk"
                         />
-                    ) : (
-                        <View style={styles.foodImagePlaceholder}>
-                            <Text style={styles.foodEmojiLarge}>{getEmojiForFood(foodData.name_en || foodData.name)}</Text>
+
+                        {/* Back button */}
+                        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                            <Ionicons name="arrow-back" size={22} color="#FFF" />
+                        </TouchableOpacity>
+
+                        {/* Share button */}
+                        <TouchableOpacity style={styles.shareButton}>
+                            <Ionicons name="share-outline" size={22} color="#FFF" />
+                        </TouchableOpacity>
+
+                        {/* Gradient name overlay at bottom of image */}
+                        <View style={styles.nameOverlay}>
+                            <Text style={styles.foodNameLarge}>{displayFoodName}</Text>
                         </View>
-                    )}
-
-                    {/* Back button */}
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={22} color="#FFF" />
-                    </TouchableOpacity>
-
-                    {/* Share button */}
-                    <TouchableOpacity style={styles.shareButton}>
-                        <Ionicons name="share-outline" size={22} color="#FFF" />
-                    </TouchableOpacity>
-
-                    {/* Gradient name overlay at bottom of image */}
-                    <View style={styles.nameOverlay}>
-                        <Text style={styles.foodNameLarge}>{displayFoodName}</Text>
                     </View>
-                </View>
+                ) : (
+                    <View style={[styles.compactHeader, { paddingTop: insets.top + 10 }]}>
+                        <View style={styles.compactHeaderContent}>
+                            <TouchableOpacity onPress={() => router.back()} style={styles.compactBackButton}>
+                                <Ionicons name="arrow-back" size={24} color="#0F172A" />
+                            </TouchableOpacity>
+                            <Text style={styles.compactTitle} numberOfLines={1}>{displayFoodName}</Text>
+                            <TouchableOpacity style={styles.compactShareButton}>
+                                <Ionicons name="share-outline" size={24} color="#0F172A" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
 
                 {/* ── White card: Total Energy (left) + Macro bars (right) ── */}
-                <View style={styles.nutritionCard}>
+                <View style={[styles.nutritionCard, !imageUri && { marginTop: 10 }]}>
                     {/* Left: big calorie number */}
                     <TouchableOpacity
                         style={styles.calorieBlock}
@@ -572,6 +580,44 @@ const styles = StyleSheet.create({
         textShadowColor: 'rgba(0,0,0,0.6)',
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 6,
+    },
+
+    // ── Compact Header (When no image) ───────────────
+    compactHeader: {
+        backgroundColor: '#FFFFFF',
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
+    },
+    compactHeaderContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    compactBackButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F8FAFC',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    compactTitle: {
+        flex: 1,
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#0F172A',
+        textAlign: 'center',
+    },
+    compactShareButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F8FAFC',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 
     // ── Nutrition Card (Calorie + Macro bars) ─────────
