@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,9 +15,48 @@ export default function KitchenScreen() {
     const { t } = useAppLanguage();
     const [tab, setTab] = useState<'fridge' | 'recipes'>('fridge');
     const [search, setSearch] = useState('');
+    const [recipeSearch, setRecipeSearch] = useState('');
     const searchRef = useRef<TextInput>(null);
     const { items, loadItems, removeItem, isLoading } = useFridgeStore();
     const addMeal = useMealStore((state) => state.addMeal);
+
+    const { matchedRecipes, bestMatch } = useMemo(() => {
+        if (!items || items.length === 0) {
+            return {
+                matchedRecipes: mockRecipes.map(r => ({ ...r, matchPercent: 0 })),
+                bestMatch: { ...mockRecipes[0], matchPercent: 0 }
+            };
+        }
+
+        const fridgeNames = items.map(i => i.name.toLowerCase());
+        
+        const scoredRecipes = mockRecipes.map(recipe => {
+            let matchCount = 0;
+            const totalIngredients = recipe.ingredients.length;
+            
+            recipe.ingredients.forEach(ing => {
+                const ingName = ing.name.toLowerCase();
+                const hasMatch = fridgeNames.some(f => f.includes(ingName) || ingName.includes(f));
+                if (hasMatch) matchCount++;
+            });
+
+            const matchPercent = totalIngredients > 0 ? Math.round((matchCount / totalIngredients) * 100) : 0;
+            return { ...recipe, matchPercent };
+        });
+
+        scoredRecipes.sort((a, b) => b.matchPercent - a.matchPercent);
+
+        return {
+            matchedRecipes: scoredRecipes,
+            bestMatch: scoredRecipes[0]
+        };
+    }, [items]);
+
+    const filteredRecipes = useMemo(() => {
+        return matchedRecipes.filter(r => 
+            recipeSearch.trim() === '' || r.name.toLowerCase().includes(recipeSearch.toLowerCase())
+        );
+    }, [matchedRecipes, recipeSearch]);
 
     useEffect(() => {
         loadItems();
@@ -201,46 +240,64 @@ export default function KitchenScreen() {
                     </View>
                 ) : (
                     <View style={styles.content}>
-                        <TextInput style={styles.search} placeholder={t('kitchen.searchRecipe')} placeholderTextColor={Colors.textLight} />
+                        <View style={styles.searchRow}>
+                            <Text style={styles.searchIcon}>🔍</Text>
+                            <TextInput 
+                                style={styles.search} 
+                                placeholder={t('kitchen.searchRecipe')} 
+                                placeholderTextColor={Colors.textLight} 
+                                value={recipeSearch}
+                                onChangeText={setRecipeSearch}
+                            />
+                            {recipeSearch.length > 0 && (
+                                <TouchableOpacity onPress={() => setRecipeSearch('')} style={styles.clearBtn}>
+                                    <Text style={styles.clearBtnText}>✕</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
 
                         {/* Featured Recipe */}
                         <Text style={styles.sectionTitle}>{t('kitchen.basedOnFridge')}</Text>
                         <TouchableOpacity
                             style={[styles.featuredRecipe, Shadows.medium]}
                             activeOpacity={0.9}
-                            onPress={() => openRecipeFlow(mockRecipes[0].id)}
+                            onPress={() => openRecipeFlow(bestMatch.id)}
                         >
-                            <Text style={styles.featuredEmoji}>{mockRecipes[0].emoji}</Text>
+                            <Text style={styles.featuredEmoji}>{bestMatch.emoji || '🍲'}</Text>
                             <View style={styles.featuredOverlay}>
                                 <View style={styles.matchBadge}>
-                                    <Text style={styles.matchText}>{t('kitchen.matchPercent', { percent: mockRecipes[0].match })}</Text>
+                                    <Text style={styles.matchText}>{t('kitchen.matchPercent', { percent: bestMatch.matchPercent || bestMatch.match })}</Text>
                                 </View>
-                                <Text style={styles.featuredName}>{mockRecipes[0].name}</Text>
-                                <Text style={styles.featuredDesc}>{mockRecipes[0].description}</Text>
+                                <Text style={styles.featuredName}>{bestMatch.name}</Text>
+                                <Text style={styles.featuredDesc}>{bestMatch.description}</Text>
                                 <View style={styles.featuredMeta}>
-                                    <Text style={styles.metaItem}>🔥 {mockRecipes[0].calories} kcal</Text>
-                                    <Text style={styles.metaItem}>💪 {mockRecipes[0].protein}</Text>
-                                    <Text style={styles.metaItem}>⏱ {mockRecipes[0].time}</Text>
+                                    <Text style={styles.metaItem}>🔥 {bestMatch.calories} kcal</Text>
+                                    <Text style={styles.metaItem}>💪 {bestMatch.protein}</Text>
+                                    <Text style={styles.metaItem}>⏱ {bestMatch.time}</Text>
                                 </View>
                             </View>
                         </TouchableOpacity>
 
                         {/* Quick & Easy */}
                         <Text style={styles.sectionTitle}>{t('kitchen.quickEasy')}</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recipesScroll}>
-                            {mockRecipes.map((recipe) => (
-                                <TouchableOpacity
-                                    key={recipe.id}
-                                    style={[styles.recipeCard, Shadows.small]}
-                                    activeOpacity={0.85}
-                                    onPress={() => openRecipeFlow(recipe.id)}
-                                >
-                                    <Text style={styles.recipeEmoji}>{recipe.emoji}</Text>
-                                    <Text style={styles.recipeName}>{recipe.name}</Text>
-                                    <Text style={styles.recipeMeta}>🔥 {recipe.calories} kcal • ⏱ {recipe.time}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
+                        {filteredRecipes.length > 0 ? (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recipesScroll}>
+                                {filteredRecipes.filter(r => r.id !== bestMatch.id).map((recipe) => (
+                                    <TouchableOpacity
+                                        key={recipe.id}
+                                        style={[styles.recipeCard, Shadows.small]}
+                                        activeOpacity={0.85}
+                                        onPress={() => openRecipeFlow(recipe.id)}
+                                    >
+                                        <Text style={styles.recipeEmoji}>{recipe.emoji || '🍲'}</Text>
+                                        <Text style={styles.recipeName}>{recipe.name}</Text>
+                                        <Text style={styles.recipeMeta}>🔥 {recipe.calories} kcal • ⏱ {recipe.time}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        ) : (
+                            <EmptyHint text="Không tìm thấy công thức nào." />
+                        )}
                     </View>
                 )}
 
@@ -371,7 +428,7 @@ function LongTermCard({
     };
 
     return (
-        <Swipeable rightThreshold={10} renderRightActions={renderRightActions} containerStyle={{ marginBottom: 4 }}>
+        <Swipeable rightThreshold={10} renderRightActions={renderRightActions} containerStyle={{ marginBottom: 8 }}>
             <TouchableOpacity activeOpacity={0.8} onPress={() => onCardPress(item)}>
             <View style={[styles.thisWeekCard, Shadows.small]}>
                 <View style={styles.thisWeekThumb}>
@@ -379,7 +436,10 @@ function LongTermCard({
                 </View>
                 <View style={styles.thisWeekInfo}>
                     <Text style={styles.fridgeName}>{item.name}</Text>
-                    <Text style={styles.fridgeDetail}>{item.amount}</Text>
+                    <Text style={styles.fridgeDetail}>{item.amount} • {t('kitchen.remainingDays', { days: item.daysLeft })}</Text>
+                </View>
+                <View style={[styles.expiryBadge, { backgroundColor: Colors.accentLight }]}>
+                    <Text style={[styles.expiryText, { color: Colors.accent }]}>{item.daysLeft}d</Text>
                 </View>
             </View>
             </TouchableOpacity>

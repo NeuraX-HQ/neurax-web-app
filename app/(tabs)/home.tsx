@@ -57,7 +57,7 @@ export default function HomeScreen() {
         useCallback(() => {
             // Only scroll to current week, but don't force select today
             // so the user stays on the date they were just logging for.
-            flatListRef.current?.scrollToIndex({ index: 2, animated: true });
+            flatListRef.current?.scrollToIndex({ index: 500, animated: true });
         }, [])
     );
 
@@ -118,7 +118,7 @@ export default function HomeScreen() {
         currentMonday.setDate(baseDate.getDate() - dayOfWeek);
 
         const weeks = [];
-        for (let weekOffset = -2; weekOffset <= 2; weekOffset++) {
+        for (let weekOffset = -500; weekOffset <= 500; weekOffset++) {
             const week = [];
             for (let i = 0; i < 7; i++) {
                 const d = new Date(currentMonday);
@@ -555,7 +555,7 @@ export default function HomeScreen() {
                     pagingEnabled
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={{ paddingVertical: 8 }}
-                    initialScrollIndex={2}
+                    initialScrollIndex={500}
                     getItemLayout={(_, index) => ({ length: windowWidth, offset: windowWidth * index, index })}
                     renderItem={({ item: week }: { item: { iso: string; weekdayIndex: number; day: number }[] }) => (
                         <View style={[styles.weekContainer, { width: windowWidth }]}>
@@ -617,7 +617,7 @@ export default function HomeScreen() {
                         onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
                     >
                         <CalorieGauge
-                            current={showCaloriesEaten ? caloriesEaten : caloriesLeft}
+                            current={showCaloriesEaten ? caloriesEaten : (isCaloriesOver ? maxCalories : caloriesLeft)}
                             max={maxCalories}
                             size={120}
                             strokeWidth={14}
@@ -644,11 +644,12 @@ export default function HomeScreen() {
                             <View style={styles.macroRingWrap}>
                                 <Svg width={44} height={44} viewBox="0 0 52 52">
                                     <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
-                                    {(showCaloriesEaten ? protein.current : Math.max(0, protein.max - protein.current)) > 0 && (
+                                    {(showCaloriesEaten ? (protein.current > 0) : true) && (
                                         <Path
                                             d={(() => {
                                                 const r = 22; const cx = 26; const cy = 26;
-                                                const circleVal = showCaloriesEaten ? protein.current : Math.max(0, protein.max - protein.current);
+                                                const isOver = !showCaloriesEaten && protein.current > protein.max;
+                                                const circleVal = showCaloriesEaten ? protein.current : (isOver ? protein.max : Math.max(0, protein.max - protein.current));
                                                 const prog = Math.min(circleVal / protein.max, 1);
                                                 const arc = 359.9 * prog;
                                                 const s = { x: cx, y: cy - r };
@@ -677,11 +678,12 @@ export default function HomeScreen() {
                             <View style={styles.macroRingWrap}>
                                 <Svg width={44} height={44} viewBox="0 0 52 52">
                                     <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
-                                    {(showCaloriesEaten ? carbs.current : Math.max(0, carbs.max - carbs.current)) > 0 && (
+                                    {(showCaloriesEaten ? (carbs.current > 0) : true) && (
                                         <Path
                                             d={(() => {
                                                 const r = 22; const cx = 26; const cy = 26;
-                                                const circleVal = showCaloriesEaten ? carbs.current : Math.max(0, carbs.max - carbs.current);
+                                                const isOver = !showCaloriesEaten && carbs.current > carbs.max;
+                                                const circleVal = showCaloriesEaten ? carbs.current : (isOver ? carbs.max : Math.max(0, carbs.max - carbs.current));
                                                 const prog = Math.min(circleVal / carbs.max, 1);
                                                 const arc = 359.9 * prog;
                                                 const s = { x: cx, y: cy - r };
@@ -710,11 +712,12 @@ export default function HomeScreen() {
                             <View style={styles.macroRingWrap}>
                                 <Svg width={44} height={44} viewBox="0 0 52 52">
                                     <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
-                                    {(showCaloriesEaten ? fat.current : Math.max(0, fat.max - fat.current)) > 0 && (
+                                    {(showCaloriesEaten ? (fat.current > 0) : true) && (
                                         <Path
                                             d={(() => {
                                                 const r = 22; const cx = 26; const cy = 26;
-                                                const circleVal = showCaloriesEaten ? fat.current : Math.max(0, fat.max - fat.current);
+                                                const isOver = !showCaloriesEaten && fat.current > fat.max;
+                                                const circleVal = showCaloriesEaten ? fat.current : (isOver ? fat.max : Math.max(0, fat.max - fat.current));
                                                 const prog = Math.min(circleVal / fat.max, 1);
                                                 const arc = 359.9 * prog;
                                                 const s = { x: cx, y: cy - r };
@@ -1008,7 +1011,7 @@ export default function HomeScreen() {
                                                     setStripBaseDateStr(cell.iso);
                                                     setShowMonthPicker(false);
                                                     setTimeout(() => {
-                                                        flatListRef.current?.scrollToIndex({ index: 2, animated: true });
+                                                        flatListRef.current?.scrollToIndex({ index: 500, animated: true });
                                                     }, 100);
                                                 }}
                                             >
