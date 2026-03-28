@@ -3,15 +3,24 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '../src/constants/colors';
 
+import { useAuthStore } from '../src/store/authStore';
+
 export default function SplashScreen() {
     const router = useRouter();
+    const { isAuthReady, isAuthenticated } = useAuthStore();
 
     useEffect(() => {
+        if (!isAuthReady) return;
+
         const timer = setTimeout(() => {
-            router.replace('/welcome');
-        }, 2000);
+            if (isAuthenticated) {
+                router.replace('/(tabs)/home');
+            } else {
+                router.replace('/welcome');
+            }
+        }, 1500);
         return () => clearTimeout(timer);
-    }, []);
+    }, [isAuthReady, isAuthenticated]);
 
     return (
         <View style={styles.container}>

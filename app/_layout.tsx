@@ -110,6 +110,7 @@ function RootLayoutShell() {
         }
 
         setIsReady(true);
+        useAuthStore.getState().setAuthReady(true);
     };
 
     const handleBiometricSuccess = () => {

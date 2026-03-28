@@ -14,11 +14,37 @@ export default function Step9() {
     const { t } = useAppLanguage();
     const [data, setData] = useState<OnboardingData | null>(null);
     const fadeAnim = useState(new Animated.Value(0))[0];
+    const [isAnalyzing, setIsAnalyzing] = useState(true);
+    const [analysisStep, setAnalysisStep] = useState(1);
+
+    const spinAnim = useState(new Animated.Value(0))[0];
+    const spin = spinAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '360deg']
+    });
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.timing(spinAnim, {
+                toValue: 1,
+                duration: 1500,
+                useNativeDriver: true,
+            })
+        ).start();
+    }, []);
 
     useEffect(() => {
         const load = async () => {
             const d = await getOnboardingData();
             setData(d);
+            
+            for (let i = 1; i <= 4; i++) {
+                setAnalysisStep(i);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            setIsAnalyzing(false);
+
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 600,
@@ -40,6 +66,49 @@ export default function Step9() {
     };
 
     if (!data) return null;
+
+    if (isAnalyzing) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.analyzingContainer}>
+                    <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                        <View style={styles.spinnerCircle}>
+                            <Ionicons name="sparkles" size={40} color={Colors.primary} />
+                        </View>
+                    </Animated.View>
+                    <Text style={styles.analyzingTitle}>{t(`onboarding.analyze.${analysisStep}`)}</Text>
+                    <Text style={styles.analyzingSubtitle}>AI Bảo đang xử lý...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    // Tính toán TDEE và Calo mục tiêu
+    const age = data.age || 25;
+    let bmr = (10 * data.currentWeight) + (6.25 * data.height) - (5 * age);
+    if (data.gender === 'male') {
+        bmr += 5;
+    } else {
+        bmr -= 161;
+    }
+
+    const activityMultipliers: Record<string, number> = {
+        sedentary: 1.2,
+        light: 1.375,
+        moderate: 1.55,
+        active: 1.725,
+        extreme: 1.9,
+    };
+    const tdee = bmr * (activityMultipliers[data.activityLevel] || 1.2);
+
+    let targetCalories = tdee;
+    if (data.goal === 'lose') {
+        targetCalories = tdee - (data.weightChangeSpeed * 1100);
+        targetCalories = Math.max(1200, targetCalories); // Safe minimum
+    } else if (data.goal === 'gain') {
+        targetCalories = tdee + (data.weightChangeSpeed * 1100);
+    }
+    const finalCalories = Math.round(targetCalories);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -113,7 +182,7 @@ export default function Step9() {
                         </View>
                         <View>
                             <Text style={styles.summaryLabel}>{t('onboarding.step9.dailyCalories')}</Text>
-                            <Text style={styles.summaryValue}>1,850 kcal</Text>
+                            <Text style={styles.summaryValue}>{finalCalories.toLocaleString('en-US')} kcal</Text>
                         </View>
                     </View>
                 </View>
@@ -142,6 +211,35 @@ export default function Step9() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFFFFF' },
+    analyzingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 32,
+    },
+    spinnerCircle: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#F0F4FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: Colors.primary,
+        borderStyle: 'dashed',
+    },
+    analyzingTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: Colors.text,
+        marginTop: 40,
+        textAlign: 'center',
+    },
+    analyzingSubtitle: {
+        fontSize: 14,
+        color: Colors.textSecondary,
+        marginTop: 12,
+    },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12 },
     backBtn: {
         width: 40,

@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,7 +16,7 @@ export default function Step2() {
 
     const handleNext = async () => {
         await saveOnboardingData({ gender: selected });
-        router.push('/onboarding/step3');
+        router.push('/onboarding/step-age');
     };
 
     return (

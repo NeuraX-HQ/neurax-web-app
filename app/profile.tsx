@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { signOut } from 'aws-amplify/auth';
@@ -128,22 +128,35 @@ export default function ProfileScreen() {
     );
 
     const handleSignOut = async () => {
-        Alert.alert(t('settings.logoutTitle'), t('settings.logoutMessage'), [
-            { text: t('common.cancel'), style: 'cancel' },
-            {
-                text: t('settings.logout'),
-                style: 'destructive',
-                onPress: async () => {
-                    try {
-                        await signOut();
-                        await logout();
-                        router.replace('/welcome');
-                    } catch (error) {
-                        console.log('Error signing out: ', error);
-                    }
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm(t('settings.logoutMessage'));
+            if (confirmed) {
+                try {
+                    await signOut();
+                    await logout();
+                    router.replace('/welcome');
+                } catch (error) {
+                    console.log('Error signing out: ', error);
+                }
+            }
+        } else {
+            Alert.alert(t('settings.logoutTitle'), t('settings.logoutMessage'), [
+                { text: t('common.cancel'), style: 'cancel' },
+                {
+                    text: t('settings.logout'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await signOut();
+                            await logout();
+                            router.replace('/welcome');
+                        } catch (error) {
+                            console.log('Error signing out: ', error);
+                        }
+                    },
                 },
-            },
-        ]);
+            ]);
+        }
     };
 
     const formatActivityLevel = (value: string) => {
