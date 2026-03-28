@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { signUp } from "aws-amplify/auth";
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function SignUpScreen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
     const { t } = useAppLanguage();
 
-    const [email, setEmail] = useState("");
+    const [email, setEmail] = useState(params.email as string || "");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
