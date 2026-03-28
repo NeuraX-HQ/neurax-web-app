@@ -288,9 +288,17 @@ export default function HomeScreen() {
         };
     };
 
-    const protein = getMacroStatus(Math.round(stats.totalProtein), 140, 'home.protein', Colors.protein);
-    const carbs = getMacroStatus(Math.round(stats.totalCarbs), 280, 'home.carbs', Colors.carbs);
-    const fat = getMacroStatus(Math.round(stats.totalFat), 75, 'home.fat', Colors.fat);
+    // Dynamic Macro Splits (30% Protein, 40% Carbs, 30% Fat)
+    const MACROS = useMemo(() => {
+        const p = Math.round((dailyCalorieTarget * 0.3) / 4) || 140;
+        const c = Math.round((dailyCalorieTarget * 0.4) / 4) || 280;
+        const f = Math.round((dailyCalorieTarget * 0.3) / 9) || 75;
+        return { p, c, f };
+    }, [dailyCalorieTarget]);
+
+    const protein = getMacroStatus(Math.round(stats.totalProtein), MACROS.p, 'home.protein', Colors.protein);
+    const carbs = getMacroStatus(Math.round(stats.totalCarbs), MACROS.c, 'home.carbs', Colors.carbs);
+    const fat = getMacroStatus(Math.round(stats.totalFat), MACROS.f, 'home.fat', Colors.fat);
     const [waterByDate, setWaterByDate] = useState<Record<string, number>>({
         [todayIso]: 800,
     });

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
-import { saveOnboardingData, getOnboardingData, OnboardingData } from '../../src/store/userStore';
+import { saveOnboardingData, getOnboardingData, OnboardingData, saveUserData } from '../../src/store/userStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
@@ -56,6 +56,15 @@ export default function Step9() {
 
     const handleStart = async () => {
         await saveOnboardingData({ completed: true });
+        
+        // Save the dynamically calculated metrics to global user data
+        await saveUserData({
+            name: data?.name || 'User',
+            weight: data?.currentWeight || 65,
+            goalWeight: data?.targetWeight || 55,
+            dailyCalories: finalCalories,
+            age: data?.age || 25,
+        });
         
         if (isAuthenticated) {
             router.replace('/(tabs)/home');
@@ -110,6 +119,25 @@ export default function Step9() {
     }
     const finalCalories = Math.round(targetCalories);
 
+    // Tính điểm BMI
+    const heightInMeters = data.height / 100;
+    const bmi = data.currentWeight / (heightInMeters * heightInMeters);
+    let bmiCategory = '';
+    let bmiColor = '';
+    if (bmi < 18.5) {
+        bmiCategory = 'Thiếu cân';
+        bmiColor = '#F39C12';
+    } else if (bmi < 25) {
+        bmiCategory = 'Bình thường';
+        bmiColor = '#2ECC71';
+    } else if (bmi < 30) {
+        bmiCategory = 'Thừa cân';
+        bmiColor = '#E67E22';
+    } else {
+        bmiCategory = 'Béo phì';
+        bmiColor = '#E74C3C';
+    }
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
@@ -138,6 +166,54 @@ export default function Step9() {
                     {t('onboarding.step9.subtitle', { name: data.name || '' })}
                 </Text>
 
+                <View style={[styles.titleRow, { marginTop: 20 }]}>
+                    <Ionicons name="body-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
+                    <Text style={styles.title}>Chỉ số cơ thể (Hiện tại)</Text>
+                </View>
+
+                <View style={styles.summaryCard}>
+                    <View style={styles.summaryRow}>
+                        <View style={[styles.summaryIcon, { backgroundColor: '#F0F4FF' }]}>
+                            <Ionicons name="scale-outline" size={20} color="#4A90D9" />
+                        </View>
+                        <View>
+                            <Text style={styles.summaryLabel}>BMI (Chỉ số khối cơ thể)</Text>
+                            <Text style={styles.summaryValue}>
+                                {bmi.toFixed(1)} <Text style={{ fontSize: 13, color: bmiColor, fontWeight: '700' }}>({bmiCategory})</Text>
+                            </Text>
+                        </View>
+                    </View>
+                    
+                    <View style={styles.divider} />
+
+                    <View style={styles.summaryRow}>
+                        <View style={[styles.summaryIcon, { backgroundColor: '#FFF0F0' }]}>
+                            <Ionicons name="flame-outline" size={20} color="#E74C3C" />
+                        </View>
+                        <View>
+                            <Text style={styles.summaryLabel}>BMR (Trao đổi chất cơ bản)</Text>
+                            <Text style={styles.summaryValue}>{Math.round(bmr).toLocaleString('en-US')} kcal/ngày</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.divider} />
+
+                    <View style={styles.summaryRow}>
+                        <View style={[styles.summaryIcon, { backgroundColor: '#F0F9FF' }]}>
+                            <Ionicons name="bicycle-outline" size={20} color="#00A8FF" />
+                        </View>
+                        <View>
+                            <Text style={styles.summaryLabel}>TDEE (Tổng năng lượng tiêu hao)</Text>
+                            <Text style={styles.summaryValue}>{Math.round(tdee).toLocaleString('en-US')} kcal/ngày</Text>
+                        </View>
+                    </View>
+                </View>
+
+                <View style={[styles.titleRow, { marginTop: 28 }]}>
+                    <Ionicons name="ribbon-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
+                    <Text style={styles.title}>{t('onboarding.step9.title')}</Text>
+                </View>
+
                 <View style={styles.summaryCard}>
                     <View style={styles.summaryRow}>
                         <View style={[styles.summaryIcon, { backgroundColor: '#F0F7F2' }]}>
@@ -152,27 +228,31 @@ export default function Step9() {
                         </View>
                     </View>
 
-                    <View style={styles.divider} />
+                    {data.goal !== 'maintain' && (
+                        <>
+                            <View style={styles.divider} />
 
-                    <View style={styles.summaryRow}>
-                        <View style={[styles.summaryIcon, { backgroundColor: '#F0F4FF' }]}>
-                            <Ionicons name="trending-down-outline" size={20} color="#4A90D9" />
-                        </View>
-                        <View>
-                            <Text style={styles.summaryLabel}>{t('onboarding.step9.targetWeight')}</Text>
-                            <Text style={styles.summaryValue}>{data.targetWeight} kg</Text>
-                        </View>
-                    </View>
+                            <View style={styles.summaryRow}>
+                                <View style={[styles.summaryIcon, { backgroundColor: '#F0F4FF' }]}>
+                                    <Ionicons name="trending-down-outline" size={20} color="#4A90D9" />
+                                </View>
+                                <View>
+                                    <Text style={styles.summaryLabel}>{t('onboarding.step9.targetWeight')}</Text>
+                                    <Text style={styles.summaryValue}>{data.targetWeight} kg</Text>
+                                </View>
+                            </View>
 
-                    <View style={styles.summaryRow}>
-                        <View style={[styles.summaryIcon, { backgroundColor: '#F4F0FF' }]}>
-                            <Ionicons name="flash-outline" size={20} color="#9B59B6" />
-                        </View>
-                        <View>
-                            <Text style={styles.summaryLabel}>{t('onboarding.step9.targetSpeed')}</Text>
-                            <Text style={styles.summaryValue}>{data.weightChangeSpeed.toFixed(1)} kg/tuần</Text>
-                        </View>
-                    </View>
+                            <View style={styles.summaryRow}>
+                                <View style={[styles.summaryIcon, { backgroundColor: '#F4F0FF' }]}>
+                                    <Ionicons name="flash-outline" size={20} color="#9B59B6" />
+                                </View>
+                                <View>
+                                    <Text style={styles.summaryLabel}>{t('onboarding.step9.targetSpeed')}</Text>
+                                    <Text style={styles.summaryValue}>{data.weightChangeSpeed.toFixed(1)} kg/tuần</Text>
+                                </View>
+                            </View>
+                        </>
+                    )}
 
                     <View style={styles.divider} />
 
@@ -190,9 +270,12 @@ export default function Step9() {
                 <View style={styles.aiMessage}>
                     <View style={styles.aiBubble}>
                         <Text style={styles.aiText}>
-                            {t('onboarding.step9.aiMessage', {
-                                weeks: Math.ceil(Math.abs(data.targetWeight - data.currentWeight) / data.weightChangeSpeed),
-                            })}
+                            {data.goal === 'maintain' 
+                                ? "Cơ thể bạn đang ở trạng thái cân bằng tuyệt vời! Lộ trình này sẽ giúp bạn ăn ngon, sống khỏe mà vẫn giữ gìn vóc dáng lý tưởng." 
+                                : t('onboarding.step9.aiMessage', {
+                                    weeks: Math.ceil(Math.abs(data.targetWeight - data.currentWeight) / Math.max(0.1, data.weightChangeSpeed)),
+                                })
+                            }
                         </Text>
                     </View>
                 </View>
