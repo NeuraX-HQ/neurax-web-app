@@ -58,6 +58,7 @@ infrastructure/
 # amplify
 .amplify
 amplifyconfiguration*
+amplify_outputs.json
 amplify.yml
 
 # Project docs & tooling (local only)
