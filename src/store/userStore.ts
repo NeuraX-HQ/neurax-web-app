@@ -27,6 +27,8 @@ export interface UserData {
     waterIntake: number;
     waterGoal: number;
     age?: number;
+    lastWeightUpdate?: string; // ISO date string
+    lastMilestoneShown?: number; // streak value when last milestone was shown
 }
 
 const defaultOnboarding: OnboardingData = {
