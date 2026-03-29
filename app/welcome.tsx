@@ -133,7 +133,7 @@ export default function WelcomeScreen() {
                 {/* CTA */}
                 <TouchableOpacity
                     style={styles.primaryButton}
-                    onPress={() => router.push('/onboarding/step1')}
+                    onPress={() => router.push('/onboarding/walkthrough1')}
                     activeOpacity={0.85}
                 >
                     <Text style={styles.primaryButtonText}>{t('welcome.getStarted')}</Text>

@@ -136,7 +136,7 @@ export default function WelcomeScreen() {
                         style={styles.nextButtonGradient}
                     >
                         <Text style={styles.nextButtonText}>
-                            {currentIndex === slides.length - 1 ? "Bắt đầu ngay!" : "Tiếp tục →"}
+                            {currentIndex === slides.length - 1 ? "Bắt đầu ngay!" : "Tiếp tục"}
                         </Text>
                     </LinearGradient>
                 </Pressable>

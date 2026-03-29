@@ -127,7 +127,7 @@ General rules for all cards:
 - Values must be realistic estimates
 - emoji should visually represent the item`;
 
-const genAI = new GoogleGenerativeAI("env.GEMINI_API_KEY");
+const genAI = new GoogleGenerativeAI("AIzaSyC9V1j42CjygbRAXX_DgZeahG4dpnwR6JM");
 
 // @ts-ignore
 export const handler: Schema['askGemini']['functionHandler'] = async (event: any, context: any) => {

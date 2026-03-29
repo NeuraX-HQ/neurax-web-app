@@ -465,7 +465,7 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'workout.completeTime': 'Thời gian: {{time}}',
         'workout.done': 'Xong',
 
-        'onboarding.continue': 'Tiếp tục  →',
+        'onboarding.continue': 'Tiếp tục',
         'onboarding.goal.lose': 'Giảm cân',
         'onboarding.goal.maintain': 'Duy trì cân nặng',
         'onboarding.goal.gain': 'Tăng cân',
@@ -542,7 +542,7 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'onboarding.step9.targetSpeed': 'TỐC ĐỘ MỤC TIÊU',
         'onboarding.step9.dailyCalories': 'LƯỢNG CALO / NGÀY',
         'onboarding.step9.aiMessage': '"Tôi tin rằng với kế hoạch này, bạn sẽ đạt được mục tiêu trong khoảng {{weeks}} tuần. Hãy bắt đầu thôi!"',
-        'onboarding.step9.startNow': 'Bắt đầu ngay  →',
+        'onboarding.step9.startNow': 'Bắt đầu ngay',
         'onboarding.weightSpeed.valuePerWeek': '{{value}} kg/tuần',
 
         'profile.activity.notSet': 'Chưa cập nhật',
