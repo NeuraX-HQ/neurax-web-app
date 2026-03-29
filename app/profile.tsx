@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import { getOnboardingData, getUserData, UserData } from '../src/store/userStore';
+import { useFriendStore } from '../src/store/friendStore';
 import { Colors, Shadows } from '../src/constants/colors';
 import { ProfileIcon } from '../src/components/TabIcons';
 import Svg, { Path, Circle, Line, Polyline, Rect } from 'react-native-svg';
@@ -84,7 +85,9 @@ function ChevronRight({ size = 18, color = Colors.textLight }: { size?: number; 
 export default function ProfileScreen() {
     const router = useRouter();
     const { t } = useAppLanguage();
-    const { logout, email } = useAuthStore();
+    const { logout, email, userId } = useAuthStore();
+    const { myFriendCode, loadMyFriendCode, friends, loadFriends } = useFriendStore();
+    const [codeCopied, setCodeCopied] = React.useState(false);
     const [gender, setGender] = React.useState<string>('');
     const [userData, setUserData] = React.useState<UserData>({
         name: '',
@@ -98,6 +101,13 @@ export default function ProfileScreen() {
     });
     const [profileName, setProfileName] = React.useState(email || '');
     const [activityLevel, setActivityLevel] = React.useState('');
+
+    React.useEffect(() => {
+        if (userId) {
+            loadMyFriendCode(userId);
+            loadFriends();
+        }
+    }, [userId]);
 
     React.useEffect(() => {
         const fetchUserData = async () => {
@@ -208,6 +218,35 @@ export default function ProfileScreen() {
                             </View>
                         </View>
                     ))}
+                </View>
+
+                {/* Friend Code Section */}
+                <View style={styles.friendCodeCard}>
+                    <View style={styles.friendCodeHeader}>
+                        <Text style={styles.friendCodeLabel}>{t('friend.myCode')}</Text>
+                        <Text style={styles.friendCountText}>
+                            {t('friend.friendCount', { count: friends.length })}
+                        </Text>
+                    </View>
+                    <View style={styles.friendCodeRow}>
+                        <View style={styles.friendCodeBox}>
+                            <Text style={styles.friendCodeText}>{myFriendCode || '--------'}</Text>
+                        </View>
+                        <TouchableOpacity
+                            style={styles.friendCopyBtn}
+                            onPress={async () => {
+                                if (myFriendCode) {
+                                    Alert.alert('Friend Code', myFriendCode);
+                                    setCodeCopied(true);
+                                    setTimeout(() => setCodeCopied(false), 2000);
+                                }
+                            }}
+                        >
+                            <Text style={styles.friendCopyText}>
+                                {codeCopied ? t('friend.copied') : t('friend.copyCode')}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Account Section */}
@@ -386,4 +425,65 @@ const styles = StyleSheet.create({
     },
     menuLabel: { flex: 1, fontSize: 15, fontWeight: '500', color: Colors.text },
     menuBadge: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500', marginRight: 4 },
+
+    friendCodeCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        marginHorizontal: 20,
+        marginBottom: 24,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: '#EDEDF0',
+    },
+    friendCodeHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    friendCodeLabel: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: Colors.textSecondary,
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+    },
+    friendCountText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: Colors.accent,
+    },
+    friendCodeRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    friendCodeBox: {
+        flex: 1,
+        height: 46,
+        borderRadius: 12,
+        backgroundColor: '#F0F4FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1.5,
+        borderColor: '#D0D8E8',
+        borderStyle: 'dashed',
+    },
+    friendCodeText: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: Colors.primary,
+        letterSpacing: 3,
+    },
+    friendCopyBtn: {
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 12,
+        backgroundColor: Colors.accentLight,
+    },
+    friendCopyText: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: Colors.accent,
+    },
 });

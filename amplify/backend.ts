@@ -3,6 +3,7 @@ import { auth } from './auth/resource';
 import { data } from './data/resource';
 import { askBedrock } from './ask-bedrock/resource';
 import { processNutrition } from './process-nutrition/resource';
+import { friendRequest } from './friend-request/resource';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { storage } from './storage/resource';
@@ -18,6 +19,7 @@ const backend = defineBackend({
   data,
   askBedrock,
   processNutrition,
+  friendRequest,
   storage,
   resizeAndAntiMaliciousImg,
 });
@@ -100,3 +102,33 @@ askBedrockLambda.addToRolePolicy(
 // Pass S3 bucket name to askBedrock Lambda via escape hatch
 const cfnAskBedrockFn = askBedrockLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;
 cfnAskBedrockFn.addPropertyOverride('Environment.Variables.STORAGE_BUCKET_NAME', s3Bucket.bucketName);
+
+// Grant friendRequest Lambda permissions to read/write user + Friendship tables
+const friendRequestLambda = backend.friendRequest.resources.lambda;
+
+friendRequestLambda.addToRolePolicy(new iam.PolicyStatement({
+  effect: iam.Effect.ALLOW,
+  actions: ['dynamodb:ListTables'],
+  resources: ['*'],
+}));
+
+friendRequestLambda.addToRolePolicy(new iam.PolicyStatement({
+  effect: iam.Effect.ALLOW,
+  actions: [
+    'dynamodb:GetItem',
+    'dynamodb:PutItem',
+    'dynamodb:UpdateItem',
+    'dynamodb:DeleteItem',
+    'dynamodb:Query',
+    'dynamodb:Scan',
+    'dynamodb:BatchGetItem',
+    'dynamodb:BatchWriteItem',
+    'dynamodb:DescribeTable',
+  ],
+  resources: [
+    'arn:aws:dynamodb:*:*:table/user-*',
+    'arn:aws:dynamodb:*:*:table/user-*/index/*',
+    'arn:aws:dynamodb:*:*:table/Friendship-*',
+    'arn:aws:dynamodb:*:*:table/Friendship-*/index/*',
+  ],
+}));
