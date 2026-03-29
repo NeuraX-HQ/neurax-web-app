@@ -4,6 +4,16 @@ import { getOnboardingData, OnboardingData, saveOnboardingData } from '../store/
 
 const client = generateClient<Schema>();
 
+// Generate friend code: 8 chars, excludes I/O/0/1 to avoid ambiguity
+const FRIEND_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function generateFriendCode(): string {
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+        code += FRIEND_CODE_CHARS[Math.floor(Math.random() * FRIEND_CODE_CHARS.length)];
+    }
+    return code;
+}
+
 export const createUserProfile = async (userId: string, email: string, onboardingData?: OnboardingData) => {
     try {
         const input: any = {
@@ -12,6 +22,7 @@ export const createUserProfile = async (userId: string, email: string, onboardin
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             onboarding_status: onboardingData ? onboardingData.completed : false,
+            friend_code: generateFriendCode(),
         };
 
         if (onboardingData) {
@@ -70,6 +81,19 @@ export const syncOnboardingWithDB = async (userId: string, email: string) => {
         const existingUser = await fetchUserProfile(userId);
 
         if (existingUser) {
+            // Backfill friend_code for existing users who don't have one
+            if (!existingUser.friend_code) {
+                try {
+                    await client.models.user.update({
+                        user_id: userId,
+                        friend_code: generateFriendCode(),
+                        updated_at: new Date().toISOString(),
+                    });
+                } catch (e) {
+                    console.warn('[USER] Failed to backfill friend_code:', e);
+                }
+            }
+
             if (localHasData) {
                 // Local có data thật → push lên cloud
                 const { data: updatedUser } = await client.models.user.update({

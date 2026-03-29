@@ -47,13 +47,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         await authService.saveSession(session);
 
-        // Sync data with DB after login
-        await userService.syncOnboardingWithDB(userId, email);
-
         set({
             isAuthenticated: true,
             userId,
             email,
+        });
+
+        // Sync data with DB after login (non-blocking — don't delay navigation)
+        userService.syncOnboardingWithDB(userId, email).catch((e) => {
+            console.warn('[AUTH] syncOnboardingWithDB failed:', e);
         });
     },
 
@@ -66,6 +68,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const { useFridgeStore } = require('./fridgeStore');
         useMealStore.setState({ meals: [], activities: [], currentFoodItem: null });
         useFridgeStore.setState({ items: [] });
+        const { useFriendStore } = require('./friendStore');
+        useFriendStore.setState({ friends: [], pendingRequests: [], sentRequests: [], myFriendCode: null, leaderboard: [], sendingRequest: false, acceptingId: null, decliningId: null, removingId: null, error: null });
 
         set({
             isAuthenticated: false,

@@ -1,6 +1,7 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 import { askBedrock } from '../ask-bedrock/resource';
 import { processNutrition } from '../process-nutrition/resource';
+import { friendRequest } from '../friend-request/resource';
 
 
 const schema = a.schema({
@@ -227,6 +228,7 @@ const schema = a.schema({
       friend_avatar: a.string(),
       status: a.enum(['pending', 'accepted', 'blocked']),
       direction: a.enum(['sent', 'received']),
+      linked_id: a.string(),
     })
     .secondaryIndexes((index) => [
       index('friend_id'),
@@ -277,6 +279,19 @@ const schema = a.schema({
     .arguments({ payload: a.string().required() })
     .returns(a.string())
     .handler(a.handler.function(processNutrition))
+    .authorization((allow) => [allow.authenticated()]),
+
+  //========================================
+  // Friend Request (send/accept/decline/remove/block)
+  //========================================
+  friendRequest: a
+    .mutation()
+    .arguments({
+      action: a.string().required(),
+      payload: a.string().required(),
+    })
+    .returns(a.string())
+    .handler(a.handler.function(friendRequest))
     .authorization((allow) => [allow.authenticated()]),
 });
 

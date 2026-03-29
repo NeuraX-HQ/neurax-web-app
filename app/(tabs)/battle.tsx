@@ -2,11 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadows } from '../../src/constants/colors';
-import { mockLeaderboard } from '../../src/data/mockData';
 import Svg, { Path } from 'react-native-svg';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 import { Video, ResizeMode } from 'expo-av';
 import { useMealStore } from '../../src/store/mealStore';
+import { useFriendStore } from '../../src/store/friendStore';
+import { useAuthStore } from '../../src/store/authStore';
+import { router } from 'expo-router';
 
 type SortMode = 'streak' | 'petScore';
 
@@ -54,31 +56,53 @@ const DAYS_PER_STAGE = TOTAL_EVOLUTION_DAYS / TOTAL_STAGES;
 export default function BattleScreen() {
     const { t } = useAppLanguage();
     const { meals } = useMealStore();
+    const { userId } = useAuthStore();
+    const { friends, leaderboard, loadFriends, loadLeaderboard, pendingRequests, loadPendingRequests } = useFriendStore();
     const [tab, setTab] = useState<'friends' | 'achievements'>('friends');
     const [sortMode, setSortMode] = useState<SortMode>('streak');
     const [showSortMenu, setShowSortMenu] = useState(false);
     const [devBoostDays, setDevBoostDays] = useState(0);
 
     useEffect(() => {
+        loadFriends();
+        loadPendingRequests();
+    }, []);
+
+    useEffect(() => {
+        if (userId) {
+            loadLeaderboard(userId, 'Bạn', meals);
+        }
+    }, [userId, friends.length, meals.length]);
+
+    useEffect(() => {
         // Friends ranking focuses on streak, achievements focuses on pet score.
         setSortMode(tab === 'friends' ? 'streak' : 'petScore');
     }, [tab]);
 
+    const hasFriends = friends.length > 0;
 
     const sortedData = useMemo(() => {
-        const data = [...mockLeaderboard];
+        const data = leaderboard.map(e => ({
+            name: e.display_name || 'User',
+            streak: e.current_streak,
+            petScore: e.pet_score,
+            isMe: e.isMe || false,
+            rank: 0,
+            change: 0,
+        }));
         if (sortMode === 'streak') {
             data.sort((a, b) => b.streak - a.streak);
         } else {
             data.sort((a, b) => b.petScore - a.petScore);
         }
         return data.map((item, i) => ({ ...item, rank: i + 1 }));
-    }, [sortMode]);
+    }, [sortMode, leaderboard]);
 
+    const myEntry = sortedData.find(e => e.isMe);
     const top3 = sortedData.slice(0, 3);
     const rest = sortedData.slice(3);
 
-    const getDisplayScoreShort = (user: typeof mockLeaderboard[0]) => {
+    const getDisplayScoreShort = (user: { streak: number; petScore: number }) => {
         return sortMode === 'streak' ? `${user.streak}` : `${user.petScore}`;
     };
 
@@ -124,13 +148,28 @@ export default function BattleScreen() {
             <View style={styles.header}>
                 <Text style={styles.title}>{t('battle.title')}</Text>
                 {tab === 'friends' ? (
-                    <TouchableOpacity
-                        style={styles.sortButton}
-                        onPress={() => setShowSortMenu(true)}
-                    >
-                        <Text style={styles.sortButtonText}>{t('battle.sortButton')}</Text>
-                        <ChevronDown size={14} color={Colors.textSecondary} />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <TouchableOpacity
+                            style={styles.addFriendButton}
+                            onPress={() => router.push('/add-friend')}
+                        >
+                            <Text style={styles.addFriendText}>{t('battle.addFriend')}</Text>
+                            {pendingRequests.length > 0 && (
+                                <View style={styles.badge}>
+                                    <Text style={styles.badgeText}>{pendingRequests.length}</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                        {hasFriends && (
+                            <TouchableOpacity
+                                style={styles.sortButton}
+                                onPress={() => setShowSortMenu(true)}
+                            >
+                                <Text style={styles.sortButtonText}>{t('battle.sortButton')}</Text>
+                                <ChevronDown size={14} color={Colors.textSecondary} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 ) : (
                     <View style={styles.levelPill}>
                         <Text style={styles.levelPillText}>{t('battle.levelShort', { level })}</Text>
@@ -155,6 +194,20 @@ export default function BattleScreen() {
             </View>
 
             {tab === 'friends' ? (
+                !hasFriends ? (
+                    /* Empty state — no friends yet */
+                    <View style={styles.emptyState}>
+                        <Text style={styles.emptyEmoji}>👥</Text>
+                        <Text style={styles.emptyTitle}>{t('battle.noFriends.title')}</Text>
+                        <Text style={styles.emptyDesc}>{t('battle.noFriends.desc')}</Text>
+                        <TouchableOpacity
+                            style={styles.emptyAddBtn}
+                            onPress={() => router.push('/add-friend')}
+                        >
+                            <Text style={styles.emptyAddText}>{t('battle.addFriend')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                ) : (
                 <>
                     <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Sort badge */}
@@ -252,7 +305,9 @@ export default function BattleScreen() {
                     {/* You bar - sticky at bottom */}
                     <View style={styles.youBar}>
                         <View style={[styles.rankRow, styles.rankRowYou, Shadows.medium]}>
-                            <Text style={[styles.rankNum, { color: Colors.accent }]}>42</Text>
+                            <Text style={[styles.rankNum, { color: Colors.accent }]}>
+                                {myEntry ? String(myEntry.rank).padStart(2, '0') : '--'}
+                            </Text>
                             <View style={[styles.rankAvatar, { backgroundColor: Colors.accentLight }]}>
                                 <Text>👤</Text>
                             </View>
@@ -267,13 +322,10 @@ export default function BattleScreen() {
                             <Text style={[styles.rankScore, { color: Colors.accent }]}>
                                 {sortMode === 'streak' ? String(petStreak) : String(petScore)}
                             </Text>
-                            <View style={styles.rankChangeRow}>
-                                <ArrowUp size={12} />
-                                <Text style={[styles.rankChange, styles.rankUp]}>4</Text>
-                            </View>
                         </View>
                     </View>
                 </>
+                )
             ) : (
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.achievementsContent}>
                     <View style={styles.petStatRow}>
@@ -743,4 +795,32 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     checkMark: { color: '#FFF', fontSize: 13, fontWeight: '700' },
+    // Add friend button + badge
+    addFriendButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: Colors.accentLight,
+    },
+    addFriendText: { fontSize: 13, fontWeight: '700', color: Colors.accent },
+    badge: {
+        width: 18, height: 18, borderRadius: 9,
+        backgroundColor: Colors.red, justifyContent: 'center', alignItems: 'center',
+    },
+    badgeText: { color: '#FFF', fontSize: 10, fontWeight: '800' },
+    // Empty state
+    emptyState: {
+        flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80,
+    },
+    emptyEmoji: { fontSize: 56, marginBottom: 16 },
+    emptyTitle: { fontSize: 20, fontWeight: '800', color: Colors.primary, marginBottom: 8 },
+    emptyDesc: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 40, marginBottom: 24 },
+    emptyAddBtn: {
+        paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14,
+        backgroundColor: Colors.accent,
+    },
+    emptyAddText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
 });
