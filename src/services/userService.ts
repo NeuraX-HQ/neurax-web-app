@@ -4,6 +4,21 @@ import { getOnboardingData, OnboardingData, saveOnboardingData } from '../store/
 
 const client = generateClient<Schema>();
 
+const calculateTargetCalories = (data: OnboardingData): number => {
+    const activityMultipliers: Record<string, number> = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, extreme: 1.9 };
+    let bmr = (10 * data.currentWeight) + (6.25 * data.height) - (5 * (data.age || 25));
+    bmr += data.gender === 'male' ? 5 : -161;
+    const tdee = bmr * (activityMultipliers[data.activityLevel] || 1.2);
+    
+    let targetCals = tdee;
+    if (data.goal === 'lose') {
+        targetCals = Math.max(1200, tdee - (data.weightChangeSpeed * 1100));
+    } else if (data.goal === 'gain') {
+        targetCals = tdee + (data.weightChangeSpeed * 1100);
+    }
+    return Math.round(targetCals);
+};
+
 export const createUserProfile = async (userId: string, email: string, onboardingData?: OnboardingData) => {
     try {
         const input: any = {
@@ -17,6 +32,7 @@ export const createUserProfile = async (userId: string, email: string, onboardin
         if (onboardingData) {
             input.display_name = onboardingData.name;
             input.biometric = {
+                age: onboardingData.age || 25,
                 gender: onboardingData.gender,
                 height_cm: onboardingData.height,
                 weight_kg: onboardingData.currentWeight,
@@ -24,8 +40,7 @@ export const createUserProfile = async (userId: string, email: string, onboardin
             };
             input.goal = {
                 target_weight_kg: onboardingData.targetWeight,
-                // Placeholder cho calo, có thể tính toán chính xác hơn sau
-                daily_calories: 2000, 
+                daily_calories: calculateTargetCalories(onboardingData),
             };
             input.dietary_profile = {
                 allergies: onboardingData.dietaryRestrictions,
@@ -65,31 +80,39 @@ export const syncOnboardingWithDB = async (userId: string, email: string) => {
     try {
         const onboardingData = await getOnboardingData();
         
-        // Kiểm tra xem user đã tồn tại trong DB chưa
         const existingUser = await fetchUserProfile(userId);
 
         if (existingUser) {
-            // Cập nhật nếu cần
-            const { data: updatedUser, errors } = await client.models.user.update({
-                user_id: userId,
-                display_name: onboardingData.name,
-                onboarding_status: onboardingData.completed,
-                biometric: {
-                    gender: onboardingData.gender,
-                    height_cm: onboardingData.height,
-                    weight_kg: onboardingData.currentWeight,
-                    active_level: onboardingData.activityLevel,
-                },
-                goal: {
-                    target_weight_kg: onboardingData.targetWeight,
-                    daily_calories: 2000,
-                },
-                dietary_profile: {
-                    allergies: onboardingData.dietaryRestrictions,
-                },
-                updated_at: new Date().toISOString(),
-            });
-            return updatedUser;
+            // Chỉ cập nhật nếu user vừa hoàn thành onboarding ở máy này
+            if (onboardingData && onboardingData.completed) {
+                const { data: updatedUser, errors } = await client.models.user.update({
+                    user_id: userId,
+                    display_name: onboardingData.name,
+                    onboarding_status: true,
+                    biometric: {
+                        age: onboardingData.age || 25,
+                        gender: onboardingData.gender,
+                        height_cm: onboardingData.height,
+                        weight_kg: onboardingData.currentWeight,
+                        active_level: onboardingData.activityLevel,
+                    },
+                    goal: {
+                        target_weight_kg: onboardingData.targetWeight,
+                        daily_calories: calculateTargetCalories(onboardingData),
+                    },
+                    dietary_profile: {
+                        allergies: onboardingData.dietaryRestrictions,
+                    },
+                    updated_at: new Date().toISOString(),
+                });
+                
+                // Sau khi map xong có thể xoá onboarding data local để login lần tới không bị ghi đè
+                // Xoá tạm bỏ qua, đợi test kĩ hơn
+                
+                return updatedUser;
+            } else {
+                return existingUser;
+            }
         } else {
             // Tạo mới
             return await createUserProfile(userId, email, onboardingData);

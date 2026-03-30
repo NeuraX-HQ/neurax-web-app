@@ -7,7 +7,7 @@ const getHostUri = () => {
     if (Platform.OS === 'web') return 'http://127.0.0.1:8000';
 
     // We explicitly use your Windows PC's IPv4 address for physical iOS testing.
-    return 'http://192.168.1.16:8000';
+    return 'http://192.168.1.19:8000';
 };
 
 const API_BASE_URL = `${getHostUri()}/api/ai`;

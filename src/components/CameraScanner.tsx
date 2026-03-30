@@ -137,7 +137,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
         try {
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['images'],
-                quality: 0.6,
+                quality: 0.9,
                 base64: true,
                 allowsEditing: true,
             });
@@ -194,13 +194,16 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
             let imageUri: string | undefined;
 
             if (Platform.OS === 'web') {
-                base64Data = captureWebFrame();
-                if (!base64Data) throw new Error(t('camera.error.captureWebcam'));
+                const rawBase64 = captureWebFrame();
+                if (!rawBase64) throw new Error(t('camera.error.captureWebcam'));
+                base64Data = rawBase64;
+                // For web, use the base64 as the imageUri so it can be displayed in food-detail
+                imageUri = `data:image/jpeg;base64,${rawBase64}`;
             } else {
                 if (!cameraRef.current) throw new Error(t('camera.error.captureFailed'));
                 
                 const photo = await cameraRef.current.takePictureAsync({
-                    quality: 0.6,
+                    quality: 0.9,
                     base64: true,
                 });
                 

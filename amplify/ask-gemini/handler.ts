@@ -127,7 +127,7 @@ General rules for all cards:
 - Values must be realistic estimates
 - emoji should visually represent the item`;
 
-const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI();
 
 // @ts-ignore
 export const handler: Schema['askGemini']['functionHandler'] = async (event: any, context: any) => {
@@ -139,7 +139,7 @@ export const handler: Schema['askGemini']['functionHandler'] = async (event: any
 
         if (action === 'analyzeFoodImage') {
             const { imageBase64 } = data;
-            
+
             let cleanBase64 = imageBase64;
             if (imageBase64.includes('base64,')) {
                 cleanBase64 = imageBase64.split('base64,')[1];
@@ -170,14 +170,14 @@ Quy tắc:
                 prompt,
                 { inlineData: { data: cleanBase64, mimeType: 'image/jpeg' } }
             ]);
-            
+
             return JSON.stringify({ success: true, text: result.response.text() });
         }
 
         if (action === 'transcribeAudio') {
             const { audioBase64, mimeType } = data;
             const audioMimeType = mimeType || 'audio/m4a'; // fallback
-            
+
             const result = await model.generateContent([
                 'Transcribe this audio to text. Return ONLY the transcribed text, nothing else.',
                 { inlineData: { data: audioBase64, mimeType: audioMimeType } }
@@ -190,13 +190,14 @@ Quy tắc:
             const { transcript } = data;
             const prompt = `Người dùng nói: "${transcript}"
 
-Trích xuất TÊN MÓN ĂN, TỪNG NGUYÊN LIỆU THÀNH PHẦN kèm KHỐI LƯỢNG ƯỚC TÍNH (gram) và GIÁ TRỊ DINH DƯỠNG ước tính.
+Phân tích CÂU NÓI CỦA NGƯỜI DÙNG để xác định Ý ĐỊNH (intent) và trả về dữ liệu tương ứng.
 
-Nếu người dùng nhắc đến nhiều món, trả về mảng items. Mỗi item là 1 món riêng biệt.
-
-Chỉ trả về DUY NHẤT một đối tượng JSON hợp lệ (không có markdown, không có văn bản thừa):
+Chỉ trả về DUY NHẤT một đối tượng JSON hợp lệ (không markdown, không văn bản thừa) với cấu trúc sau:
 {
-    "items": [
+    "intent": "log_food" | "ask_coach" | "log_water" | "unknown",
+    
+    // Nếu intent là "log_food" (Người dùng muốn ghi chép/thêm đồ ăn. VD: "tôi vừa ăn 1 bát phở", "cho tôi 1 quả táo")
+    "food_items": [
         {
             "meal_name": "Tên món ăn bằng tiếng Việt",
             "portion_size": "small | medium | large",
@@ -205,17 +206,24 @@ Chỉ trả về DUY NHẤT một đối tượng JSON hợp lệ (không có ma
             "total_carbs_g": 68,
             "total_fat_g": 12,
             "ingredients": [
-                { "name": "tên nguyên liệu (tiếng Việt)", "estimated_g": 150, "calories": 200, "protein_g": 15, "carbs_g": 0, "fat_g": 10 }
+                { "name": "tên nguyên liệu", "estimated_g": 150, "calories": 200, "protein_g": 15, "carbs_g": 0, "fat_g": 10 }
             ]
         }
-    ]
+    ],
+
+    // Nếu intent là "log_water" (Người dùng muốn ghi chép lượng nước uống. VD: "tôi vừa uống 1 ly nước 200ml")
+    "water_ml": 200,
+
+    // Nếu intent là "ask_coach" (Người dùng hỏi kiến thức, xin lời khuyên, nhờ tạo thực đơn. VD: "ăn gì để giảm cân", "phở bao calo")
+    "coach_query": "Câu người dùng vừa nói để làm đầu vào cho trợ lý ảo",
+
+    // Bắt buộc luôn có
+    "message": "Câu phản hồi ngắn gọn cho người dùng (VD: 'Đã phân tích xong!', 'Đang chuyển đến Coach...')"
 }
 
 Quy tắc:
-- Sử dụng kích thước phần ăn điển hình của người Việt
-- Sử dụng tên nguyên liệu phổ biến bằng tiếng Việt
-- Ước tính dinh dưỡng chính xác nhất có thể cho từng nguyên liệu
-- total_calories/protein/carbs/fat = tổng của tất cả ingredients`;
+- Mặc định nếu không rõ ý định, phân loại là "ask_coach" hoặc "unknown".
+- Nếu intent là log_food: Ước tính calo và dinh dưỡng sát thực tế cho món ăn người dùng nói.`;
 
             const result = await model.generateContent(prompt);
             return JSON.stringify({ success: true, text: result.response.text() });
@@ -265,8 +273,8 @@ Quy tắc:
 
     } catch (error) {
         console.error('Gemini Lambda Error:', error);
-        return JSON.stringify({ 
-            success: false, 
+        return JSON.stringify({
+            success: false,
             error: error instanceof Error ? error.message : 'Unknown error'
         });
     }

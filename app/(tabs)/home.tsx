@@ -10,13 +10,16 @@ import { NotificationIcon, SettingsIcon, ProfileIcon } from '../../src/component
 import { drinkTypes } from '../../src/data/mockData';
 import { CalorieGauge } from '../../src/components/CalorieGauge';
 import { useMealStore, Meal } from '../../src/store/mealStore';
-import { getOnboardingData, getUserData } from '../../src/store/userStore';
+import { getOnboardingData, getUserData, saveUserData } from '../../src/store/userStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { useNotificationStore } from '../../src/store/notificationStore';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 import { getCurrentStreak } from '../../src/utils/streak';
 import Svg, { Path } from 'react-native-svg';
 import AnimatedTransitionText from '../../src/components/AnimatedTransitionText';
+import StreakMilestoneModal from '../../src/components/StreakMilestoneModal';
+import WeightCheckinModal from '../../src/components/WeightCheckinModal';
+import AiAdjustmentModal from '../../src/components/AiAdjustmentModal';
 
 const WEEKDAY_LABELS_BY_LANG: Record<'vi' | 'en', string[]> = {
     vi: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'],
@@ -57,7 +60,7 @@ export default function HomeScreen() {
         useCallback(() => {
             // Only scroll to current week, but don't force select today
             // so the user stays on the date they were just logging for.
-            flatListRef.current?.scrollToIndex({ index: 2, animated: true });
+            flatListRef.current?.scrollToIndex({ index: 500, animated: true });
         }, [])
     );
 
@@ -71,6 +74,17 @@ export default function HomeScreen() {
     const userEmail = useAuthStore((state) => state.email);
     const { unreadCount } = useNotificationStore();
 
+    // Smart Notification Modal States
+    const [showStreakModal, setShowStreakModal] = useState(false);
+    const [showWeightModal, setShowWeightModal] = useState(false);
+    const [showAiModal, setShowAiModal] = useState(false);
+    const [userWeight, setUserWeight] = useState(65);
+    const [lastWeight, setLastWeight] = useState(65);
+    const [lastWeightUpdateDate, setLastWeightUpdateDate] = useState('');
+    const [oldCalories, setOldCalories] = useState(1800);
+    const [newCalories, setNewCalories] = useState(1800);
+    const modalCheckedRef = useRef(false);
+
     // Meal store
     const {
         meals, activities, loadMeals, getMealsByDate, removeMeal,
@@ -81,7 +95,7 @@ export default function HomeScreen() {
     } = useMealStore();
     const selectedDateStr = storeSelectedDateStr || todayIso;
     const [stripBaseDateStr, setStripBaseDateStr] = useState(selectedDateStr);
-    
+
     const hasAnyMeals = meals && meals.length > 0;
     const displayedMeals = getMealsByDate(selectedDateStr);
     const usedMealDates = useMemo(() => new Set(meals.map((meal) => meal.date)), [meals]);
@@ -92,14 +106,14 @@ export default function HomeScreen() {
         const burnedMap: Record<string, number> = {};
         const minsMap: Record<string, number> = {};
         let minDate = todayIso;
-        
+
         for (const meal of meals) {
             eatenMap[meal.date] = (eatenMap[meal.date] ?? 0) + meal.calories;
             if (meal.date < minDate) {
                 minDate = meal.date;
             }
         }
-        
+
         for (const act of activities || []) {
             burnedMap[act.date] = (burnedMap[act.date] ?? 0) + act.caloriesBurned;
             minsMap[act.date] = (minsMap[act.date] ?? 0) + act.durationMinutes;
@@ -107,18 +121,18 @@ export default function HomeScreen() {
                 minDate = act.date;
             }
         }
-        
+
         return { caloriesByDate: eatenMap, burnedByDate: burnedMap, minutesByDate: minsMap, earliestLogDate: minDate };
     }, [meals, activities, todayIso]);
 
     const dateStrip = useMemo(() => {
         const baseDate = fromIsoDate(stripBaseDateStr);
-        const dayOfWeek = (baseDate.getDay() + 6) % 7; 
+        const dayOfWeek = (baseDate.getDay() + 6) % 7;
         const currentMonday = new Date(baseDate);
         currentMonday.setDate(baseDate.getDate() - dayOfWeek);
 
         const weeks = [];
-        for (let weekOffset = -2; weekOffset <= 2; weekOffset++) {
+        for (let weekOffset = -500; weekOffset <= 500; weekOffset++) {
             const week = [];
             for (let i = 0; i < 7; i++) {
                 const d = new Date(currentMonday);
@@ -225,7 +239,7 @@ export default function HomeScreen() {
         while (cursor <= selectedDateStr) {
             const eaten = Math.round(caloriesByDate[cursor] ?? 0);
             const burned = Math.round(burnedByDate[cursor] ?? 0);
-            
+
             const totalAllowance = dailyTarget + burned;
             const totalEatenIncludingDebt = eaten + carryOver;
 
@@ -269,15 +283,15 @@ export default function HomeScreen() {
         const isOver = !showCaloriesEaten && current > max;
         const oAmount = Math.round(current - max);
         const lAmount = Math.round(max - current);
-        
-        const mainValue = showCaloriesEaten 
+
+        const mainValue = showCaloriesEaten
             ? `${current}g`
             : isOver ? `${oAmount}g` : `${Math.max(0, lAmount)}g`;
-            
+
         const maxValue = showCaloriesEaten ? `/${max}g` : undefined;
-            
+
         const label = t(labelName);
-            
+
         return {
             current,
             max,
@@ -288,15 +302,23 @@ export default function HomeScreen() {
         };
     };
 
-    const protein = getMacroStatus(Math.round(stats.totalProtein), 140, 'home.protein', Colors.protein);
-    const carbs = getMacroStatus(Math.round(stats.totalCarbs), 280, 'home.carbs', Colors.carbs);
-    const fat = getMacroStatus(Math.round(stats.totalFat), 75, 'home.fat', Colors.fat);
+    // Dynamic Macro Splits (30% Protein, 40% Carbs, 30% Fat)
+    const MACROS = useMemo(() => {
+        const p = Math.round((dailyCalorieTarget * 0.3) / 4) || 140;
+        const c = Math.round((dailyCalorieTarget * 0.4) / 4) || 280;
+        const f = Math.round((dailyCalorieTarget * 0.3) / 9) || 75;
+        return { p, c, f };
+    }, [dailyCalorieTarget]);
+
+    const protein = getMacroStatus(Math.round(stats.totalProtein), MACROS.p, 'home.protein', Colors.protein);
+    const carbs = getMacroStatus(Math.round(stats.totalCarbs), MACROS.c, 'home.carbs', Colors.carbs);
+    const fat = getMacroStatus(Math.round(stats.totalFat), MACROS.f, 'home.fat', Colors.fat);
     const [waterByDate, setWaterByDate] = useState<Record<string, number>>({
         [todayIso]: 800,
     });
     const waterMax = 2500;
     const waterCurrent = waterByDate[selectedDateStr] ?? 0;
-    
+
     // Use actual calories burned from workout activities (goal: 400 kcal)
     const exerciseKcal = Math.round(burnedByDate[selectedDateStr] ?? 0);
     const exerciseKcalTarget = 400;
@@ -321,6 +343,109 @@ export default function HomeScreen() {
             fetchUserData();
         }, [loadMeals])
     );
+
+    // Smart Notification Modal trigger logic
+    useFocusEffect(
+        useCallback(() => {
+            if (modalCheckedRef.current) return;
+            modalCheckedRef.current = true;
+
+            const checkModals = async () => {
+                const [onboarding, user] = await Promise.all([getOnboardingData(), getUserData()]);
+                const streak = user?.streak || 0;
+                const weight = user?.weight || 65;
+                const lastMilestoneShown = user?.lastMilestoneShown || 0;
+                const lastUpdateStr = user?.lastWeightUpdate;
+
+                setUserWeight(weight);
+                setLastWeight(weight);
+
+                // Calculate days since last weight update
+                let daysSinceUpdate = 999;
+                let updateDateLabel = 'chưa cập nhật';
+                if (lastUpdateStr) {
+                    const lastDate = new Date(lastUpdateStr);
+                    const now = new Date();
+                    daysSinceUpdate = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+                    updateDateLabel = `${daysSinceUpdate} ngày trước`;
+                }
+                setLastWeightUpdateDate(updateDateLabel);
+
+                // Check for streak milestones (7, 14, 21, 30, 60, 90)
+                const milestones = [7, 14, 21, 30, 60, 90];
+                const currentMilestone = milestones.reverse().find(m => streak >= m);
+                if (currentMilestone && currentMilestone > lastMilestoneShown) {
+                    setShowStreakModal(true);
+                    await saveUserData({ lastMilestoneShown: currentMilestone });
+                    return;
+                }
+
+                // Check if weight update is needed (7+ days since last update)
+                if (daysSinceUpdate >= 7) {
+                    setShowWeightModal(true);
+                }
+            };
+
+            // Delay to let the screen settle
+            const timer = setTimeout(checkModals, 1500);
+            return () => clearTimeout(timer);
+        }, [])
+    );
+
+    // Handle weight save from WeightCheckinModal
+    const handleWeightSave = async (newWeight: number) => {
+        const todayStr = new Date().toISOString();
+        const previousCalories = dailyCalorieTarget;
+
+        // Save weight and update date
+        await saveUserData({
+            weight: newWeight,
+            lastWeightUpdate: todayStr,
+        });
+
+        setShowWeightModal(false);
+
+        // Recalculate TDEE and see if calories changed
+        const onboarding = await getOnboardingData();
+        if (onboarding) {
+            const age = onboarding.age || 25;
+            let bmr = (10 * newWeight) + (6.25 * onboarding.height) - (5 * age);
+            if (onboarding.gender === 'male') {
+                bmr += 5;
+            } else {
+                bmr -= 161;
+            }
+
+            const activityMultipliers: Record<string, number> = {
+                sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, extreme: 1.9,
+            };
+            const tdee = bmr * (activityMultipliers[onboarding.activityLevel] || 1.2);
+
+            let targetCalories = tdee;
+            if (onboarding.goal === 'lose') {
+                targetCalories = tdee - (onboarding.weightChangeSpeed * 1100);
+                targetCalories = Math.max(1200, targetCalories);
+            } else if (onboarding.goal === 'gain') {
+                targetCalories = tdee + (onboarding.weightChangeSpeed * 1100);
+            }
+            const recalculated = Math.round(targetCalories);
+
+            // If calories changed significantly (> 20 kcal diff), show AI Adjustment modal
+            if (Math.abs(recalculated - previousCalories) > 20) {
+                setOldCalories(previousCalories);
+                setNewCalories(recalculated);
+                // Small delay so the weight modal closes first
+                setTimeout(() => setShowAiModal(true), 400);
+            }
+        }
+    };
+
+    // Handle AI adjustment accept
+    const handleAiAccept = async () => {
+        setDailyCalorieTarget(newCalories);
+        await saveUserData({ dailyCalories: newCalories });
+        setShowAiModal(false);
+    };
 
     // Hydration modal state
     const [showHydration, setShowHydration] = useState(false);
@@ -401,50 +526,56 @@ export default function HomeScreen() {
         );
     };
 
-    const renderMealPressable = (meal: Meal) => (
-        <TouchableOpacity
-            style={[styles.mealCard, Shadows.small, { marginHorizontal: 0, marginBottom: 0 }]}
-            onPress={() => {
-                // Ignore accidental tap generated right after a swipe release on web.
-                if (Date.now() - swipeOpenedAtRef.current < 300) {
-                    return;
-                }
-                if (openMealIdRef.current) {
-                    return;
-                }
-
-                router.push({
-                    pathname: '/food-detail',
-                    params: {
-                        foodData: JSON.stringify({
-                            name: meal.name,
-                            calories: meal.calories,
-                            protein: meal.protein,
-                            carbs: meal.carbs,
-                            fat: meal.fat,
-                            servingSize: meal.servingSize,
-                            ingredients: meal.ingredients,
-                        }),
-                        source: 'meal',
-                        mealId: meal.id,
+    const renderMealPressable = (meal: Meal) => {
+        const displayMealName = language === 'vi' ? (meal.name_vi || meal.name) : (meal.name_en || meal.name);
+        return (
+            <TouchableOpacity
+                style={[styles.mealCard, Shadows.small, { marginHorizontal: 0, marginBottom: 0 }]}
+                onPress={() => {
+                    // Ignore accidental tap generated right after a swipe release on web.
+                    if (Date.now() - swipeOpenedAtRef.current < 300) {
+                        return;
                     }
-                });
-            }}
-        >
-            <View style={styles.mealImage}>
-                {meal.image && meal.image.startsWith('file://') ? (
-                    <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
-                ) : (
-                    <Text style={styles.mealEmoji}>{meal.image || '🍽️'}</Text>
-                )}
-            </View>
-            <View style={styles.mealInfo}>
-                <Text style={styles.mealName}>{meal.name}</Text>
-                <Text style={styles.mealTime}>{meal.time}</Text>
-            </View>
-            <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
-        </TouchableOpacity>
-    );
+                    if (openMealIdRef.current) {
+                        return;
+                    }
+
+                    router.push({
+                        pathname: '/food-detail',
+                        params: {
+                            foodData: JSON.stringify({
+                                name: meal.name,
+                                name_vi: meal.name_vi,
+                                name_en: meal.name_en,
+                                calories: meal.calories,
+                                protein: meal.protein,
+                                carbs: meal.carbs,
+                                fat: meal.fat,
+                                servingSize: meal.servingSize,
+                                ingredients: meal.ingredients,
+                            }),
+                            source: 'meal',
+                            mealId: meal.id,
+                            image: meal.image,
+                        }
+                    });
+                }}
+            >
+                <View style={styles.mealImage}>
+                    {meal.image && (meal.image.startsWith('file://') || meal.image.startsWith('http') || meal.image.length > 30) ? (
+                        <Image source={{ uri: meal.image }} style={styles.mealCardImg} contentFit="cover" />
+                    ) : (
+                        <Text style={styles.mealEmoji}>{(!meal.image || meal.image.length > 10) ? '🍽️' : meal.image}</Text>
+                    )}
+                </View>
+                <View style={styles.mealInfo}>
+                    <Text style={styles.mealName}>{displayMealName}</Text>
+                    <Text style={styles.mealTime}>{meal.time}</Text>
+                </View>
+                <Text style={styles.mealCalories}>{meal.calories} kcal</Text>
+            </TouchableOpacity>
+        );
+    };
 
     const renderMealCard = (meal: Meal) => {
         const canQuickDelete = true;
@@ -458,37 +589,37 @@ export default function HomeScreen() {
         }
 
         return (
-        <Swipeable 
-            key={meal.id}
-            rightThreshold={10}
-            overshootRight={false}
-            ref={(ref) => {
-                if (ref) swipeableRefs.current.set(meal.id, ref);
-                else swipeableRefs.current.delete(meal.id);
-            }}
-            onSwipeableOpen={(direction) => {
-                if (direction === 'right') {
+            <Swipeable
+                key={meal.id}
+                rightThreshold={10}
+                overshootRight={false}
+                ref={(ref) => {
+                    if (ref) swipeableRefs.current.set(meal.id, ref);
+                    else swipeableRefs.current.delete(meal.id);
+                }}
+                onSwipeableOpen={(direction) => {
+                    if (direction === 'right') {
+                        openMealIdRef.current = meal.id;
+                        swipeOpenedAtRef.current = Date.now();
+                    }
+                }}
+                onSwipeableWillOpen={() => {
+                    if (openMealIdRef.current && openMealIdRef.current !== meal.id) {
+                        const prevRef = swipeableRefs.current.get(openMealIdRef.current);
+                        if (prevRef) prevRef.close();
+                    }
                     openMealIdRef.current = meal.id;
-                    swipeOpenedAtRef.current = Date.now();
-                }
-            }}
-            onSwipeableWillOpen={() => {
-                if (openMealIdRef.current && openMealIdRef.current !== meal.id) {
-                    const prevRef = swipeableRefs.current.get(openMealIdRef.current);
-                    if (prevRef) prevRef.close();
-                }
-                openMealIdRef.current = meal.id;
-            }}
-            onSwipeableWillClose={() => {
-                if (openMealIdRef.current === meal.id) {
-                    openMealIdRef.current = null;
-                }
-            }}
-            renderRightActions={() => renderRightActions(meal.id)}
-            containerStyle={{ marginHorizontal: 16, marginBottom: 8 }}
-        >
-            {renderMealPressable(meal)}
-        </Swipeable>
+                }}
+                onSwipeableWillClose={() => {
+                    if (openMealIdRef.current === meal.id) {
+                        openMealIdRef.current = null;
+                    }
+                }}
+                renderRightActions={() => renderRightActions(meal.id)}
+                containerStyle={{ marginHorizontal: 16, marginBottom: 8 }}
+            >
+                {renderMealPressable(meal)}
+            </Swipeable>
         );
     };
 
@@ -500,134 +631,134 @@ export default function HomeScreen() {
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
                 <View style={{ flex: 1 }}>
-                {/* Header */}
-                <View style={styles.header}>
-                    <View style={styles.headerLeft}>
-                        <TouchableOpacity style={styles.avatar} onPress={withAutoClose(() => router.push('/profile'))}>
-                            {gender === 'male' ? (
-                                <Image source={require('../../assets/images/male.png')} style={styles.avatarIcon} />
-                            ) : gender === 'female' ? (
-                                <Image source={require('../../assets/images/female.png')} style={styles.avatarIcon} />
-                            ) : (
-                                <ProfileIcon size={20} color="#000" />
-                            )}
-                            <View style={styles.statusDot} />
-                        </TouchableOpacity>
-                        <Text style={styles.greeting}>{t('home.greeting', { name: greetingName })}</Text>
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <View style={styles.headerLeft}>
+                            <TouchableOpacity style={styles.avatar} onPress={withAutoClose(() => router.push('/profile'))}>
+                                {gender === 'male' ? (
+                                    <Image source={require('../../assets/images/male.png')} style={styles.avatarIcon} />
+                                ) : gender === 'female' ? (
+                                    <Image source={require('../../assets/images/female.png')} style={styles.avatarIcon} />
+                                ) : (
+                                    <ProfileIcon size={20} color="#000" />
+                                )}
+                                <View style={styles.statusDot} />
+                            </TouchableOpacity>
+                            <Text style={styles.greeting}>{t('home.greeting', { name: greetingName })}</Text>
+                        </View>
+                        <View style={styles.headerRight}>
+                            <TouchableOpacity style={{ position: 'relative' }} onPress={withAutoClose(() => router.push('/notifications'))}>
+                                <NotificationIcon size={20} color="#000" />
+                                {unreadCount > 0 && <View style={styles.notificationBadge} />}
+                            </TouchableOpacity>
+                            {/* Settings icon removed as requested */}
+                        </View>
                     </View>
-                    <View style={styles.headerRight}>
-                        <TouchableOpacity style={{ position: 'relative' }} onPress={withAutoClose(() => router.push('/notifications'))}>
-                            <NotificationIcon size={20} color="#000" />
-                            {unreadCount > 0 && <View style={styles.notificationBadge} />}
+
+                    {/* Month & Streak */}
+                    <View style={styles.monthRow}>
+                        <TouchableOpacity
+                            style={styles.monthDropdown}
+                            onPress={withAutoClose(() => {
+                                setCalendarMonth(startOfMonth(selectedDate));
+                                setShowMonthPicker(true);
+                            })}
+                        >
+                            <Text style={styles.monthText}>{monthName} ▾</Text>
                         </TouchableOpacity>
-                        {/* Settings icon removed as requested */}
+                        <TouchableOpacity style={styles.streakBadge} onPress={withAutoClose(() => router.push('/achievements'))}>
+                            <Text style={styles.streakText}>{t('home.streakDays', { count: currentStreak })} 🔥</Text>
+                        </TouchableOpacity>
                     </View>
-                </View>
 
-                {/* Month & Streak */}
-                <View style={styles.monthRow}>
-                    <TouchableOpacity
-                        style={styles.monthDropdown}
-                        onPress={withAutoClose(() => {
-                            setCalendarMonth(startOfMonth(selectedDate));
-                            setShowMonthPicker(true);
-                        })}
-                    >
-                        <Text style={styles.monthText}>{monthName} ▾</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.streakBadge} onPress={withAutoClose(() => router.push('/achievements'))}>
-                        <Text style={styles.streakText}>{t('home.streakDays', { count: currentStreak })} 🔥</Text>
-                    </TouchableOpacity>
-                </View>
+                    {/* Sliding Date Strip */}
+                    <FlatList
+                        ref={flatListRef}
+                        data={dateStrip}
+                        keyExtractor={(week) => week[0].iso}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={{ paddingVertical: 8 }}
+                        initialScrollIndex={500}
+                        getItemLayout={(_, index) => ({ length: windowWidth, offset: windowWidth * index, index })}
+                        renderItem={({ item: week }: { item: { iso: string; weekdayIndex: number; day: number }[] }) => (
+                            <View style={[styles.weekContainer, { width: windowWidth }]}>
+                                {week.map(item => {
+                                    const isSelected = item.iso === selectedDateStr;
+                                    const isPast = item.iso < todayIso;
+                                    const isToday = item.iso === todayIso;
+                                    const isAfterOrOnStart = item.iso >= earliestLogDate;
 
-                {/* Sliding Date Strip */}
-                <FlatList
-                    ref={flatListRef}
-                    data={dateStrip}
-                    keyExtractor={(week) => week[0].iso}
-                    horizontal
-                    pagingEnabled
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ paddingVertical: 8 }}
-                    initialScrollIndex={2}
-                    getItemLayout={(_, index) => ({ length: windowWidth, offset: windowWidth * index, index })}
-                    renderItem={({ item: week }: { item: { iso: string; weekdayIndex: number; day: number }[] }) => (
-                        <View style={[styles.weekContainer, { width: windowWidth }]}>
-                            {week.map(item => {
-                                const isSelected = item.iso === selectedDateStr;
-                                const isPast = item.iso < todayIso;
-                                const isToday = item.iso === todayIso;
-                                const isAfterOrOnStart = item.iso >= earliestLogDate;
-                                
-                                let ringStyle = {};
-                                if (isPast && isAfterOrOnStart) {
-                                    const eaten = caloriesByDate[item.iso];
-                                    if (eaten === undefined) {
-                                        ringStyle = styles.dayRingDashed;
-                                    } else {
-                                        const excess = eaten - dailyCalorieTarget;
-                                        if (excess <= 100) {
-                                            ringStyle = styles.dayRingGreen;
-                                        } else if (excess <= 200) {
-                                            ringStyle = styles.dayRingYellow;
+                                    let ringStyle = {};
+                                    if (isPast && isAfterOrOnStart) {
+                                        const eaten = caloriesByDate[item.iso];
+                                        if (eaten === undefined) {
+                                            ringStyle = styles.dayRingDashed;
                                         } else {
-                                            ringStyle = styles.dayRingRed;
+                                            const excess = eaten - dailyCalorieTarget;
+                                            if (excess <= 100) {
+                                                ringStyle = styles.dayRingGreen;
+                                            } else if (excess <= 200) {
+                                                ringStyle = styles.dayRingYellow;
+                                            } else {
+                                                ringStyle = styles.dayRingRed;
+                                            }
                                         }
                                     }
-                                }
 
-                                return (
-                                    <View key={item.iso} style={styles.dayContainer}>
-                                        <View style={[styles.dayRingWrapper, ringStyle]}>
-                                            <TouchableOpacity
-                                                style={[
-                                                    styles.dayItem,
-                                                    isSelected && styles.dayItemSelected,
-                                                    !isSelected && isToday && styles.dayItemToday,
-                                                ]}
-                                                onPress={withAutoClose(() => setSelectedDateStr(item.iso))}
-                                            >
-                                                <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
-                                                    {weekdayLabels[item.weekdayIndex]}
-                                                </Text>
-                                                <Text style={[styles.dayDate, isSelected && styles.dayDateSelected]}>
-                                                    {item.day}
-                                                </Text>
-                                            </TouchableOpacity>
+                                    return (
+                                        <View key={item.iso} style={styles.dayContainer}>
+                                            <View style={[styles.dayRingWrapper, ringStyle]}>
+                                                <TouchableOpacity
+                                                    style={[
+                                                        styles.dayItem,
+                                                        isSelected && styles.dayItemSelected,
+                                                        !isSelected && isToday && styles.dayItemToday,
+                                                    ]}
+                                                    onPress={withAutoClose(() => setSelectedDateStr(item.iso))}
+                                                >
+                                                    <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
+                                                        {weekdayLabels[item.weekdayIndex]}
+                                                    </Text>
+                                                    <Text style={[styles.dayDate, isSelected && styles.dayDateSelected]}>
+                                                        {item.day}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            </View>
                                         </View>
-                                    </View>
-                                );
-                            })}
-                        </View>
-                    )}
-                />
+                                    );
+                                })}
+                            </View>
+                        )}
+                    />
 
-                {/* Calorie Card */}
-                <View style={[styles.card, Shadows.medium]}>
-                    {/* Calorie Ring */}
-                    <TouchableOpacity
-                        activeOpacity={0.85}
-                        style={styles.calorieRingWrapper}
-                        onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
-                    >
-                        <CalorieGauge
-                            current={showCaloriesEaten ? caloriesEaten : caloriesLeft}
-                            max={maxCalories}
-                            size={120}
-                            strokeWidth={14}
-                            displayValue={calorieGaugeValue}
-                            label={calorieGaugeLabel}
-                            accentColor={calorieAccentColor}
-                        />
-                    </TouchableOpacity>
-                </View>
+                    {/* Calorie Card */}
+                    <View style={[styles.card, Shadows.medium]}>
+                        {/* Calorie Ring */}
+                        <TouchableOpacity
+                            activeOpacity={0.85}
+                            style={styles.calorieRingWrapper}
+                            onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
+                        >
+                            <CalorieGauge
+                                current={showCaloriesEaten ? caloriesEaten : (isCaloriesOver ? maxCalories : caloriesLeft)}
+                                max={maxCalories}
+                                size={120}
+                                strokeWidth={14}
+                                displayValue={calorieGaugeValue}
+                                label={calorieGaugeLabel}
+                                accentColor={calorieAccentColor}
+                            />
+                        </TouchableOpacity>
+                    </View>
 
-                {/* Macro Mini-Ring Grid (Standalone Cards) */}
+                    {/* Macro Mini-Ring Grid (Standalone Cards) */}
                     <View style={styles.macroGrid}>
                         {/* Protein */}
-                        <TouchableOpacity 
-                            style={[styles.macroGridItem, Shadows.small]} 
-                            activeOpacity={0.85} 
+                        <TouchableOpacity
+                            style={[styles.macroGridItem, Shadows.small]}
+                            activeOpacity={0.85}
                             onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
@@ -638,11 +769,12 @@ export default function HomeScreen() {
                             <View style={styles.macroRingWrap}>
                                 <Svg width={44} height={44} viewBox="0 0 52 52">
                                     <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
-                                    {(showCaloriesEaten ? protein.current : Math.max(0, protein.max - protein.current)) > 0 && (
+                                    {(showCaloriesEaten ? (protein.current > 0) : true) && (
                                         <Path
                                             d={(() => {
                                                 const r = 22; const cx = 26; const cy = 26;
-                                                const circleVal = showCaloriesEaten ? protein.current : Math.max(0, protein.max - protein.current);
+                                                const isOver = !showCaloriesEaten && protein.current > protein.max;
+                                                const circleVal = showCaloriesEaten ? protein.current : (isOver ? protein.max : Math.max(0, protein.max - protein.current));
                                                 const prog = Math.min(circleVal / protein.max, 1);
                                                 const arc = 359.9 * prog;
                                                 const s = { x: cx, y: cy - r };
@@ -658,9 +790,9 @@ export default function HomeScreen() {
                         </TouchableOpacity>
 
                         {/* Carbs */}
-                        <TouchableOpacity 
-                            style={[styles.macroGridItem, Shadows.small]} 
-                            activeOpacity={0.85} 
+                        <TouchableOpacity
+                            style={[styles.macroGridItem, Shadows.small]}
+                            activeOpacity={0.85}
                             onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
@@ -671,11 +803,12 @@ export default function HomeScreen() {
                             <View style={styles.macroRingWrap}>
                                 <Svg width={44} height={44} viewBox="0 0 52 52">
                                     <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
-                                    {(showCaloriesEaten ? carbs.current : Math.max(0, carbs.max - carbs.current)) > 0 && (
+                                    {(showCaloriesEaten ? (carbs.current > 0) : true) && (
                                         <Path
                                             d={(() => {
                                                 const r = 22; const cx = 26; const cy = 26;
-                                                const circleVal = showCaloriesEaten ? carbs.current : Math.max(0, carbs.max - carbs.current);
+                                                const isOver = !showCaloriesEaten && carbs.current > carbs.max;
+                                                const circleVal = showCaloriesEaten ? carbs.current : (isOver ? carbs.max : Math.max(0, carbs.max - carbs.current));
                                                 const prog = Math.min(circleVal / carbs.max, 1);
                                                 const arc = 359.9 * prog;
                                                 const s = { x: cx, y: cy - r };
@@ -691,9 +824,9 @@ export default function HomeScreen() {
                         </TouchableOpacity>
 
                         {/* Fat */}
-                        <TouchableOpacity 
-                            style={[styles.macroGridItem, Shadows.small]} 
-                            activeOpacity={0.85} 
+                        <TouchableOpacity
+                            style={[styles.macroGridItem, Shadows.small]}
+                            activeOpacity={0.85}
                             onPress={withAutoClose(() => setShowCaloriesEaten((prev) => !prev))}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center' }}>
@@ -704,11 +837,12 @@ export default function HomeScreen() {
                             <View style={styles.macroRingWrap}>
                                 <Svg width={44} height={44} viewBox="0 0 52 52">
                                     <Path d={`M 26 4 A 22 22 0 1 1 25.999 4`} fill="none" stroke="#F0F0F0" strokeWidth={5} strokeLinecap="round" />
-                                    {(showCaloriesEaten ? fat.current : Math.max(0, fat.max - fat.current)) > 0 && (
+                                    {(showCaloriesEaten ? (fat.current > 0) : true) && (
                                         <Path
                                             d={(() => {
                                                 const r = 22; const cx = 26; const cy = 26;
-                                                const circleVal = showCaloriesEaten ? fat.current : Math.max(0, fat.max - fat.current);
+                                                const isOver = !showCaloriesEaten && fat.current > fat.max;
+                                                const circleVal = showCaloriesEaten ? fat.current : (isOver ? fat.max : Math.max(0, fat.max - fat.current));
                                                 const prog = Math.min(circleVal / fat.max, 1);
                                                 const arc = 359.9 * prog;
                                                 const s = { x: cx, y: cy - r };
@@ -724,132 +858,132 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                     </View>
 
-                {/* Quick Metrics Row: Water + Exercise side by side */}
-                <View style={styles.metricsRow}>
-                    {/* Water Card */}
-                    <View style={[styles.metricCard, Shadows.small]}>
-                        <View style={styles.metricCardHeader}>
-                            <View style={[styles.metricIconBg, { backgroundColor: '#EBF3FB' }]}>
-                                <Text style={styles.metricIconText}>💧</Text>
+                    {/* Quick Metrics Row: Water + Exercise side by side */}
+                    <View style={styles.metricsRow}>
+                        {/* Water Card */}
+                        <View style={[styles.metricCard, Shadows.small]}>
+                            <View style={styles.metricCardHeader}>
+                                <View style={[styles.metricIconBg, { backgroundColor: '#EBF3FB' }]}>
+                                    <Text style={styles.metricIconText}>💧</Text>
+                                </View>
+                                <TouchableOpacity style={styles.metricAddBtn} onPress={withAutoClose(() => setShowHydration(true))}>
+                                    <Text style={styles.metricAddBtnText}>+</Text>
+                                </TouchableOpacity>
                             </View>
-                            <TouchableOpacity style={styles.metricAddBtn} onPress={withAutoClose(() => setShowHydration(true))}>
-                                <Text style={styles.metricAddBtnText}>+</Text>
-                            </TouchableOpacity>
+                            <View style={styles.metricCardBody}>
+                                <Text style={styles.metricCardTitle} numberOfLines={1} adjustsFontSizeToFit>{t('home.waterIntake')}</Text>
+                                <Text style={styles.metricCardSubtitle}>{waterCurrent}/{waterMax}ml</Text>
+                            </View>
+                            <View style={styles.metricBarBg}>
+                                <View style={[styles.metricBar, { width: `${Math.min((waterCurrent / waterMax) * 100, 100)}%`, backgroundColor: Colors.water }]} />
+                            </View>
                         </View>
-                        <View style={styles.metricCardBody}>
-                            <Text style={styles.metricCardTitle} numberOfLines={1} adjustsFontSizeToFit>{t('home.waterIntake')}</Text>
-                            <Text style={styles.metricCardSubtitle}>{waterCurrent}/{waterMax}ml</Text>
-                        </View>
-                        <View style={styles.metricBarBg}>
-                            <View style={[styles.metricBar, { width: `${Math.min((waterCurrent / waterMax) * 100, 100)}%`, backgroundColor: Colors.water }]} />
-                        </View>
+
+                        {/* Exercise Card */}
+                        <TouchableOpacity
+                            style={[styles.metricCard, Shadows.small]}
+                            onPress={withAutoClose(() => router.push('/exercise-library'))}
+                            activeOpacity={0.85}
+                        >
+                            <View style={styles.metricCardHeader}>
+                                <View style={[styles.metricIconBg, { backgroundColor: '#FFF3E6' }]}>
+                                    <Text style={styles.metricIconText}>🏃</Text>
+                                </View>
+                                <Text style={styles.metricChevron}>›</Text>
+                            </View>
+                            <View style={styles.metricCardBody}>
+                                <Text style={styles.metricCardTitle} numberOfLines={1} adjustsFontSizeToFit>{t('home.exercise')}</Text>
+                                <Text style={styles.metricCardSubtitle}>{exerciseKcal}/{exerciseKcalTarget} kcal</Text>
+                            </View>
+                            <View style={styles.metricBarBg}>
+                                <View style={[styles.metricBar, { width: `${Math.min((exerciseKcal / exerciseKcalTarget) * 100, 100)}%`, backgroundColor: Colors.streak }]} />
+                            </View>
+                        </TouchableOpacity>
                     </View>
 
-                    {/* Exercise Card */}
-                    <TouchableOpacity
-                        style={[styles.metricCard, Shadows.small]}
-                        onPress={withAutoClose(() => router.push('/exercise-library'))}
-                        activeOpacity={0.85}
-                    >
-                        <View style={styles.metricCardHeader}>
-                            <View style={[styles.metricIconBg, { backgroundColor: '#FFF3E6' }]}>
-                                <Text style={styles.metricIconText}>🏃</Text>
-                            </View>
-                            <Text style={styles.metricChevron}>›</Text>
-                        </View>
-                        <View style={styles.metricCardBody}>
-                            <Text style={styles.metricCardTitle} numberOfLines={1} adjustsFontSizeToFit>{t('home.exercise')}</Text>
-                            <Text style={styles.metricCardSubtitle}>{exerciseKcal}/{exerciseKcalTarget} kcal</Text>
-                        </View>
-                        <View style={styles.metricBarBg}>
-                            <View style={[styles.metricBar, { width: `${Math.min((exerciseKcal / exerciseKcalTarget) * 100, 100)}%`, backgroundColor: Colors.streak }]} />
-                        </View>
-                    </TouchableOpacity>
-                </View>
+                    {/* Today's Meals */}
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>{t('home.meals')}</Text>
+                        <Text style={styles.sectionSubtitle}>{Math.round(stats.totalCalories)} {t('home.kcalTotal')}</Text>
+                    </View>
 
-                {/* Today's Meals */}
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>{t('home.meals')}</Text>
-                    <Text style={styles.sectionSubtitle}>{Math.round(stats.totalCalories)} {t('home.kcalTotal')}</Text>
-                </View>
-
-                {/* Breakfast Section */}
-                <View style={styles.mealSection}>
-                    <Text style={styles.mealSectionLabel}>{mealTypeLabel('BREAKFAST')}</Text>
-                    {getMealsByType('BREAKFAST').length > 0 && (
-                        <Text style={styles.mealSectionCalories}>
-                            {getMealsByType('BREAKFAST').reduce((sum, m) => sum + m.calories, 0)} kcal
-                        </Text>
+                    {/* Breakfast Section */}
+                    <View style={styles.mealSection}>
+                        <Text style={styles.mealSectionLabel}>{mealTypeLabel('BREAKFAST')}</Text>
+                        {getMealsByType('BREAKFAST').length > 0 && (
+                            <Text style={styles.mealSectionCalories}>
+                                {getMealsByType('BREAKFAST').reduce((sum, m) => sum + m.calories, 0)} kcal
+                            </Text>
+                        )}
+                    </View>
+                    {getMealsByType('BREAKFAST').map(renderMealCard)}
+                    {getMealsByType('BREAKFAST').length === 0 && (
+                        <TouchableOpacity
+                            style={[styles.logMealCard, Shadows.small]}
+                            onPress={withAutoClose(() => openAddMenu('BREAKFAST'))}
+                        >
+                            <Text style={styles.logMealText}>{t('home.logMeal.breakfast')}</Text>
+                        </TouchableOpacity>
                     )}
-                </View>
-                {getMealsByType('BREAKFAST').map(renderMealCard)}
-                {getMealsByType('BREAKFAST').length === 0 && (
-                    <TouchableOpacity
-                        style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(() => openAddMenu('BREAKFAST'))}
-                    >
-                        <Text style={styles.logMealText}>{t('home.logMeal.breakfast')}</Text>
-                    </TouchableOpacity>
-                )}
 
-                {/* Lunch Section */}
-                <View style={styles.mealSection}>
-                    <Text style={styles.mealSectionLabel}>{mealTypeLabel('LUNCH')}</Text>
-                    {getMealsByType('LUNCH').length > 0 && (
-                        <Text style={styles.mealSectionCalories}>
-                            {getMealsByType('LUNCH').reduce((sum, m) => sum + m.calories, 0)} kcal
-                        </Text>
+                    {/* Lunch Section */}
+                    <View style={styles.mealSection}>
+                        <Text style={styles.mealSectionLabel}>{mealTypeLabel('LUNCH')}</Text>
+                        {getMealsByType('LUNCH').length > 0 && (
+                            <Text style={styles.mealSectionCalories}>
+                                {getMealsByType('LUNCH').reduce((sum, m) => sum + m.calories, 0)} kcal
+                            </Text>
+                        )}
+                    </View>
+                    {getMealsByType('LUNCH').map(renderMealCard)}
+                    {getMealsByType('LUNCH').length === 0 && (
+                        <TouchableOpacity
+                            style={[styles.logMealCard, Shadows.small]}
+                            onPress={withAutoClose(() => openAddMenu('LUNCH'))}
+                        >
+                            <Text style={styles.logMealText}>{t('home.logMeal.lunch')}</Text>
+                        </TouchableOpacity>
                     )}
-                </View>
-                {getMealsByType('LUNCH').map(renderMealCard)}
-                {getMealsByType('LUNCH').length === 0 && (
-                    <TouchableOpacity
-                        style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(() => openAddMenu('LUNCH'))}
-                    >
-                        <Text style={styles.logMealText}>{t('home.logMeal.lunch')}</Text>
-                    </TouchableOpacity>
-                )}
 
-                {/* Dinner Section */}
-                <View style={styles.mealSection}>
-                    <Text style={styles.mealSectionLabel}>{mealTypeLabel('DINNER')}</Text>
-                    {getMealsByType('DINNER').length > 0 && (
-                        <Text style={styles.mealSectionCalories}>
-                            {getMealsByType('DINNER').reduce((sum, m) => sum + m.calories, 0)} kcal
-                        </Text>
+                    {/* Dinner Section */}
+                    <View style={styles.mealSection}>
+                        <Text style={styles.mealSectionLabel}>{mealTypeLabel('DINNER')}</Text>
+                        {getMealsByType('DINNER').length > 0 && (
+                            <Text style={styles.mealSectionCalories}>
+                                {getMealsByType('DINNER').reduce((sum, m) => sum + m.calories, 0)} kcal
+                            </Text>
+                        )}
+                    </View>
+                    {getMealsByType('DINNER').map(renderMealCard)}
+                    {getMealsByType('DINNER').length === 0 && (
+                        <TouchableOpacity
+                            style={[styles.logMealCard, Shadows.small]}
+                            onPress={withAutoClose(() => openAddMenu('DINNER'))}
+                        >
+                            <Text style={styles.logMealText}>{t('home.logMeal.dinner')}</Text>
+                        </TouchableOpacity>
                     )}
-                </View>
-                {getMealsByType('DINNER').map(renderMealCard)}
-                {getMealsByType('DINNER').length === 0 && (
-                    <TouchableOpacity
-                        style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(() => openAddMenu('DINNER'))}
-                    >
-                        <Text style={styles.logMealText}>{t('home.logMeal.dinner')}</Text>
-                    </TouchableOpacity>
-                )}
 
-                {/* Snack Section */}
-                <View style={styles.mealSection}>
-                    <Text style={styles.mealSectionLabel}>{mealTypeLabel('SNACK')}</Text>
-                    {getMealsByType('SNACK').length > 0 && (
-                        <Text style={styles.mealSectionCalories}>
-                            {getMealsByType('SNACK').reduce((sum, m) => sum + m.calories, 0)} kcal
-                        </Text>
+                    {/* Snack Section */}
+                    <View style={styles.mealSection}>
+                        <Text style={styles.mealSectionLabel}>{mealTypeLabel('SNACK')}</Text>
+                        {getMealsByType('SNACK').length > 0 && (
+                            <Text style={styles.mealSectionCalories}>
+                                {getMealsByType('SNACK').reduce((sum, m) => sum + m.calories, 0)} kcal
+                            </Text>
+                        )}
+                    </View>
+                    {getMealsByType('SNACK').map(renderMealCard)}
+                    {getMealsByType('SNACK').length === 0 && (
+                        <TouchableOpacity
+                            style={[styles.logMealCard, Shadows.small]}
+                            onPress={withAutoClose(() => openAddMenu('SNACK'))}
+                        >
+                            <Text style={styles.logMealText}>{t('home.logMeal.snack')}</Text>
+                        </TouchableOpacity>
                     )}
-                </View>
-                {getMealsByType('SNACK').map(renderMealCard)}
-                {getMealsByType('SNACK').length === 0 && (
-                    <TouchableOpacity
-                        style={[styles.logMealCard, Shadows.small]}
-                        onPress={withAutoClose(() => openAddMenu('SNACK'))}
-                    >
-                        <Text style={styles.logMealText}>{t('home.logMeal.snack')}</Text>
-                    </TouchableOpacity>
-                )}
 
-                <View style={{ height: 90 }} />
+                    <View style={{ height: 90 }} />
                 </View>
             </ScrollView>
 
@@ -1002,7 +1136,7 @@ export default function HomeScreen() {
                                                     setStripBaseDateStr(cell.iso);
                                                     setShowMonthPicker(false);
                                                     setTimeout(() => {
-                                                        flatListRef.current?.scrollToIndex({ index: 2, animated: true });
+                                                        flatListRef.current?.scrollToIndex({ index: 500, animated: true });
                                                     }, 100);
                                                 }}
                                             >
@@ -1024,6 +1158,35 @@ export default function HomeScreen() {
                     </View>
                 </TouchableWithoutFeedback>
             </Modal>
+
+            {/* Smart Notification Modals */}
+            <StreakMilestoneModal
+                visible={showStreakModal}
+                streak={currentStreak}
+                userName={greetingName}
+                onUpdateWeight={() => {
+                    setShowStreakModal(false);
+                    setTimeout(() => setShowWeightModal(true), 300);
+                }}
+                onDismiss={() => setShowStreakModal(false)}
+            />
+
+            <WeightCheckinModal
+                visible={showWeightModal}
+                currentWeight={userWeight}
+                lastWeight={lastWeight}
+                lastUpdateDate={lastWeightUpdateDate}
+                onSave={handleWeightSave}
+                onDismiss={() => setShowWeightModal(false)}
+            />
+
+            <AiAdjustmentModal
+                visible={showAiModal}
+                oldCalories={oldCalories}
+                newCalories={newCalories}
+                onAccept={handleAiAccept}
+                onDismiss={() => setShowAiModal(false)}
+            />
 
         </SafeAreaView>
     );
@@ -1386,7 +1549,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderRadius: 14,
         marginHorizontal: 16,
-        marginBottom: 0, 
+        marginBottom: 0,
         padding: 12,
         flexDirection: 'row',
         alignItems: 'center',
@@ -1399,6 +1562,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F5F5F5',
         justifyContent: 'center',
         alignItems: 'center',
+        overflow: 'hidden',
     },
     mealEmoji: { fontSize: 26 },
     mealCardImg: { width: '100%', height: '100%', borderRadius: 12 },

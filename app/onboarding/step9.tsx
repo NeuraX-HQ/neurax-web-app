@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
-import { saveOnboardingData, getOnboardingData, OnboardingData } from '../../src/store/userStore';
+import { saveOnboardingData, getOnboardingData, OnboardingData, saveUserData } from '../../src/store/userStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
@@ -14,11 +14,37 @@ export default function Step9() {
     const { t } = useAppLanguage();
     const [data, setData] = useState<OnboardingData | null>(null);
     const fadeAnim = useState(new Animated.Value(0))[0];
+    const [isAnalyzing, setIsAnalyzing] = useState(true);
+    const [analysisStep, setAnalysisStep] = useState(1);
+
+    const spinAnim = useState(new Animated.Value(0))[0];
+    const spin = spinAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0deg', '360deg']
+    });
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.timing(spinAnim, {
+                toValue: 1,
+                duration: 1500,
+                useNativeDriver: true,
+            })
+        ).start();
+    }, []);
 
     useEffect(() => {
         const load = async () => {
             const d = await getOnboardingData();
             setData(d);
+            
+            for (let i = 1; i <= 4; i++) {
+                setAnalysisStep(i);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            setIsAnalyzing(false);
+
             Animated.timing(fadeAnim, {
                 toValue: 1,
                 duration: 600,
@@ -31,6 +57,15 @@ export default function Step9() {
     const handleStart = async () => {
         await saveOnboardingData({ completed: true });
         
+        // Save the dynamically calculated metrics to global user data
+        await saveUserData({
+            name: data?.name || 'User',
+            weight: data?.currentWeight || 65,
+            goalWeight: data?.targetWeight || 55,
+            dailyCalories: finalCalories,
+            age: data?.age || 25,
+        });
+        
         if (isAuthenticated) {
             router.replace('/(tabs)/home');
         } else {
@@ -40,6 +75,68 @@ export default function Step9() {
     };
 
     if (!data) return null;
+
+    if (isAnalyzing) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.analyzingContainer}>
+                    <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                        <View style={styles.spinnerCircle}>
+                            <Ionicons name="sparkles" size={40} color={Colors.primary} />
+                        </View>
+                    </Animated.View>
+                    <Text style={styles.analyzingTitle}>{t(`onboarding.analyze.${analysisStep}`)}</Text>
+                    <Text style={styles.analyzingSubtitle}>AI Bảo đang xử lý...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    // Tính toán TDEE và Calo mục tiêu
+    const age = data.age || 25;
+    let bmr = (10 * data.currentWeight) + (6.25 * data.height) - (5 * age);
+    if (data.gender === 'male') {
+        bmr += 5;
+    } else {
+        bmr -= 161;
+    }
+
+    const activityMultipliers: Record<string, number> = {
+        sedentary: 1.2,
+        light: 1.375,
+        moderate: 1.55,
+        active: 1.725,
+        extreme: 1.9,
+    };
+    const tdee = bmr * (activityMultipliers[data.activityLevel] || 1.2);
+
+    let targetCalories = tdee;
+    if (data.goal === 'lose') {
+        targetCalories = tdee - (data.weightChangeSpeed * 1100);
+        targetCalories = Math.max(1200, targetCalories); // Safe minimum
+    } else if (data.goal === 'gain') {
+        targetCalories = tdee + (data.weightChangeSpeed * 1100);
+    }
+    const finalCalories = Math.round(targetCalories);
+
+    // Tính điểm BMI
+    const heightInMeters = data.height / 100;
+    const bmi = data.currentWeight / (heightInMeters * heightInMeters);
+    let bmiCategory = '';
+    let bmiColor = '';
+    if (bmi < 18.5) {
+        bmiCategory = 'Thiếu cân';
+        bmiColor = '#F39C12';
+    } else if (bmi < 25) {
+        bmiCategory = 'Bình thường';
+        bmiColor = '#2ECC71';
+    } else if (bmi < 30) {
+        bmiCategory = 'Thừa cân';
+        bmiColor = '#E67E22';
+    } else {
+        bmiCategory = 'Béo phì';
+        bmiColor = '#E74C3C';
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -69,6 +166,54 @@ export default function Step9() {
                     {t('onboarding.step9.subtitle', { name: data.name || '' })}
                 </Text>
 
+                <View style={[styles.titleRow, { marginTop: 20 }]}>
+                    <Ionicons name="body-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
+                    <Text style={styles.title}>Chỉ số cơ thể (Hiện tại)</Text>
+                </View>
+
+                <View style={styles.summaryCard}>
+                    <View style={styles.summaryRow}>
+                        <View style={[styles.summaryIcon, { backgroundColor: '#F0F4FF' }]}>
+                            <Ionicons name="scale-outline" size={20} color="#4A90D9" />
+                        </View>
+                        <View>
+                            <Text style={styles.summaryLabel}>BMI (Chỉ số khối cơ thể)</Text>
+                            <Text style={styles.summaryValue}>
+                                {bmi.toFixed(1)} <Text style={{ fontSize: 13, color: bmiColor, fontWeight: '700' }}>({bmiCategory})</Text>
+                            </Text>
+                        </View>
+                    </View>
+                    
+                    <View style={styles.divider} />
+
+                    <View style={styles.summaryRow}>
+                        <View style={[styles.summaryIcon, { backgroundColor: '#FFF0F0' }]}>
+                            <Ionicons name="flame-outline" size={20} color="#E74C3C" />
+                        </View>
+                        <View>
+                            <Text style={styles.summaryLabel}>BMR (Trao đổi chất cơ bản)</Text>
+                            <Text style={styles.summaryValue}>{Math.round(bmr).toLocaleString('en-US')} kcal/ngày</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.divider} />
+
+                    <View style={styles.summaryRow}>
+                        <View style={[styles.summaryIcon, { backgroundColor: '#F0F9FF' }]}>
+                            <Ionicons name="bicycle-outline" size={20} color="#00A8FF" />
+                        </View>
+                        <View>
+                            <Text style={styles.summaryLabel}>TDEE (Tổng năng lượng tiêu hao)</Text>
+                            <Text style={styles.summaryValue}>{Math.round(tdee).toLocaleString('en-US')} kcal/ngày</Text>
+                        </View>
+                    </View>
+                </View>
+
+                <View style={[styles.titleRow, { marginTop: 28 }]}>
+                    <Ionicons name="ribbon-outline" size={24} color={Colors.primary} style={styles.titleIcon} />
+                    <Text style={styles.title}>{t('onboarding.step9.title')}</Text>
+                </View>
+
                 <View style={styles.summaryCard}>
                     <View style={styles.summaryRow}>
                         <View style={[styles.summaryIcon, { backgroundColor: '#F0F7F2' }]}>
@@ -83,27 +228,31 @@ export default function Step9() {
                         </View>
                     </View>
 
-                    <View style={styles.divider} />
+                    {data.goal !== 'maintain' && (
+                        <>
+                            <View style={styles.divider} />
 
-                    <View style={styles.summaryRow}>
-                        <View style={[styles.summaryIcon, { backgroundColor: '#F0F4FF' }]}>
-                            <Ionicons name="trending-down-outline" size={20} color="#4A90D9" />
-                        </View>
-                        <View>
-                            <Text style={styles.summaryLabel}>{t('onboarding.step9.targetWeight')}</Text>
-                            <Text style={styles.summaryValue}>{data.targetWeight} kg</Text>
-                        </View>
-                    </View>
+                            <View style={styles.summaryRow}>
+                                <View style={[styles.summaryIcon, { backgroundColor: '#F0F4FF' }]}>
+                                    <Ionicons name="trending-down-outline" size={20} color="#4A90D9" />
+                                </View>
+                                <View>
+                                    <Text style={styles.summaryLabel}>{t('onboarding.step9.targetWeight')}</Text>
+                                    <Text style={styles.summaryValue}>{data.targetWeight} kg</Text>
+                                </View>
+                            </View>
 
-                    <View style={styles.summaryRow}>
-                        <View style={[styles.summaryIcon, { backgroundColor: '#F4F0FF' }]}>
-                            <Ionicons name="flash-outline" size={20} color="#9B59B6" />
-                        </View>
-                        <View>
-                            <Text style={styles.summaryLabel}>{t('onboarding.step9.targetSpeed')}</Text>
-                            <Text style={styles.summaryValue}>{data.weightChangeSpeed.toFixed(1)} kg/tuần</Text>
-                        </View>
-                    </View>
+                            <View style={styles.summaryRow}>
+                                <View style={[styles.summaryIcon, { backgroundColor: '#F4F0FF' }]}>
+                                    <Ionicons name="flash-outline" size={20} color="#9B59B6" />
+                                </View>
+                                <View>
+                                    <Text style={styles.summaryLabel}>{t('onboarding.step9.targetSpeed')}</Text>
+                                    <Text style={styles.summaryValue}>{data.weightChangeSpeed.toFixed(1)} kg/tuần</Text>
+                                </View>
+                            </View>
+                        </>
+                    )}
 
                     <View style={styles.divider} />
 
@@ -113,7 +262,7 @@ export default function Step9() {
                         </View>
                         <View>
                             <Text style={styles.summaryLabel}>{t('onboarding.step9.dailyCalories')}</Text>
-                            <Text style={styles.summaryValue}>1,850 kcal</Text>
+                            <Text style={styles.summaryValue}>{finalCalories.toLocaleString('en-US')} kcal</Text>
                         </View>
                     </View>
                 </View>
@@ -121,9 +270,12 @@ export default function Step9() {
                 <View style={styles.aiMessage}>
                     <View style={styles.aiBubble}>
                         <Text style={styles.aiText}>
-                            {t('onboarding.step9.aiMessage', {
-                                weeks: Math.ceil(Math.abs(data.targetWeight - data.currentWeight) / data.weightChangeSpeed),
-                            })}
+                            {data.goal === 'maintain' 
+                                ? "Cơ thể bạn đang ở trạng thái cân bằng tuyệt vời! Lộ trình này sẽ giúp bạn ăn ngon, sống khỏe mà vẫn giữ gìn vóc dáng lý tưởng." 
+                                : t('onboarding.step9.aiMessage', {
+                                    weeks: Math.ceil(Math.abs(data.targetWeight - data.currentWeight) / Math.max(0.1, data.weightChangeSpeed)),
+                                })
+                            }
                         </Text>
                     </View>
                 </View>
@@ -142,6 +294,35 @@ export default function Step9() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFFFFF' },
+    analyzingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 32,
+    },
+    spinnerCircle: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#F0F4FF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: Colors.primary,
+        borderStyle: 'dashed',
+    },
+    analyzingTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: Colors.text,
+        marginTop: 40,
+        textAlign: 'center',
+    },
+    analyzingSubtitle: {
+        fontSize: 14,
+        color: Colors.textSecondary,
+        marginTop: 12,
+    },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12 },
     backBtn: {
         width: 40,

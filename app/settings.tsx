@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TouchableWithoutFeedback, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors, Shadows } from '../src/constants/colors';
@@ -125,21 +125,28 @@ export default function SettingsScreen() {
     };
 
     const handleLogout = () => {
-        Alert.alert(
-            t('settings.logoutTitle'),
-            t('settings.logoutMessage'),
-            [
-                { text: t('common.cancel'), style: 'cancel' },
-                {
-                    text: t('settings.logout'),
-                    style: 'destructive',
-                    onPress: async () => {
-                        await logout();
-                        router.replace('/login');
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm(t('settings.logoutMessage'));
+            if (confirmed) {
+                logout().then(() => router.replace('/login'));
+            }
+        } else {
+            Alert.alert(
+                t('settings.logoutTitle'),
+                t('settings.logoutMessage'),
+                [
+                    { text: t('common.cancel'), style: 'cancel' },
+                    {
+                        text: t('settings.logout'),
+                        style: 'destructive',
+                        onPress: async () => {
+                            await logout();
+                            router.replace('/login');
+                        },
                     },
-                },
-            ]
-        );
+                ]
+            );
+        }
     };
 
     type SettingsSection = {

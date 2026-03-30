@@ -9,8 +9,10 @@ interface AuthState {
     biometricEnabled: boolean;
     biometricSupported: boolean;
     biometricEnrolled: boolean;
+    isAuthReady: boolean;
 
     // Actions
+    setAuthReady: (ready: boolean) => void;
     login: (email: string, userId: string, token: string) => Promise<void>;
     logout: () => Promise<void>;
     checkSession: () => Promise<boolean>;
@@ -26,6 +28,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     biometricEnabled: false,
     biometricSupported: false,
     biometricEnrolled: false,
+    isAuthReady: false,
+
+    setAuthReady: (ready: boolean) => set({ isAuthReady: ready }),
 
     login: async (email: string, userId: string, token: string) => {
         const session: authService.AuthSession = {

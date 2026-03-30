@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;family=Space_Grotesk:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-container": "#e2e2e2",
+              "tertiary-fixed": "#ffdad7",
+              "on-tertiary": "#ffffff",
+              "on-secondary-fixed-variant": "#474747",
+              "inverse-primary": "#4edea3",
+              "surface": "#f7f9fb",
+              "secondary": "#5e5e5e",
+              "surface-container-high": "#e6e8ea",
+              "primary-fixed": "#6ffbbe",
+              "on-tertiary-container": "#711419",
+              "surface-bright": "#f7f9fb",
+              "error-container": "#ffdad6",
+              "on-secondary-container": "#646464",
+              "on-background": "#191c1e",
+              "on-secondary-fixed": "#1b1b1b",
+              "error": "#ba1a1a",
+              "surface-dim": "#d8dadc",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary-fixed": "#410005",
+              "tertiary-fixed-dim": "#ffb3af",
+              "primary": "#006c49",
+              "outline": "#6c7a71",
+              "on-surface": "#191c1e",
+              "on-error": "#ffffff",
+              "surface-container-highest": "#e0e3e5",
+              "secondary-fixed-dim": "#c6c6c6",
+              "primary-container": "#10b981",
+              "primary-fixed-dim": "#4edea3",
+              "outline-variant": "#bbcabf",
+              "on-surface-variant": "#3c4a42",
+              "on-primary-fixed-variant": "#005236",
+              "inverse-surface": "#2d3133",
+              "surface-tint": "#006c49",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#00422b",
+              "tertiary-container": "#fc7c78",
+              "tertiary": "#a43a3a",
+              "surface-container-lowest": "#ffffff",
+              "surface-container": "#eceef0",
+              "surface-container-low": "#f2f4f6",
+              "on-tertiary-fixed-variant": "#842225",
+              "background": "#f7f9fb",
+              "on-primary-fixed": "#002113",
+              "on-error-container": "#93000a",
+              "secondary-fixed": "#e2e2e2",
+              "on-secondary": "#ffffff",
+              "inverse-on-surface": "#eff1f3"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Space Grotesk"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        vertical-align: middle;
+      }
+      .clinical-glass {
+        background: rgba(224, 227, 229, 0.6);
+        backdrop-filter: blur(20px);
+      }
+      .shutter-button {
+        background: #191c1e;
+        color: #f7f9fb;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .shutter-button:active {
+        transform: scale(0.95);
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface min-h-screen flex flex-col">
+<!-- Top App Bar (Shared Component) -->
+<header class="bg-[#f7f9fb] dark:bg-[#191c1e] flex items-center justify-between px-6 py-4 w-full top-0 z-50">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#006c49] dark:text-[#10b981]">menu</span>
+<h1 class="font-['Manrope'] font-bold tracking-tight text-lg font-black tracking-widest text-[#191c1e] dark:text-[#f7f9fb]">NUTRITRACK</h1>
+</div>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/10">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="Close-up professional portrait of a smiling man with clean minimalist aesthetic and soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjDQKWm4_1oKT3ZGmxP3QyX3OMAjSjLZh3lBSiVR5pB6lTGrTf9N5Fti-djyiI2_REwmGHe6Y7ZbVpyUVxYANHAK9U8WiTwk1WbOEHWnrv9suxy5ed-NOpxsZDdldpoglEuXE4jhKN-dTRMR8eGK1JVUdUqkQqxtGi1q6K0ZVIgAJzHJb1G69hMgPFqKadwZcYyw80FcUcj9Xplq-Qm3XTFFhPy3HZTE-jgPZuOR5gGg6OuV74EwsE32qmnppPTbTSZFHxY4zM0A"/>
+</div>
+</header>
+<!-- Main Dashboard Background (Mockup) -->
+<main class="flex-1 px-6 pt-4 pb-32 relative overflow-hidden">
+<div class="grid grid-cols-2 gap-4 mb-8">
+<div class="col-span-2 bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/10">
+<div class="flex justify-between items-end">
+<div>
+<p class="font-label text-xs uppercase tracking-widest text-secondary mb-1">Calories Remaining</p>
+<p class="font-headline text-4xl font-extrabold tracking-tight">1,240</p>
+</div>
+<div class="text-right">
+<p class="font-label text-[10px] text-primary font-bold">GOAL: 1800</p>
+</div>
+</div>
+<div class="w-full h-2 bg-surface-container-high rounded-full mt-4 overflow-hidden">
+<div class="w-1/3 h-full bg-primary"></div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/10">
+<p class="font-label text-[10px] uppercase text-secondary">Protein</p>
+<p class="font-headline text-xl font-bold">84g</p>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/10">
+<p class="font-label text-[10px] uppercase text-secondary">Carbs</p>
+<p class="font-headline text-xl font-bold">142g</p>
+</div>
+</div>
+<!-- AI Insight Modal Overlay -->
+<div class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-on-surface/40 backdrop-blur-sm">
+<div class="bg-surface-container-lowest w-full max-w-md rounded-[2rem] overflow-hidden shadow-[0px_20px_40px_rgba(25,28,30,0.1)] relative">
+<!-- Modal Header -->
+<div class="pt-8 px-8 pb-4 text-center">
+<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-container/20 mb-4">
+<span class="material-symbols-outlined text-primary text-4xl" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<h2 class="font-headline text-2xl font-extrabold tracking-tight text-on-surface mb-2">Lộ trình đã được tối ưu</h2>
+<p class="font-body text-sm text-on-surface-variant leading-relaxed px-4">
+                        Vì bạn đã giảm 1kg, AI Bảo đã điều chỉnh mục tiêu Calo để đảm bảo bạn vẫn giảm cân đều đặn và an toàn.
+                    </p>
+</div>
+<!-- Comparison Card -->
+<div class="px-8 py-6">
+<div class="bg-surface-container-low rounded-2xl p-6 flex items-center justify-between gap-4 relative">
+<div class="flex-1 text-center">
+<span class="font-label text-[10px] uppercase tracking-wider text-secondary block mb-1">Cũ</span>
+<span class="font-headline text-lg font-bold text-on-surface-variant">1800 <span class="text-xs font-normal">kcal</span></span>
+</div>
+<div class="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-primary shadow-lg shadow-primary/20 z-10">
+<span class="material-symbols-outlined text-white">trending_down</span>
+</div>
+<div class="flex-1 text-center">
+<span class="font-label text-[10px] uppercase tracking-wider text-primary block mb-1">Mới</span>
+<span class="font-headline text-lg font-extrabold text-primary">1750 <span class="text-xs font-bold">kcal</span></span>
+</div>
+<!-- Connecting Line -->
+<div class="absolute top-1/2 left-0 w-full h-[1px] bg-outline-variant/20 -translate-y-1/2"></div>
+</div>
+</div>
+<!-- Technical Details / Micro-Insight -->
+<div class="px-8 pb-8 flex flex-col gap-4">
+<div class="flex items-start gap-3 bg-primary-container/5 p-4 rounded-xl border border-primary/5">
+<span class="material-symbols-outlined text-primary text-sm mt-0.5">verified_user</span>
+<div class="flex-1">
+<p class="font-label text-[11px] font-bold text-primary uppercase tracking-tighter mb-0.5">Scientific Adjustment</p>
+<p class="text-xs text-on-surface-variant leading-snug">Điều chỉnh này dựa trên TDEE mới của bạn sau khi thay đổi cân nặng.</p>
+</div>
+</div>
+<!-- Footer Action -->
+<button class="shutter-button w-full py-4 rounded-xl font-headline font-bold text-base flex items-center justify-center gap-2 mt-2">
+                        Đồng ý &amp; Tiếp tục
+                        <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+<button class="w-full py-2 text-secondary font-label text-xs uppercase tracking-widest hover:text-on-surface transition-colors">
+                        Xem chi tiết phân tích
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar (Shared Component) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-[#ffffff]/80 dark:bg-[#191c1e]/80 backdrop-blur-xl rounded-t-[2rem] border-t border-[#bbcabf]/15 shadow-[0px_-10px_30px_rgba(25,28,30,0.04)]">
+<a class="flex flex-col items-center text-[#5c5e61] dark:text-[#919191] hover:text-[#10b981] dark:hover:text-[#006c49]" href="#">
+<span class="material-symbols-outlined">photo_camera</span>
+<span class="font-['Space_Grotesk'] text-[10px] uppercase tracking-wider mt-1">Scan</span>
+</a>
+<a class="flex flex-col items-center text-[#5c5e61] dark:text-[#919191] hover:text-[#10b981] dark:hover:text-[#006c49]" href="#">
+<span class="material-symbols-outlined">edit_note</span>
+<span class="font-['Space_Grotesk'] text-[10px] uppercase tracking-wider mt-1">Log</span>
+</a>
+<a class="flex flex-col items-center text-[#006c49] dark:text-[#10b981] font-bold" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">timeline</span>
+<span class="font-['Space_Grotesk'] text-[10px] uppercase tracking-wider mt-1">Trends</span>
+</a>
+<a class="flex flex-col items-center text-[#5c5e61] dark:text-[#919191] hover:text-[#10b981] dark:hover:text-[#006c49]" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Space_Grotesk'] text-[10px] uppercase tracking-wider mt-1">Profile</span>
+</a>
+</nav>
+</body></html>
