@@ -1,11 +1,14 @@
 import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { signOut } from 'aws-amplify/auth';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadData } from 'aws-amplify/storage';
 import { useAuthStore } from '../src/store/authStore';
-import { getOnboardingData, getUserData, UserData } from '../src/store/userStore';
+import { getOnboardingData, getUserData, saveUserData, UserData } from '../src/store/userStore';
 import { useFriendStore } from '../src/store/friendStore';
+import { updateMyPublicStats } from '../src/services/friendService';
 import { Colors, Shadows } from '../src/constants/colors';
 import { ProfileIcon } from '../src/components/TabIcons';
 import Svg, { Path, Circle, Line, Polyline, Rect } from 'react-native-svg';
@@ -102,6 +105,8 @@ export default function ProfileScreen() {
     });
     const [profileName, setProfileName] = React.useState(email || '');
     const [activityLevel, setActivityLevel] = React.useState('');
+    const [avatarUri, setAvatarUri] = React.useState<string | null>(null);
+    const [uploadingAvatar, setUploadingAvatar] = React.useState(false);
 
     React.useEffect(() => {
         if (userId) {
@@ -121,6 +126,7 @@ export default function ProfileScreen() {
 
                 if (storedUser) {
                     setUserData(storedUser);
+                    if (storedUser.avatar_url) setAvatarUri(storedUser.avatar_url);
                 }
 
                 if (onboarding?.name?.trim()) {
@@ -136,6 +142,47 @@ export default function ProfileScreen() {
             fetchUserData();
         }, [])
     );
+
+    const handlePickAvatar = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission needed', 'Please allow access to your photo library.');
+            return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.7,
+        });
+        if (result.canceled || !result.assets?.[0]) return;
+
+        const pickedUri = result.assets[0].uri;
+        setAvatarUri(pickedUri);
+
+        // Upload to S3 if user is authenticated
+        if (userId) {
+            setUploadingAvatar(true);
+            try {
+                const response = await fetch(pickedUri);
+                const blob = await response.blob();
+                const ext = pickedUri.split('.').pop() || 'jpg';
+                const key = `incoming/${userId}/avatar/avatar.${ext}`;
+                await uploadData({ path: key, data: blob, options: { contentType: `image/${ext}` } }).result;
+                await saveUserData({ avatar_url: pickedUri });
+                // Sync avatar to public stats so friends see the update
+                await updateMyPublicStats({ user_id: userId, avatar_url: pickedUri });
+            } catch (e) {
+                console.warn('[AVATAR] Upload failed:', e);
+                // Still save locally
+                await saveUserData({ avatar_url: pickedUri });
+            } finally {
+                setUploadingAvatar(false);
+            }
+        } else {
+            await saveUserData({ avatar_url: pickedUri });
+        }
+    };
 
     const handleSignOut = async () => {
         if (Platform.OS === 'web') {
@@ -208,15 +255,22 @@ export default function ProfileScreen() {
                 <View style={styles.avatarSection}>
                     <View style={styles.avatarContainer}>
                         <View style={styles.avatar}>
-                            {gender === 'male' ? (
+                            {avatarUri ? (
+                                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                            ) : gender === 'male' ? (
                                 <Image source={require('../assets/images/male.png')} style={styles.avatarImage} />
                             ) : gender === 'female' ? (
                                 <Image source={require('../assets/images/female.png')} style={styles.avatarImage} />
                             ) : (
                                 <ProfileIcon size={20} color="#000" />
                             )}
+                            {uploadingAvatar && (
+                                <View style={styles.avatarOverlay}>
+                                    <ActivityIndicator color="#FFF" />
+                                </View>
+                            )}
                         </View>
-                        <TouchableOpacity style={styles.editBadge}>
+                        <TouchableOpacity style={styles.editBadge} onPress={handlePickAvatar}>
                             <EditPenIcon size={14} />
                         </TouchableOpacity>
                     </View>
@@ -367,6 +421,13 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     avatarImage: { width: '100%', height: '100%' },
+    avatarOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 50,
+    },
     editBadge: {
         position: 'absolute',
         bottom: 2,

@@ -104,16 +104,13 @@ export default function Walkthrough2Screen() {
                             contentFit="cover"
                         />
                     </View>
-
                     {/* Floating Chat 1 */}
                     <Animated.View style={[styles.chatBubble, styles.chat1, { transform: [{ translateY: floatAnim1 }] }]}>                        <Text style={styles.chatText}>Món này bao nhiêu kcal?</Text>
                     </Animated.View>
-
                     {/* Floating Chat 2 */}
                     <Animated.View style={[styles.chatBubble, styles.chat2, { transform: [{ translateY: floatAnim2 }] }]}>
                         <Text style={styles.chatText}>Gợi ý bữa tối giảm cân?</Text>
                     </Animated.View>
-
                     {/* Small icon bubble */}
                     <Animated.View style={[styles.iconBubble, { transform: [{ translateY: floatAnim1 }] }]}>
                         <Ionicons name="bar-chart" size={16} color={Colors.primary} />

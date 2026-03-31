@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Shadows } from '../../src/constants/colors';
-import { mockRecipes } from '../../src/data/mockData';
+import { recipes } from '../../src/data/recipes';
 import { useFridgeStore, FridgeItem } from '../../src/store/fridgeStore';
 import { useMealStore } from '../../src/store/mealStore';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
@@ -77,10 +77,10 @@ export default function KitchenScreen() {
 
             <View style={styles.tabs}>
                 <TouchableOpacity style={[styles.tab, tab === 'fridge' && styles.tabActive]} onPress={() => setTab('fridge')}>
-                    <Text style={[styles.tabText, tab === 'fridge' && styles.tabTextActive]}>🧊 {t('kitchen.tab.fridge')}</Text>
+                    <Text style={[styles.tabText, tab === 'fridge' && styles.tabTextActive]}>{t('kitchen.tab.fridge')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.tab, tab === 'recipes' && styles.tabActive]} onPress={() => setTab('recipes')}>
-                    <Text style={[styles.tabText, tab === 'recipes' && styles.tabTextActive]}>👨‍🍳 {t('kitchen.tab.recipes')}</Text>
+                    <Text style={[styles.tabText, tab === 'recipes' && styles.tabTextActive]}>{t('kitchen.tab.recipes')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -166,19 +166,19 @@ export default function KitchenScreen() {
                         <TouchableOpacity
                             style={[styles.featuredRecipe, Shadows.medium]}
                             activeOpacity={0.9}
-                            onPress={() => openRecipeFlow(mockRecipes[0].id)}
+                            onPress={() => openRecipeFlow(recipes[0].id)}
                         >
-                            <Text style={styles.featuredEmoji}>{mockRecipes[0].emoji}</Text>
+                            <Text style={styles.featuredEmoji}>{recipes[0].emoji}</Text>
                             <View style={styles.featuredOverlay}>
                                 <View style={styles.matchBadge}>
-                                    <Text style={styles.matchText}>{t('kitchen.matchPercent', { percent: mockRecipes[0].match })}</Text>
+                                    <Text style={styles.matchText}>{t('kitchen.matchPercent', { percent: recipes[0].match })}</Text>
                                 </View>
-                                <Text style={styles.featuredName}>{mockRecipes[0].name}</Text>
-                                <Text style={styles.featuredDesc}>{mockRecipes[0].description}</Text>
+                                <Text style={styles.featuredName}>{recipes[0].name}</Text>
+                                <Text style={styles.featuredDesc}>{recipes[0].description}</Text>
                                 <View style={styles.featuredMeta}>
-                                    <Text style={styles.metaItem}>🔥 {mockRecipes[0].calories} kcal</Text>
-                                    <Text style={styles.metaItem}>💪 {mockRecipes[0].protein}</Text>
-                                    <Text style={styles.metaItem}>⏱ {mockRecipes[0].time}</Text>
+                                    <Text style={styles.metaItem}>🔥 {recipes[0].calories} kcal</Text>
+                                    <Text style={styles.metaItem}>💪 {recipes[0].protein}</Text>
+                                    <Text style={styles.metaItem}>⏱ {recipes[0].time}</Text>
                                 </View>
                             </View>
                         </TouchableOpacity>
@@ -186,7 +186,7 @@ export default function KitchenScreen() {
                         {/* Quick & Easy */}
                         <Text style={styles.sectionTitle}>{t('kitchen.quickEasy')}</Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recipesScroll}>
-                            {mockRecipes.map((recipe) => (
+                            {recipes.map((recipe) => (
                                 <TouchableOpacity
                                     key={recipe.id}
                                     style={[styles.recipeCard, Shadows.small]}
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
         width: 42,
         height: 42,
         borderRadius: 21,
-        backgroundColor: Colors.accent,
+        backgroundColor: Colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
     emptyFridgeDesc: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
     emptyAddBtn: {
         marginTop: 10,
-        backgroundColor: Colors.accent,
+        backgroundColor: Colors.primary,
         borderRadius: 14,
         paddingHorizontal: 24,
         paddingVertical: 12,

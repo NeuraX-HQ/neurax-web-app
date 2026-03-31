@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import * as friendService from '../services/friendService';
 import type { FriendshipRecord, PublicStats } from '../services/friendService';
+import { getUserData } from './userStore';
 
 interface LeaderboardEntry {
     user_id: string;
@@ -85,6 +86,8 @@ export const useFriendStore = create<FriendState>((set, get) => ({
     loadLeaderboard: async (myUserId: string, myDisplayName: string, myMeals: any[]) => {
         try {
             const friends = get().friends;
+            const myUserData = await getUserData();
+            const myAvatar = myUserData?.avatar_url || null;
             if (friends.length === 0) {
                 // Only show "me" with no friends
                 const myDays = new Set(myMeals.map((m: any) => m.date)).size;
@@ -92,7 +95,7 @@ export const useFriendStore = create<FriendState>((set, get) => ({
                     leaderboard: [{
                         user_id: myUserId,
                         display_name: myDisplayName,
-                        avatar_url: null,
+                        avatar_url: myAvatar,
                         current_streak: myDays,
                         pet_score: myDays * 20,
                         pet_level: myDays <= 0 ? 1 : Math.min(5, Math.floor((myDays - 1) / 36) + 1),
@@ -124,7 +127,7 @@ export const useFriendStore = create<FriendState>((set, get) => ({
             entries.push({
                 user_id: myUserId,
                 display_name: myDisplayName,
-                avatar_url: null,
+                avatar_url: myAvatar,
                 current_streak: myDays,
                 pet_score: myDays * 20,
                 pet_level: myDays <= 0 ? 1 : Math.min(5, Math.floor((myDays - 1) / 36) + 1),

@@ -3,6 +3,7 @@ import {
   DynamoDBDocumentClient,
   GetCommand,
   TransactWriteCommand,
+  QueryCommand,
   ScanCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { randomUUID } from 'node:crypto';
@@ -311,20 +312,15 @@ async function blockFriend(caller: CallerIdentity, friendshipId: string) {
 // ─── Helpers ───
 
 async function findUserByFriendCode(tableName: string, friendCode: string) {
-  // Full table scan with filter — no Limit (DynamoDB applies Limit BEFORE filter)
   try {
-    let lastKey: Record<string, any> | undefined;
-    do {
-      const result = await docClient.send(new ScanCommand({
-        TableName: tableName,
-        FilterExpression: 'friend_code = :code',
-        ExpressionAttributeValues: { ':code': friendCode },
-        ExclusiveStartKey: lastKey,
-      }));
-      if (result.Items && result.Items.length > 0) return result.Items[0];
-      lastKey = result.LastEvaluatedKey;
-    } while (lastKey);
-    return null;
+    const result = await docClient.send(new QueryCommand({
+      TableName: tableName,
+      IndexName: 'usersByFriend_code',
+      KeyConditionExpression: 'friend_code = :code',
+      ExpressionAttributeValues: { ':code': friendCode },
+      Limit: 1,
+    }));
+    return result.Items && result.Items.length > 0 ? result.Items[0] : null;
   } catch {
     return null;
   }

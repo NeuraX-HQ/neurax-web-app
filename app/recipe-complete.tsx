@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Shadows } from '../src/constants/colors';
-import { getRecipeById } from '../src/data/mockData';
+import { getRecipeById } from '../src/data/recipes';
 import { useMealStore, MealType } from '../src/store/mealStore';
 import { useFridgeStore } from '../src/store/fridgeStore';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';

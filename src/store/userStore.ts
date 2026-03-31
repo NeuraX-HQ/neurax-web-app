@@ -29,6 +29,7 @@ export interface UserData {
     age?: number;
     lastWeightUpdate?: string; // ISO date string
     lastMilestoneShown?: number; // streak value when last milestone was shown
+    avatar_url?: string;
 }
 
 const defaultOnboarding: OnboardingData = {

@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Colors, Shadows } from '../src/constants/colors';
-import { getRecipeById } from '../src/data/mockData';
+import { getRecipeById } from '../src/data/recipes';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function RecipeIngredientsScreen() {
