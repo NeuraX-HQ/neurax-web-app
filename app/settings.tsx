@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Alert, Modal, TouchableWithoutFeedback, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors, Shadows } from '../src/constants/colors';
@@ -145,21 +145,28 @@ export default function SettingsScreen() {
     };
 
     const handleLogout = () => {
-        Alert.alert(
-            t('settings.logoutTitle'),
-            t('settings.logoutMessage'),
-            [
-                { text: t('common.cancel'), style: 'cancel' },
-                {
-                    text: t('settings.logout'),
-                    style: 'destructive',
-                    onPress: async () => {
-                        await logout();
-                        router.replace('/welcome');
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm(t('settings.logoutMessage'));
+            if (confirmed) {
+                logout().then(() => router.replace('/welcome'));
+            }
+        } else {
+            Alert.alert(
+                t('settings.logoutTitle'),
+                t('settings.logoutMessage'),
+                [
+                    { text: t('common.cancel'), style: 'cancel' },
+                    {
+                        text: t('settings.logout'),
+                        style: 'destructive',
+                        onPress: async () => {
+                            await logout();
+                            router.replace('/welcome');
+                        },
                     },
-                },
-            ]
-        );
+                ]
+            );
+        }
     };
 
     type SettingsSection = {
@@ -198,27 +205,6 @@ export default function SettingsScreen() {
                     onPress: () => setPickerType('language'),
                     showArrow: true,
                 },
-                {
-                    key: 'units',
-                    icon: '📏',
-                    label: t('settings.units'),
-                    value: units === 'Metric (kg, cm)' ? t('settings.units.metric') : t('settings.units.imperial'),
-                    onPress: () => setPickerType('units'),
-                    showArrow: true,
-                },
-                {
-                    key: 'dark-mode',
-                    icon: '🌙',
-                    label: t('settings.darkMode'),
-                    trailing: (
-                        <Switch
-                            value={darkMode}
-                            onValueChange={handleDarkModeChange}
-                            trackColor={{ false: '#E0E0E0', true: Colors.accent }}
-                            thumbColor="#FFFFFF"
-                        />
-                    ),
-                },
             ],
         },
         {
@@ -232,43 +218,6 @@ export default function SettingsScreen() {
                         <Switch
                             value={pushNotif}
                             onValueChange={handlePushNotifChange}
-                            trackColor={{ false: '#E0E0E0', true: Colors.accent }}
-                            thumbColor="#FFFFFF"
-                        />
-                    ),
-                },
-                {
-                    key: 'email',
-                    icon: '📧',
-                    label: t('settings.emailUpdates'),
-                    trailing: (
-                        <Switch
-                            value={emailUpdates}
-                            onValueChange={handleEmailUpdatesChange}
-                            trackColor={{ false: '#E0E0E0', true: Colors.accent }}
-                            thumbColor="#FFFFFF"
-                        />
-                    ),
-                },
-            ],
-        },
-        {
-            title: t('settings.section.security'),
-            rows: [
-                {
-                    key: 'biometric',
-                    icon: '🔐',
-                    label: t('settings.biometricAuth'),
-                    subtext: !biometricSupported
-                        ? t('settings.notSupported')
-                        : !biometricEnrolled
-                            ? t('settings.noBiometric')
-                            : undefined,
-                    trailing: (
-                        <Switch
-                            value={biometricEnabled}
-                            onValueChange={handleBiometricToggle}
-                            disabled={!biometricSupported || !biometricEnrolled}
                             trackColor={{ false: '#E0E0E0', true: Colors.accent }}
                             thumbColor="#FFFFFF"
                         />

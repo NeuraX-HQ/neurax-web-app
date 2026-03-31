@@ -1,5 +1,5 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
-import { askBedrock } from '../ask-bedrock/resource';
+import { aiEngine } from '../ai-engine/resource';
 import { processNutrition } from '../process-nutrition/resource';
 import { friendRequest } from '../friend-request/resource';
 
@@ -259,16 +259,16 @@ const schema = a.schema({
     ]),
 
   //========================================
-  // Bedrock AI
+  // AI Engine (Bedrock)
   //========================================
-  askBedrock: a
+  aiEngine: a
     .query()
     .arguments({
       action: a.string().required(),
       payload: a.string(),
     })
     .returns(a.string())
-    .handler(a.handler.function(askBedrock))
+    .handler(a.handler.function(aiEngine))
     .authorization((allow) => [allow.authenticated()]),
 
   //========================================

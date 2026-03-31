@@ -1,9 +1,27 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Colors } from '../src/constants/colors';
 
-// Static splash — _layout.tsx handles all auth routing via initializeAuth
+import { useAuthStore } from '../src/store/authStore';
+
 export default function SplashScreen() {
+    const router = useRouter();
+    const { isAuthReady, isAuthenticated } = useAuthStore();
+
+    useEffect(() => {
+        if (!isAuthReady) return;
+
+        const timer = setTimeout(() => {
+            if (isAuthenticated) {
+                router.replace('/(tabs)/home');
+            } else {
+                router.replace('/welcome');
+            }
+        }, 1500);
+        return () => clearTimeout(timer);
+    }, [isAuthReady, isAuthenticated]);
+
     return (
         <View style={styles.container}>
             <View style={styles.logoContainer}>

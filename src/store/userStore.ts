@@ -6,6 +6,7 @@ const USER_KEY = 'user_data';
 export interface OnboardingData {
     name: string;
     gender: string;
+    age: number;
     goal: string;
     height: number;
     currentWeight: number;
@@ -25,11 +26,15 @@ export interface UserData {
     dailyCalories: number;
     waterIntake: number;
     waterGoal: number;
+    age?: number;
+    lastWeightUpdate?: string; // ISO date string
+    lastMilestoneShown?: number; // streak value when last milestone was shown
 }
 
 const defaultOnboarding: OnboardingData = {
     name: '',
     gender: '',
+    age: 25,
     goal: '',
     height: 170,
     currentWeight: 65,

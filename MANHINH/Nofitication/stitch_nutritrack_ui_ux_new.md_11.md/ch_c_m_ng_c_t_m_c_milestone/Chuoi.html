@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500&amp;family=Space_Grotesk:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "secondary-container": "#e2e2e2",
+              "tertiary-fixed": "#ffdad7",
+              "on-tertiary": "#ffffff",
+              "on-secondary-fixed-variant": "#474747",
+              "inverse-primary": "#4edea3",
+              "surface": "#f7f9fb",
+              "secondary": "#5e5e5e",
+              "surface-container-high": "#e6e8ea",
+              "primary-fixed": "#6ffbbe",
+              "on-tertiary-container": "#711419",
+              "surface-bright": "#f7f9fb",
+              "error-container": "#ffdad6",
+              "on-secondary-container": "#646464",
+              "on-background": "#191c1e",
+              "on-secondary-fixed": "#1b1b1b",
+              "error": "#ba1a1a",
+              "surface-dim": "#d8dadc",
+              "surface-variant": "#e0e3e5",
+              "on-tertiary-fixed": "#410005",
+              "tertiary-fixed-dim": "#ffb3af",
+              "primary": "#006c49",
+              "outline": "#6c7a71",
+              "on-surface": "#191c1e",
+              "on-error": "#ffffff",
+              "surface-container-highest": "#e0e3e5",
+              "secondary-fixed-dim": "#c6c6c6",
+              "primary-container": "#10b981",
+              "primary-fixed-dim": "#4edea3",
+              "outline-variant": "#bbcabf",
+              "on-surface-variant": "#3c4a42",
+              "on-primary-fixed-variant": "#005236",
+              "inverse-surface": "#2d3133",
+              "surface-tint": "#006c49",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#00422b",
+              "tertiary-container": "#fc7c78",
+              "tertiary": "#a43a3a",
+              "surface-container-lowest": "#ffffff",
+              "surface-container": "#eceef0",
+              "surface-container-low": "#f2f4f6",
+              "on-tertiary-fixed-variant": "#842225",
+              "background": "#f7f9fb",
+              "on-primary-fixed": "#002113",
+              "on-error-container": "#93000a",
+              "secondary-fixed": "#e2e2e2",
+              "on-secondary": "#ffffff",
+              "inverse-on-surface": "#eff1f3"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Space Grotesk"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem", "24px": "1.5rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+        .flame-gradient {
+            background: linear-gradient(135deg, #FF6B35 0%, #FF2E00 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .glow-effect {
+            box-shadow: 0 0 40px rgba(255, 107, 53, 0.2);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body text-on-surface antialiased overflow-hidden">
+<!-- Background Dashboard (Simulated Dimmed State) -->
+<div class="fixed inset-0 z-0 bg-surface flex flex-col opacity-40 grayscale-[0.2]">
+<!-- Top Nav -->
+<header class="flex items-center justify-between px-6 py-4 w-full">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">menu</span>
+<h1 class="font-headline font-bold tracking-tight text-lg text-on-surface">NUTRITRACK</h1>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden">
+<img alt="User Profile" data-alt="professional headshot of a smiling fitness enthusiast in high-key studio lighting with soft clean background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2rwREBOCY-6wPgKbUyCX59p2EGgjxlV19WT-Bs9kPgliDpf0TYSzT91gLV78nr_O0ISin_ltU6mvXf8N0kyboQPuhsTuqWIKrx2p2QlrrDkjWasxNUGTEGMpJQGZT-Y-jdDBCxBEU5InrcECDTqISbBtDTgSW8HzJV7cpoKqnEVVdmiyMo-afNWzzIRZlrdMC2r5nyuViuYgIhRBSC8WJVnsoIA91oZnFaldyOSfpXi2Uohjo4eraud-DPeTGAgNxYZtaQmJpHg"/>
+</div>
+</header>
+<!-- Mock Dashboard Content -->
+<main class="px-6 py-4 space-y-6">
+<div class="h-40 bg-surface-container-lowest rounded-xl p-4 flex flex-col justify-end">
+<div class="w-2/3 h-6 bg-surface-container-high rounded mb-2"></div>
+<div class="w-1/2 h-4 bg-surface-container rounded"></div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="h-32 bg-surface-container-lowest rounded-xl"></div>
+<div class="h-32 bg-surface-container-lowest rounded-xl"></div>
+</div>
+<div class="h-24 bg-surface-container-lowest rounded-xl"></div>
+</main>
+</div>
+<!-- Modal Overlay -->
+<div class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-[#191c1e]/40 backdrop-blur-sm">
+<!-- Achievement Card -->
+<div class="w-full max-w-sm glass-panel rounded-24px overflow-hidden flex flex-col items-center p-8 text-center shadow-[0px_20px_40px_rgba(25,28,30,0.12)] border border-white/40">
+<!-- Close Trigger (Decorative) -->
+<div class="absolute top-4 right-4 text-on-surface-variant/40">
+<span class="material-symbols-outlined">close</span>
+</div>
+<!-- Milestone Visual -->
+<div class="relative mb-8">
+<!-- Background Glow -->
+<div class="absolute inset-0 bg-[#FF6B35]/20 blur-3xl rounded-full scale-150"></div>
+<!-- Flame Icon Wrapper -->
+<div class="relative w-32 h-32 flex items-center justify-center bg-white rounded-full shadow-[0px_10px_30px_rgba(255,107,53,0.15)] border border-[#FF6B35]/10">
+<span class="material-symbols-outlined text-7xl flame-gradient leading-none" style="font-variation-settings: 'FILL' 1;">
+                        local_fire_department
+                    </span>
+<!-- Floating Streak Badge -->
+<div class="absolute -bottom-2 right-0 bg-primary text-white font-label font-bold text-xs py-1 px-3 rounded-full shadow-lg border-2 border-white">
+                        7 DAYS
+                    </div>
+</div>
+</div>
+<!-- Text Content -->
+<div class="space-y-3 mb-10">
+<h2 class="font-headline font-extrabold text-2xl tracking-tight text-on-surface">
+                    Tuyệt vời, Admin!
+                </h2>
+<p class="font-body text-sm leading-relaxed text-on-surface-variant px-2">
+                    Bạn đã duy trì kỷ luật ăn uống trong 7 ngày liên tiếp. Cơ thể bạn đang bắt đầu thay đổi tích cực!
+                </p>
+</div>
+<!-- Stats Mini-Grid -->
+<div class="grid grid-cols-2 gap-3 w-full mb-10">
+<div class="bg-primary/5 rounded-xl p-3 border border-primary/10">
+<div class="font-label text-[10px] uppercase tracking-widest text-primary mb-1">Consistency</div>
+<div class="font-headline font-bold text-lg text-on-primary-container">100%</div>
+</div>
+<div class="bg-primary/5 rounded-xl p-3 border border-primary/10">
+<div class="font-label text-[10px] uppercase tracking-widest text-primary mb-1">Health Score</div>
+<div class="font-headline font-bold text-lg text-on-primary-container">+12pt</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="w-full flex flex-col gap-4">
+<button class="w-full bg-[#1B2838] text-white font-headline font-bold py-4 rounded-full shadow-xl hover:opacity-90 transition-all active:scale-95">
+                    Cập nhật cân nặng ngay
+                </button>
+<button class="w-full text-on-surface-variant font-label text-xs uppercase tracking-[0.2em] font-bold hover:text-primary transition-colors">
+                    Để sau
+                </button>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation (Simulated Fixed Shell) -->
+<nav class="fixed bottom-0 left-0 w-full z-10 flex justify-around items-center px-4 pb-8 pt-4 bg-[#ffffff]/60 backdrop-blur-md rounded-t-[2rem] border-t border-white/20 opacity-30 pointer-events-none">
+<div class="flex flex-col items-center text-primary">
+<span class="material-symbols-outlined">photo_camera</span>
+<span class="font-label text-[10px] uppercase tracking-wider mt-1">Scan</span>
+</div>
+<div class="flex flex-col items-center text-secondary">
+<span class="material-symbols-outlined">edit_note</span>
+<span class="font-label text-[10px] uppercase tracking-wider mt-1">Log</span>
+</div>
+<div class="flex flex-col items-center text-secondary">
+<span class="material-symbols-outlined">timeline</span>
+<span class="font-label text-[10px] uppercase tracking-wider mt-1">Trends</span>
+</div>
+<div class="flex flex-col items-center text-secondary">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label text-[10px] uppercase tracking-wider mt-1">Profile</span>
+</div>
+</nav>
+</body></html>

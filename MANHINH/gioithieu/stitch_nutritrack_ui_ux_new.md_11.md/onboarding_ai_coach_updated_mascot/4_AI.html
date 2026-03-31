@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+
+<html class="light" lang="vi"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NeuraX - AI Coaching Onboarding</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500&amp;family=Space_Grotesk:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-error": "#ffffff",
+              "tertiary": "#a43a3a",
+              "on-surface": "#191c1e",
+              "surface-tint": "#006c49",
+              "inverse-primary": "#4edea3",
+              "on-primary-container": "#00422b",
+              "secondary-fixed-dim": "#c6c6c6",
+              "secondary-fixed": "#e2e2e2",
+              "on-tertiary-fixed": "#410005",
+              "on-primary": "#ffffff",
+              "surface-dim": "#d8dadc",
+              "secondary": "#5e5e5e",
+              "surface-container-highest": "#e0e3e5",
+              "inverse-surface": "#2d3133",
+              "surface-bright": "#f7f9fb",
+              "on-primary-fixed-variant": "#005236",
+              "on-tertiary-container": "#711419",
+              "tertiary-fixed-dim": "#ffb3af",
+              "on-secondary-fixed-variant": "#474747",
+              "secondary-container": "#e2e2e2",
+              "primary-fixed-dim": "#4edea3",
+              "on-tertiary-fixed-variant": "#842225",
+              "on-secondary-fixed": "#1b1b1b",
+              "on-secondary-container": "#646464",
+              "on-secondary": "#ffffff",
+              "surface": "#f7f9fb",
+              "error-container": "#ffdad6",
+              "surface-container-high": "#e6e8ea",
+              "on-surface-variant": "#3c4a42",
+              "surface-container-lowest": "#ffffff",
+              "tertiary-container": "#fc7c78",
+              "surface-container-low": "#f2f4f6",
+              "primary-fixed": "#6ffbbe",
+              "primary": "#006c49",
+              "tertiary-fixed": "#ffdad7",
+              "on-background": "#191c1e",
+              "background": "#f7f9fb",
+              "surface-variant": "#e0e3e5",
+              "inverse-on-surface": "#eff1f3",
+              "primary-container": "#10b981",
+              "on-tertiary": "#ffffff",
+              "surface-container": "#eceef0",
+              "on-primary-fixed": "#002113",
+              "on-error-container": "#93000a",
+              "outline-variant": "#bbcabf",
+              "error": "#ba1a1a",
+              "outline": "#6c7a71"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Space Grotesk"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .clinical-glass {
+        background: rgba(224, 227, 229, 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+      .shutter-gradient {
+        background: linear-gradient(135deg, #006c49 0%, #10b981 100%);
+      }
+      .floating-ui {
+        box-shadow: 0px 20px 40px rgba(25, 28, 30, 0.06);
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface font-body text-on-surface antialiased min-h-screen flex flex-col overflow-hidden">
+<!-- Top Navigation / Skip -->
+<nav class="flex justify-between items-center px-6 py-6 w-full z-50">
+<div class="flex items-center gap-2">
+<span class="font-headline font-black tracking-widest text-lg text-on-surface">NEURAX</span>
+</div>
+<button class="font-label text-sm font-bold text-secondary uppercase tracking-widest hover:text-primary transition-colors">
+            Bỏ qua
+        </button>
+</nav>
+<!-- Content Canvas -->
+<main class="flex-1 flex flex-col items-center justify-center relative px-6 pb-32">
+<!-- Background Decorative Elements -->
+<div class="absolute inset-0 flex items-center justify-center -z-10 opacity-20">
+<div class="w-96 h-96 bg-primary-container rounded-full blur-[100px]"></div>
+</div>
+<!-- Central Avatar/HUD Area -->
+<div class="relative w-full max-w-md aspect-square flex items-center justify-center mb-8">
+<!-- The Scanning Bracket (Clinical Precision) -->
+<div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary"></div>
+<div class="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary"></div>
+<div class="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary"></div>
+<div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary"></div>
+<!-- Avatar Representation -->
+<div class="relative w-64 h-64 rounded-full overflow-hidden bg-surface-container-high flex items-center justify-center border-4 border-surface-container-lowest shadow-2xl">
+<img class="w-full h-full object-cover" data-alt="Cute 3D white and blue robot waving hello, professional high-tech aesthetic, clean minimalist background" src="https://lh3.googleusercontent.com/aida/ADBb0ujjOoAJ_NeUNYmofTE9AFosrZp8g32CQBKm2o11w-vbypX_9bMwCtl9OVXmm0IUl8Fy0MmqXnqjiAdlN6nZOEwM8dMJ9DZ7GC9gKjXhb30cLBu9RkWFfTXyrUQpGzySap9fThGF2Pb3AXgNXkg13sneup7iakU9uJz4mJNPBTw_sl_Zk-QDSSYznl8qoiITejmqObEv7wCxpITxT10Iz9Anl31Hpc4w2FIvCfJiWdMEI88R2FaTPq_HdCh7FpbBpAE3PYS4LxWj"/>
+</div>
+<!-- Floating Chat Bubbles (Asymmetric Layout) -->
+<div class="absolute top-[10%] -left-4 clinical-glass p-4 rounded-xl floating-ui max-w-[160px]">
+<p class="font-label text-[10px] uppercase text-primary mb-1 tracking-tighter font-bold">Query 01</p>
+<p class="text-xs font-medium leading-relaxed">Món này bao nhiêu kcal?</p>
+</div>
+<div class="absolute bottom-[20%] -right-2 clinical-glass p-4 rounded-xl floating-ui max-w-[180px]">
+<p class="font-label text-[10px] uppercase text-primary mb-1 tracking-tighter font-bold">Coach Suggestion</p>
+<p class="text-xs font-medium leading-relaxed">Gợi ý bữa tối giảm cân?</p>
+</div>
+<div class="absolute top-[45%] -right-10 clinical-glass p-3 rounded-full floating-ui flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">analytics</span>
+</div>
+</div>
+<!-- Text Content -->
+<div class="text-center space-y-4 max-w-sm">
+<h1 class="font-headline text-3xl font-extrabold tracking-tight text-on-surface">
+                AI Bảo - Người đồng hành 24/7
+            </h1>
+<p class="text-secondary leading-relaxed text-sm px-2">
+                Không chỉ là bộ đếm calo, AI Bảo thấu hiểu và đưa ra những lời khuyên cá nhân hóa cho từng bữa ăn của bạn.
+            </p>
+</div>
+<!-- Page Indicator -->
+<div class="flex gap-2 mt-8">
+<div class="h-1.5 w-4 bg-surface-container-highest rounded-full"></div>
+<div class="h-1.5 w-10 shutter-gradient rounded-full"></div>
+<div class="h-1.5 w-4 bg-surface-container-highest rounded-full"></div>
+</div>
+</main>
+<!-- Fixed Bottom Controls -->
+<div class="fixed bottom-0 left-0 w-full p-6 bg-surface/80 backdrop-blur-md">
+<div class="max-w-md mx-auto flex flex-col gap-4">
+<button class="w-full shutter-gradient text-on-primary py-4 rounded-md font-headline font-bold text-lg shadow-xl active:scale-[0.98] transition-transform">
+                Tiếp tục
+            </button>
+<p class="text-center font-label text-[10px] text-secondary tracking-[0.2em] uppercase">
+                Khám phá tiềm năng sức khỏe cùng NeuraX
+            </p>
+</div>
+</div>
+<!-- Technical HUD Background Overlay (Subtle) -->
+<div class="fixed inset-0 pointer-events-none select-none overflow-hidden opacity-5 z-[-1]">
+<div class="absolute top-20 right-20 font-label text-4xl rotate-90">00.2_ONBOARDING</div>
+<div class="absolute bottom-40 left-10 font-label text-sm tracking-widest">DIAGNOSTIC_MODE: ACTIVE</div>
+<div class="absolute top-1/2 left-10 h-[1px] w-32 bg-on-surface"></div>
+</div>
+</body></html>

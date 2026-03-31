@@ -37,7 +37,11 @@ function getClient() {
 }
 
 export interface IngredientItem {
-    name: string;
+    name: string; // Keep legacy name for backward compatibility
+    name_en?: string;
+    name_vi?: string;
+    note_en?: string;
+    note_vi?: string;
     amount?: string;
     estimated_g?: number;
     calories?: number;
@@ -50,7 +54,15 @@ export interface IngredientItem {
 }
 
 export interface NutritionInfo {
-    name: string;
+    name: string; // Keep legacy name for backward compatibility
+    name_en?: string;
+    name_vi?: string;
+    category_en?: string;
+    category_vi?: string;
+    cooking_method_en?: string;
+    cooking_method_vi?: string;
+    allergens_en?: string[];
+    allergens_vi?: string[];
     calories: number;
     protein: number;
     carbs: number;
@@ -65,6 +77,20 @@ export interface NutritionInfo {
 export interface FoodAnalysisResult {
     success: boolean;
     data?: NutritionInfo;
+    error?: string;
+}
+
+export interface VoiceAnalysisData {
+    intent: 'log_food' | 'ask_coach' | 'log_water' | 'unknown';
+    food_data?: NutritionInfo;
+    water_ml?: number;
+    coach_query?: string;
+    message?: string;
+}
+
+export interface VoiceAnalysisResult {
+    success: boolean;
+    data?: VoiceAnalysisData;
     error?: string;
 }
 
@@ -181,7 +207,7 @@ export interface WeeklyInsightResponse {
  */
 export async function analyzeFoodImage(imageBase64: string): Promise<FoodAnalysisResult> {
     try {
-        const result = await getClient().queries.askBedrock({
+        const result = await getClient().queries.aiEngine({
             action: 'analyzeFoodImage',
             payload: JSON.stringify({ imageBase64 })
         });
@@ -243,7 +269,7 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
         const resolvedKey = (uploadResult as any).path || `voice/${fileName}`;
 
         // Step 3: Call Lambda — Transcribe + Qwen in one shot
-        const result = await getClient().queries.askBedrock({
+        const result = await getClient().queries.aiEngine({
             action: 'voiceToFood',
             payload: JSON.stringify({ s3Key: resolvedKey }),
         });
@@ -305,7 +331,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
         console.log(`Slow path: "${foodName}" not found in DB, asking Bedrock...`);
 
         // Step 2: Ask Bedrock for ingredient breakdown + estimated nutrition
-        const aiResult = await getClient().queries.askBedrock({
+        const aiResult = await getClient().queries.aiEngine({
             action: 'searchFoodNutrition',
             payload: JSON.stringify({ foodName })
         });
@@ -413,7 +439,7 @@ function convertAiToNutritionInfo(aiData: any): NutritionInfo {
  */
 export async function fixFood(currentFoodJson: any, correctionQuery: string): Promise<FoodAnalysisResult> {
     try {
-        const result = await getClient().queries.askBedrock({
+        const result = await getClient().queries.aiEngine({
             action: 'fixFood',
             payload: JSON.stringify({ currentFoodJson, correctionQuery }),
         });
@@ -445,7 +471,7 @@ export async function fixFood(currentFoodJson: any, correctionQuery: string): Pr
  */
 export async function getOllieTip(context: string): Promise<OllieTipResponse> {
     try {
-        const result = await getClient().queries.askBedrock({
+        const result = await getClient().queries.aiEngine({
             action: 'ollieCoachTip',
             payload: JSON.stringify({ context }),
         });
@@ -477,7 +503,7 @@ export async function generateRecipe(
     servings: number
 ): Promise<RecipeResponse> {
     try {
-        const result = await getClient().queries.askBedrock({
+        const result = await getClient().queries.aiEngine({
             action: 'generateRecipe',
             payload: JSON.stringify({ inventoryText, expiringText, nutritionGoal, servings }),
         });
@@ -504,7 +530,7 @@ export async function generateRecipe(
  */
 export async function calculateMacros(userProfileJson: any): Promise<MacroResponse> {
     try {
-        const result = await getClient().queries.askBedrock({
+        const result = await getClient().queries.aiEngine({
             action: 'calculateMacros',
             payload: JSON.stringify({ userProfileJson }),
         });
@@ -540,7 +566,7 @@ export async function getChallengeSummary(params: {
     userDisplayName: string;
 }): Promise<ChallengeSummaryResponse> {
     try {
-        const result = await getClient().queries.askBedrock({
+        const result = await getClient().queries.aiEngine({
             action: 'challengeSummary',
             payload: JSON.stringify(params),
         });
@@ -571,7 +597,7 @@ export async function getWeeklyInsight(
     notablePatterns: string
 ): Promise<WeeklyInsightResponse> {
     try {
-        const result = await getClient().queries.askBedrock({
+        const result = await getClient().queries.aiEngine({
             action: 'weeklyInsight',
             payload: JSON.stringify({ userProfileJson, weeklySummaryJson, notablePatterns }),
         });
@@ -602,7 +628,7 @@ export async function generateCoachResponse(
     contextString: string
 ): Promise<CoachResponse> {
     try {
-        const result = await getClient().queries.askBedrock({
+        const result = await getClient().queries.aiEngine({
             action: 'generateCoachResponse',
             payload: JSON.stringify({ userMessage, chatHistory, contextString })
         });

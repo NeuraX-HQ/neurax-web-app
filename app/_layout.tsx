@@ -190,6 +190,7 @@ function RootLayoutShell() {
         hasNavigated.current = true;
         pendingRoute.current = '/welcome';
         setIsReady(true);
+        useAuthStore.getState().setAuthReady(true);
     };
 
     const handleBiometricSuccess = () => {

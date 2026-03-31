@@ -17,8 +17,9 @@ class Settings:
     COGNITO_APP_CLIENT_ID: str = os.getenv("COGNITO_APP_CLIENT_ID", "")
     COGNITO_REGION: str = os.getenv("COGNITO_REGION", AWS_REGION)
 
-    # Gemini AI
-    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+
+    # AI Service Team
+    AI_SERVICE_URL: str = os.getenv("AI_SERVICE_URL", "https://nutritrack-api.fly.dev")
 
     # S3
     S3_UPLOADS_BUCKET: str = os.getenv("S3_UPLOADS_BUCKET", "nutritrack-uploads")

@@ -1,7 +1,7 @@
 import { defineBackend } from '@aws-amplify/backend';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
-import { askBedrock } from './ask-bedrock/resource';
+import { aiEngine } from './ai-engine/resource';
 import { processNutrition } from './process-nutrition/resource';
 import { friendRequest } from './friend-request/resource';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -17,7 +17,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 const backend = defineBackend({
   auth,
   data,
-  askBedrock,
+  aiEngine,
   processNutrition,
   friendRequest,
   storage,
@@ -73,9 +73,9 @@ processNutritionLambda.addToRolePolicy(new iam.PolicyStatement({
   resources: ['arn:aws:dynamodb:*:*:table/Food-*'],
 }));
 
-// Grant permissions for askBedrock to invoke Bedrock models
-const askBedrockLambda = backend.askBedrock.resources.lambda;
-askBedrockLambda.addToRolePolicy(
+// Grant permissions for aiEngine to invoke Bedrock models
+const aiEngineLambda = backend.aiEngine.resources.lambda;
+aiEngineLambda.addToRolePolicy(
   new iam.PolicyStatement({
     effect: iam.Effect.ALLOW,
     actions: ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
@@ -85,10 +85,10 @@ askBedrockLambda.addToRolePolicy(
   })
 );
 
-// Grant askBedrock access to S3 (read voice files) + Transcribe
-s3Bucket.grantRead(askBedrockLambda);
-s3Bucket.grantDelete(askBedrockLambda);
-askBedrockLambda.addToRolePolicy(
+// Grant aiEngine access to S3 (read voice files) + Transcribe
+s3Bucket.grantRead(aiEngineLambda);
+s3Bucket.grantDelete(aiEngineLambda);
+aiEngineLambda.addToRolePolicy(
   new iam.PolicyStatement({
     effect: iam.Effect.ALLOW,
     actions: [
@@ -99,9 +99,9 @@ askBedrockLambda.addToRolePolicy(
   })
 );
 
-// Pass S3 bucket name to askBedrock Lambda via escape hatch
-const cfnAskBedrockFn = askBedrockLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;
-cfnAskBedrockFn.addPropertyOverride('Environment.Variables.STORAGE_BUCKET_NAME', s3Bucket.bucketName);
+// Pass S3 bucket name to aiEngine Lambda via escape hatch
+const cfnAiEngineFn = aiEngineLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;
+cfnAiEngineFn.addPropertyOverride('Environment.Variables.STORAGE_BUCKET_NAME', s3Bucket.bucketName);
 
 // Grant friendRequest Lambda permissions to read/write user + Friendship tables
 const friendRequestLambda = backend.friendRequest.resources.lambda;

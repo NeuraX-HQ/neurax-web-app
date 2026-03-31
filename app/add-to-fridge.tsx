@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, Modal, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -12,7 +12,7 @@ export default function AddToFridgeScreen() {
     const router = useRouter();
     const { t } = useAppLanguage();
     const params = useLocalSearchParams();
-    const addItem = useFridgeStore((state) => state.addItem);
+    const { addItem, updateItem } = useFridgeStore();
 
     const [selectedDuration, setSelectedDuration] = useState('7');
     const [reminder, setReminder] = useState(true);
@@ -21,9 +21,23 @@ export default function AddToFridgeScreen() {
     const [customDays, setCustomDays] = useState(1);
     const [selectionStep, setSelectionStep] = useState<'start' | 'end'>('start');
 
-    const foodData: NutritionInfo | null = params.foodData
-        ? JSON.parse(params.foodData as string)
+    const editItemData = params.editItemData
+        ? JSON.parse(params.editItemData as string)
         : null;
+
+    const foodData: NutritionInfo | null = editItemData
+        ? {
+            name: editItemData.name,
+            servingSize: editItemData.amount,
+            calories: 0,
+            protein: '0',
+            carbs: '0',
+            fat: '0',
+            image: ''
+        }
+        : params.foodData
+            ? JSON.parse(params.foodData as string)
+            : null;
 
     const getEmojiForFood = (name: string): string => {
         const lowerName = name.toLowerCase();
@@ -38,40 +52,76 @@ export default function AddToFridgeScreen() {
         return '🍽️';
     };
 
-    const now = new Date();
-    const currentDay = now.getDate();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const suggestExpiryDays = (name: string) => {
+        const lowerName = name.toLowerCase();
+        // Cơm, bún, phở, thịt chín, đồ ăn mau hỏng -> 3 days
+        if (lowerName.includes('cơm') || lowerName.includes('com') ||
+            lowerName.includes('phở') || lowerName.includes('pho') ||
+            lowerName.includes('bún') || lowerName.includes('bun') ||
+            lowerName.includes('bánh mì') || lowerName.includes('banh mi') ||
+            lowerName.includes('gà') || lowerName.includes('ga') ||
+            lowerName.includes('thịt') || lowerName.includes('thit') ||
+            lowerName.includes('cá') || lowerName.includes('ca')) {
+            return 3;
+        }
+        return 7;
+    };
+
+    const defaultDuration = foodData ? suggestExpiryDays(foodData.name) : 7;
+    const initialDuration = editItemData ? editItemData.daysLeft : defaultDuration;
+
+    const [displayMonthDate, setDisplayMonthDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+
+    const initialEndDate = new Date(today);
+    initialEndDate.setDate(today.getDate() + initialDuration - 1);
+
+    const [selectedStartDate, setSelectedStartDate] = useState(today);
+    const [selectedEndDate, setSelectedEndDate] = useState(initialEndDate);
+
+    const currentYear = displayMonthDate.getFullYear();
+    const currentMonth = displayMonthDate.getMonth();
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const firstDay = new Date(currentYear, currentMonth, 1).getDay();
     const offsetMonday = (firstDay + 6) % 7;
+
+    const changeMonth = (delta: number) => {
+        const newDate = new Date(displayMonthDate);
+        newDate.setMonth(newDate.getMonth() + delta);
+        setDisplayMonthDate(newDate);
+    };
+
     const monthNames = [
-        t('calendar.month.1'),
-        t('calendar.month.2'),
-        t('calendar.month.3'),
-        t('calendar.month.4'),
-        t('calendar.month.5'),
-        t('calendar.month.6'),
-        t('calendar.month.7'),
-        t('calendar.month.8'),
-        t('calendar.month.9'),
-        t('calendar.month.10'),
-        t('calendar.month.11'),
-        t('calendar.month.12'),
+        t('calendar.month.1'), t('calendar.month.2'), t('calendar.month.3'), t('calendar.month.4'),
+        t('calendar.month.5'), t('calendar.month.6'), t('calendar.month.7'), t('calendar.month.8'),
+        t('calendar.month.9'), t('calendar.month.10'), t('calendar.month.11'), t('calendar.month.12'),
     ];
     const weekdayLabels = [
-        t('calendar.weekday.mon'),
-        t('calendar.weekday.tue'),
-        t('calendar.weekday.wed'),
-        t('calendar.weekday.thu'),
-        t('calendar.weekday.fri'),
-        t('calendar.weekday.sat'),
-        t('calendar.weekday.sun'),
+        t('calendar.weekday.mon'), t('calendar.weekday.tue'), t('calendar.weekday.wed'),
+        t('calendar.weekday.thu'), t('calendar.weekday.fri'), t('calendar.weekday.sat'), t('calendar.weekday.sun'),
     ];
 
-    const initialDuration = 7;
-    const [selectedStartDay, setSelectedStartDay] = useState(currentDay);
-    const [selectedEndDay, setSelectedEndDay] = useState(Math.min(daysInMonth, currentDay + initialDuration - 1));
+    // For selectedDuration, we should check if initialDuration matches predefined options
+    useEffect(() => {
+        if (editItemData) {
+            const d = editItemData.daysLeft;
+            if (d === 1 || d === 3 || d === 7) {
+                setSelectedDuration(d.toString());
+            } else {
+                setSelectedDuration('custom');
+                setCustomDays(d);
+            }
+        } else {
+            if (initialDuration === 1 || initialDuration === 3 || initialDuration === 7) {
+                setSelectedDuration(initialDuration.toString());
+            } else {
+                setSelectedDuration('custom');
+                setCustomDays(initialDuration);
+            }
+        }
+    }, [editItemData, initialDuration]);
 
     const durations = [
         { id: '1', label: t('addToFridge.duration.1') },
@@ -88,29 +138,36 @@ export default function AddToFridgeScreen() {
 
         const durationDays = parseInt(id, 10);
         setSelectedDuration(id);
-        setSelectedStartDay(currentDay);
-        setSelectedEndDay(Math.min(daysInMonth, currentDay + durationDays - 1));
+        setSelectedStartDate(today);
+        
+        const nextEndDate = new Date(today);
+        nextEndDate.setDate(today.getDate() + durationDays - 1);
+        setSelectedEndDate(nextEndDate);
         setSelectionStep('start');
+        
+        setDisplayMonthDate(new Date(nextEndDate.getFullYear(), nextEndDate.getMonth(), 1));
     };
 
-    const handleSelectDay = (day: number) => {
-        if (day < currentDay) return;
+    const handleSelectDay = (date: Date) => {
+        if (date < today) return;
 
         if (selectionStep === 'start') {
-            setSelectedStartDay(day);
-            setSelectedEndDay(day);
+            setSelectedStartDate(date);
+            setSelectedEndDate(date);
             setSelectionStep('end');
             setSelectedDuration('custom');
             setCustomDays(1);
             return;
         }
 
-        const start = Math.min(selectedStartDay, day);
-        const end = Math.max(selectedStartDay, day);
-        const rangeDays = end - start + 1;
+        const start = date < selectedStartDate ? date : selectedStartDate;
+        const end = date > selectedStartDate ? date : selectedStartDate;
+        
+        const diffTime = Math.abs(end.getTime() - start.getTime());
+        const rangeDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-        setSelectedStartDay(start);
-        setSelectedEndDay(end);
+        setSelectedStartDate(start);
+        setSelectedEndDate(end);
         setSelectionStep('start');
         setSelectedDuration('custom');
         setCustomDays(rangeDays);
@@ -119,19 +176,40 @@ export default function AddToFridgeScreen() {
     const handleConfirmAdd = async () => {
         if (!foodData) return;
 
-        const days = Math.max(1, selectedEndDay - selectedStartDay + 1);
-        const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + days);
+        const diffTime = Math.abs(selectedEndDate.getTime() - selectedStartDate.getTime());
+        const days = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        const expiryDate = new Date(selectedEndDate);
 
         try {
-            await addItem({
-                name: foodData.name,
-                amount: foodData.servingSize || '1 phần',
-                location: t('addToFridge.location'),
-                daysLeft: days,
-                expiryDate: expiryDate.toISOString(),
-                emoji: getEmojiForFood(foodData.name),
-            });
+            const finalAmount = foodData.servingSize || '1 phần';
+
+            if (editItemData) {
+                await updateItem(editItemData.id, {
+                    name: foodData.name,
+                    amount: finalAmount,
+                    location: t('addToFridge.location'),
+                    daysLeft: days,
+                    expiryDate: expiryDate.toISOString(),
+                    emoji: getEmojiForFood(foodData.name),
+                    calories: foodData.calories,
+                    protein: typeof foodData.protein === 'string' ? parseFloat(foodData.protein) : foodData.protein,
+                    carbs: typeof foodData.carbs === 'string' ? parseFloat(foodData.carbs) : foodData.carbs,
+                    fat: typeof foodData.fat === 'string' ? parseFloat(foodData.fat) : foodData.fat,
+                });
+            } else {
+                await addItem({
+                    name: foodData.name,
+                    amount: finalAmount,
+                    location: t('addToFridge.location'),
+                    daysLeft: days,
+                    expiryDate: expiryDate.toISOString(),
+                    emoji: getEmojiForFood(foodData.name),
+                    calories: foodData.calories,
+                    protein: typeof foodData.protein === 'string' ? parseFloat(foodData.protein) : foodData.protein,
+                    carbs: typeof foodData.carbs === 'string' ? parseFloat(foodData.carbs) : foodData.carbs,
+                    fat: typeof foodData.fat === 'string' ? parseFloat(foodData.fat) : foodData.fat,
+                });
+            }
             setSuccessModalVisible(true);
         } catch (error) {
             Alert.alert(t('common.error'), t('addToFridge.errorAdd'));
@@ -144,7 +222,7 @@ export default function AddToFridgeScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color="#111827" />
                 </TouchableOpacity>
-                <Text style={styles.title}>{t('addToFridge.title')}</Text>
+                <Text style={styles.title}>{editItemData ? (t('common.edit') || "Sửa vật phẩm") : t('addToFridge.title')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -160,14 +238,22 @@ export default function AddToFridgeScreen() {
                     <View style={styles.foodInfo}>
                         <Text style={styles.foodName}>{foodData ? foodData.name : t('addToFridge.defaultFoodName')}</Text>
                         <Text style={styles.foodCalories}>
-                            {foodData ? `${Math.round(foodData.calories)} kcal • ${t('addToFridge.portion')}` : `450 kcal • ${t('addToFridge.defaultServing')}`}
+                            {foodData ? `${Math.round(foodData.calories)} kcal • ${foodData.servingSize || t('addToFridge.portion')}` : `450 kcal • ${t('addToFridge.defaultServing')}`}
                         </Text>
                     </View>
                 </View>
 
                 <View style={styles.expiryHeader}>
                     <Text style={styles.sectionTitle}>{t('addToFridge.expiry')}</Text>
-                    <Text style={styles.expiryMonthText}>{monthNames[currentMonth]}, {currentYear}</Text>
+                    <View style={styles.monthNav}>
+                        <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.monthNavBtn}>
+                            <Ionicons name="chevron-back" size={20} color="#111827" />
+                        </TouchableOpacity>
+                        <Text style={styles.expiryMonthText}>{monthNames[currentMonth]}, {currentYear}</Text>
+                        <TouchableOpacity onPress={() => changeMonth(1)} style={styles.monthNavBtn}>
+                            <Ionicons name="chevron-forward" size={20} color="#111827" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View style={styles.durationRow}>
@@ -198,11 +284,14 @@ export default function AddToFridgeScreen() {
 
                         {Array.from({ length: daysInMonth }, (_, i) => {
                             const day = i + 1;
-                            const isDisabled = day < currentDay;
-                            const isInRange = day >= selectedStartDay && day <= selectedEndDay;
-                            const isStart = day === selectedStartDay;
-                            const isEnd = day === selectedEndDay;
+                            const cellDate = new Date(currentYear, currentMonth, day);
+                            
+                            const isDisabled = cellDate < today;
+                            const isInRange = cellDate >= selectedStartDate && cellDate <= selectedEndDate;
+                            const isStart = cellDate.getTime() === selectedStartDate.getTime();
+                            const isEnd = cellDate.getTime() === selectedEndDate.getTime();
                             const isSingle = isStart && isEnd;
+                            const isToday = cellDate.getTime() === today.getTime();
 
                             return (
                                 <TouchableOpacity
@@ -210,7 +299,7 @@ export default function AddToFridgeScreen() {
                                     style={styles.calDay}
                                     activeOpacity={0.8}
                                     disabled={isDisabled}
-                                    onPress={() => handleSelectDay(day)}
+                                    onPress={() => handleSelectDay(cellDate)}
                                 >
                                     <View
                                         style={[
@@ -232,7 +321,7 @@ export default function AddToFridgeScreen() {
                                             {day}
                                         </Text>
                                     </View>
-                                    {day === currentDay && !isInRange && <View style={styles.todayDot} />}
+                                    {isToday && !isInRange && <View style={styles.todayDot} />}
                                 </TouchableOpacity>
                             );
                         })}
@@ -259,8 +348,8 @@ export default function AddToFridgeScreen() {
 
                 <View style={styles.footer}>
                     <TouchableOpacity style={styles.addBtn} onPress={handleConfirmAdd}>
-                        <Ionicons name="cube-outline" size={20} color="#FFFFFF" />
-                        <Text style={styles.addBtnText}>{t('addToFridge.confirmAdd')}</Text>
+                        <Ionicons name={editItemData ? "save-outline" : "cube-outline"} size={20} color="#FFFFFF" />
+                        <Text style={styles.addBtnText}>{editItemData ? (t('common.save') || "Lưu thay đổi") : t('addToFridge.confirmAdd')}</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -296,9 +385,12 @@ export default function AddToFridgeScreen() {
                             style={styles.modalConfirmBtn}
                             onPress={() => {
                                 setSelectedDuration('custom');
-                                setSelectedStartDay(currentDay);
-                                setSelectedEndDay(Math.min(daysInMonth, currentDay + customDays - 1));
+                                setSelectedStartDate(today);
+                                const customEnd = new Date(today);
+                                customEnd.setDate(today.getDate() + customDays - 1);
+                                setSelectedEndDate(customEnd);
                                 setSelectionStep('start');
+                                setDisplayMonthDate(new Date(customEnd.getFullYear(), customEnd.getMonth(), 1));
                                 setCustomModalVisible(false);
                             }}
                         >
@@ -374,6 +466,8 @@ const styles = StyleSheet.create({
     },
     sectionTitle: { fontSize: 13, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.5 },
     expiryMonthText: { fontSize: 14, fontWeight: '600', color: '#2563EB' },
+    monthNav: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    monthNavBtn: { padding: 4 },
     durationRow: {
         flexDirection: 'row',
         gap: 10,
