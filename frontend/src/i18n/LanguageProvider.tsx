@@ -44,10 +44,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         setIsSwitchingLanguage(true);
 
         // Keep a short transition to let the UI show an intentional global language reload.
-        await new Promise((resolve) => setTimeout(resolve, 450));
+        await new Promise((resolve) => setTimeout(resolve, 800));
         setLanguageState(next);
         await AsyncStorage.setItem(APP_LANGUAGE_KEY, next);
-        await new Promise((resolve) => setTimeout(resolve, 450));
+        await new Promise((resolve) => setTimeout(resolve, 800));
 
         setIsSwitchingLanguage(false);
         setTargetLanguage(null);

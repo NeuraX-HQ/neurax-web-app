@@ -18,6 +18,23 @@ JWKS_CACHE_TTL = 3600  # 1 hour
 security = HTTPBearer()
 
 
+# ── M2M: JWT Token Generator for fly.dev AI Service ──────────────────────────
+def generate_ai_token() -> str:
+    """
+    Creates a short-lived HS256 JWT to authenticate M2M calls to the AI service.
+    The AI server (fly.dev) must be configured with the same SECRET_KEY.
+    Returns an empty string if AI_SERVICE_SECRET_KEY is not configured.
+    """
+    secret = settings.AI_SERVICE_SECRET_KEY
+    if not secret:
+        return ""
+    payload = {
+        "service": "backend",
+        "exp": int(time.time()) + 3600,  # expires in 1 hour
+    }
+    return jwt.encode(payload, secret, algorithm="HS256")
+# ─────────────────────────────────────────────────────────────────────────────
+
 async def _get_jwks() -> dict:
     """Fetch and cache Cognito JWKS."""
     global _jwks_cache, _jwks_fetched_at

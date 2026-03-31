@@ -20,6 +20,7 @@ class Settings:
 
     # AI Service Team
     AI_SERVICE_URL: str = os.getenv("AI_SERVICE_URL", "https://nutritrack-api.fly.dev")
+    AI_SERVICE_SECRET_KEY: str = os.getenv("AI_SERVICE_SECRET_KEY", "")
 
     # S3
     S3_UPLOADS_BUCKET: str = os.getenv("S3_UPLOADS_BUCKET", "nutritrack-uploads")
