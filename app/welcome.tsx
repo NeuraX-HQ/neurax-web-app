@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Asset } from 'expo-asset';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
+import LanguageSelector from '../src/components/LanguageSelector';
 
 const { width, height } = Dimensions.get('window');
 
@@ -90,6 +91,11 @@ export default function WelcomeScreen() {
                 cachePolicy="memory-disk"
             />
 
+            {/* Language Selector Header */}
+            <View style={[styles.header, { top: Math.max(insets.top, 16) }]}>
+                <LanguageSelector />
+            </View>
+
             {/* Gradient overlay — white fade from transparent → cream white */}
             <LinearGradient
                 colors={['transparent', 'rgba(0,0,0,0.72)', '#000000']}
@@ -159,6 +165,11 @@ const styles = StyleSheet.create({
         position: 'absolute',
         width,
         height,
+    },
+    header: {
+        position: 'absolute',
+        right: 24,
+        zIndex: 50,
     },
     gradient: {
         position: 'absolute',

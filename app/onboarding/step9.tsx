@@ -37,7 +37,6 @@ export default function Step9() {
         const load = async () => {
             const d = await getOnboardingData();
             setData(d);
-            
             for (let i = 1; i <= 4; i++) {
                 setAnalysisStep(i);
                 await new Promise(resolve => setTimeout(resolve, 1000));
@@ -56,7 +55,6 @@ export default function Step9() {
 
     const handleStart = async () => {
         await saveOnboardingData({ completed: true });
-        
         // Save the dynamically calculated metrics to global user data
         await saveUserData({
             name: data?.name || 'User',
@@ -65,7 +63,6 @@ export default function Step9() {
             dailyCalories: finalCalories,
             age: data?.age || 25,
         });
-        
         if (isAuthenticated) {
             router.replace('/(tabs)/home');
         } else {
@@ -183,7 +180,7 @@ export default function Step9() {
                             </Text>
                         </View>
                     </View>
-                    
+
                     <View style={styles.divider} />
 
                     <View style={styles.summaryRow}>
@@ -270,8 +267,8 @@ export default function Step9() {
                 <View style={styles.aiMessage}>
                     <View style={styles.aiBubble}>
                         <Text style={styles.aiText}>
-                            {data.goal === 'maintain' 
-                                ? "Cơ thể bạn đang ở trạng thái cân bằng tuyệt vời! Lộ trình này sẽ giúp bạn ăn ngon, sống khỏe mà vẫn giữ gìn vóc dáng lý tưởng." 
+                            {data.goal === 'maintain'
+                                ? "Cơ thể bạn đang ở trạng thái cân bằng tuyệt vời! Lộ trình này sẽ giúp bạn ăn ngon, sống khỏe mà vẫn giữ gìn vóc dáng lý tưởng."
                                 : t('onboarding.step9.aiMessage', {
                                     weeks: Math.ceil(Math.abs(data.targetWeight - data.currentWeight) / Math.max(0.1, data.weightChangeSpeed)),
                                 })

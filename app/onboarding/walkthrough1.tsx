@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { Image } from 'expo-image';
 
 export default function Walkthrough1Screen() {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
     const { t } = useAppLanguage();
 
     // Animations
@@ -134,9 +135,11 @@ export default function Walkthrough1Screen() {
 
                 {/* Text Content */}
                 <Animated.View style={[styles.textContainer, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
-                    <Text style={styles.title}>Ghi chép siêu tốc</Text>
+                    <Text style={styles.title}>{t('walkthrough1.title')}</Text>
                     <Text style={styles.description}>
-                        Quét món ăn, mã vạch, nhãn dán hay chỉ cần ra lệnh bằng giọng nói. <Text style={styles.descriptionBold}>NeuraX</Text> tích hợp mọi cách thức để việc theo dõi trở nên dễ dàng nhất.
+                        {t('walkthrough1.desc1')}
+                        <Text style={styles.descriptionBold}>NeuraX</Text>
+                        {t('walkthrough1.desc2')}
                     </Text>
                 </Animated.View>
             </View>
@@ -148,7 +151,7 @@ export default function Walkthrough1Screen() {
                     onPress={() => router.push('/onboarding/walkthrough2')}
                     activeOpacity={0.8}
                 >
-                    <Text style={styles.buttonText}>Tiếp tục</Text>
+                    <Text style={styles.buttonText}>{t('common.continue')}</Text>
                 </TouchableOpacity>
 
                 {/* Progress Indicators */}

@@ -7,6 +7,7 @@ from typing import Optional
 from deep_translator import GoogleTranslator
 
 from config import settings
+from auth import generate_ai_token
 
 router = APIRouter(prefix="/api/ai", tags=["AI Scanner Integration"])
 
@@ -38,10 +39,13 @@ async def analyze_food(method: Optional[str] = None, file: UploadFile = File(...
         
         # Async call to AI Server (long timeout since AI analysis takes time)
         async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(ai_url, files=files)
+            token = generate_ai_token()
+            headers = {"Authorization": f"Bearer {token}"} if token else {}
+            response = await client.post(ai_url, files=files, headers=headers)
             
         if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail="Error from AI Server")
+            print(f"[ERROR] AI Server returned {response.status_code}: {response.text}")
+            raise HTTPException(status_code=response.status_code, detail=f"AI Server error {response.status_code}: {response.text}")
             
         data = response.json()
         print(f"=== [DEBUG] FLY.DEV AI RESPONSE ===")

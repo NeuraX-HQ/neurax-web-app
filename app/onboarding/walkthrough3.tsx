@@ -6,12 +6,15 @@ import { Colors } from '../../src/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
+import { Asset } from 'expo-asset';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 export default function Walkthrough3Screen() {
     const router = useRouter();
 
     // Animations
     const fadeAnim = useRef(new Animated.Value(0)).current;
+    const { t } = useAppLanguage();
     const slideLeftAnim = useRef(new Animated.Value(50)).current;
     const floatAnim1 = useRef(new Animated.Value(0)).current;
     const floatAnim2 = useRef(new Animated.Value(0)).current;
@@ -100,10 +103,10 @@ export default function Walkthrough3Screen() {
                             <View style={styles.hudItem}>
                                 <View style={styles.hudItemLeft}>
                                     <Ionicons name="restaurant" size={14} color={Colors.primary} />
-                                    <Text style={styles.hudItemText}>Ức gà</Text>
+                                    <Text style={styles.hudItemText}>{t('walkthrough3.hudItem')}</Text>
                                 </View>
                                 <View style={[styles.tag, styles.tagGray]}>
-                                    <Text style={styles.tagTextGray}>Còn 5 ngày</Text>
+                                    <Text style={styles.tagTextGray}>{t('walkthrough3.tag')}</Text>
                                 </View>
                             </View>
                         </View>
@@ -117,7 +120,7 @@ export default function Walkthrough3Screen() {
                             contentFit="cover"
                         />
                         <View style={styles.recipeContent}>
-                            <Text style={styles.recipeTag}>GỢI Ý MÓN ĂN</Text>
+                            <Text style={styles.recipeTag}>{t('walkthrough3.recipeTag')}</Text>
                             <Text style={styles.recipeTitle}>Healthy Salad</Text>
                             <View style={styles.recipeStats}>
                                 <View style={styles.recipeStat}>
@@ -135,10 +138,10 @@ export default function Walkthrough3Screen() {
 
                 {/* Text Content */}
                 <Animated.View style={[styles.textContainer, { opacity: fadeAnim, transform: [{ translateX: slideLeftAnim }] }]}>
-                    <Text style={styles.categoryLabel}>KITCHEN INTELLIGENCE</Text>
-                    <Text style={styles.title}>Làm chủ{'\n'}<Text style={styles.titleItalic}>căn bếp</Text></Text>
+                    <Text style={styles.categoryLabel}>{t('walkthrough3.categoryLabel', { defaultValue: 'KITCHEN INTELLIGENCE' })}</Text>
+                    <Text style={styles.title}>{t('walkthrough3.title1')}<Text style={styles.titleItalic}>{t('walkthrough3.title2')}</Text></Text>
                     <Text style={styles.description}>
-                        Quản lý tủ lạnh thông minh, gợi ý món ăn từ những gì bạn sẵn có và hỗ trợ nấu ăn từng bước.
+                        {t('walkthrough3.desc')}
                     </Text>
 
                     {/* Features list */}
@@ -148,8 +151,8 @@ export default function Walkthrough3Screen() {
                                 <Ionicons name="cube" size={20} color={Colors.primary} />
                             </View>
                             <View style={styles.featureTexts}>
-                                <Text style={styles.featureTitle}>Cập nhật thời hạn</Text>
-                                <Text style={styles.featureDesc}>Tự động nhắc nhở khi thực phẩm sắp hết hạn để tránh lãng phí.</Text>
+                                <Text style={styles.featureTitle}>{t('walkthrough3.feature1.title')}</Text>
+                                <Text style={styles.featureDesc}>{t('walkthrough3.feature1.desc')}</Text>
                             </View>
                         </View>
 
@@ -158,8 +161,8 @@ export default function Walkthrough3Screen() {
                                 <Ionicons name="color-wand" size={20} color={Colors.primary} />
                             </View>
                             <View style={styles.featureTexts}>
-                                <Text style={styles.featureTitle}>Công thức linh hoạt</Text>
-                                <Text style={styles.featureDesc}>Gợi ý hàng ngàn món ngon chỉ dựa trên nguyên liệu bạn đang có.</Text>
+                                <Text style={styles.featureTitle}>{t('walkthrough3.feature2.title')}</Text>
+                                <Text style={styles.featureDesc}>{t('walkthrough3.feature2.desc')}</Text>
                             </View>
                         </View>
                     </View>
@@ -174,7 +177,7 @@ export default function Walkthrough3Screen() {
                     onPress={() => router.push('/onboarding/walkthrough4')}
                     activeOpacity={0.8}
                 >
-                    <Text style={styles.buttonText}>Tiếp tục</Text>
+                    <Text style={styles.buttonText}>{t('common.continue')}</Text>
                 </TouchableOpacity>
 
                 {/* Progress Indicators */}
