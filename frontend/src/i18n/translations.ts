@@ -1126,7 +1126,7 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'workout.completeTime': 'Time: {{time}}',
         'workout.done': 'Done',
 
-        'onboarding.continue': 'Continue  →',
+        'onboarding.continue': 'Continue',
         'onboarding.goal.lose': 'Lose Weight',
         'onboarding.goal.maintain': 'Maintain Weight',
         'onboarding.goal.gain': 'Gain Weight',
@@ -1197,7 +1197,7 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'onboarding.step9.targetSpeed': 'TARGET SPEED',
         'onboarding.step9.dailyCalories': 'CALORIES / DAY',
         'onboarding.step9.aiMessage': '"With this plan, I believe you can reach your goal in about {{weeks}} weeks. Let\'s begin!"',
-        'onboarding.step9.startNow': 'Start now  →',
+        'onboarding.step9.startNow': 'Start now',
         'onboarding.weightSpeed.valuePerWeek': '{{value}} kg/week',
 
         'profile.activity.notSet': 'Not updated',
