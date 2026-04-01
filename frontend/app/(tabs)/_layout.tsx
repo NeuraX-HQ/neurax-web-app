@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, Platform,
-    Pressable, Animated, PanResponder,
+    Pressable, Animated, PanResponder, Alert,
     type GestureResponderEvent, type PanResponderGestureState,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
@@ -454,7 +454,7 @@ export default function TabsLayout() {
                         <Animated.View style={[styles.aiBubbleRow, getItemStyle(itemAnims[3])]}>
                             <View style={styles.aiBubbleContainer}>
                                 <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
-                                <Ionicons name="chatbubble-ellipses-outline" size={22} color="#6366F1" />
+                                <Ionicons name="chatbubble-ellipses-outline" size={24} color="#6366F1" />
                             </View>
                         </Animated.View>
 
@@ -484,7 +484,7 @@ export default function TabsLayout() {
                 {!menuOpen && !isAiCoachScreen && (
                     <TouchableOpacity style={styles.aiBubbleResting} activeOpacity={0.85} onPress={() => router.push('/(tabs)/ai-coach')}>
                         <BlurView intensity={70} tint="light" style={styles.aiBubbleBlur}>
-                            <Ionicons name="chatbubble-ellipses-outline" size={20} color="#6366F1" />
+                            <Ionicons name="chatbubble-ellipses-outline" size={24} color="#6366F1" />
                         </BlurView>
                     </TouchableOpacity>
                 )}

@@ -29,6 +29,7 @@ export interface UserData {
     age?: number;
     lastWeightUpdate?: string; // ISO date string
     lastMilestoneShown?: number; // streak value when last milestone was shown
+    avatar_url?: string;
 }
 
 const defaultOnboarding: OnboardingData = {
@@ -52,8 +53,8 @@ const defaultUser: UserData = {
     goalWeight: 70,
     streak: 14,
     dailyCalories: 1800,
-    waterIntake: 800,
-    waterGoal: 2500,
+    waterIntake: 0,
+    waterGoal: 2000,
 };
 
 export const saveOnboardingData = async (data: Partial<OnboardingData>) => {

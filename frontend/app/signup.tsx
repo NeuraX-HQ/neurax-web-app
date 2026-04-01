@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { signUp } from "aws-amplify/auth";
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function SignUpScreen() {
     const router = useRouter();
+    const params = useLocalSearchParams();
     const { t } = useAppLanguage();
 
-    const [email, setEmail] = useState("");
+    const [email, setEmail] = useState(params.email as string || "");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [loading, setLoading] = useState(false);
@@ -64,26 +65,32 @@ export default function SignUpScreen() {
                 <Text style={styles.title}>{t('signup.title')}</Text>
                 <Text style={styles.subtitle}>{t('signup.subtitle')}</Text>
 
+                <Text style={styles.label}>Email</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder={t('signup.email')}
+                    placeholder="example@email.com"
+                    placeholderTextColor="#9CA3AF"
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
                     keyboardType="email-address"
                 />
 
+                <Text style={styles.label}>{t('signup.password')}</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder={t('signup.password')}
+                    placeholder="••••••••"
+                    placeholderTextColor="#9CA3AF"
                     secureTextEntry
                     value={password}
                     onChangeText={setPassword}
                 />
 
+                <Text style={styles.label}>{t('signup.confirmPassword')}</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder={t('signup.confirmPassword')}
+                    placeholder="••••••••"
+                    placeholderTextColor="#9CA3AF"
                     secureTextEntry
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -134,6 +141,12 @@ const styles = StyleSheet.create({
         color: "#666",
         marginBottom: 40
     },
+    label: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#374151',
+        marginBottom: 6,
+    },
     input: {
         borderWidth: 1,
         borderColor: "#ddd",
@@ -141,7 +154,8 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         marginBottom: 16,
         backgroundColor: "#fff",
-        fontSize: 16
+        fontSize: 16,
+        color: '#1F2937',
     },
     button: {
         backgroundColor: "#1E2B22",

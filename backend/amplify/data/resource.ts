@@ -1,7 +1,7 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
-import { askGemini } from '../ask-gemini/resource';
-import { askBedrock } from '../ask-bedrock/resource';
+import { aiEngine } from '../ai-engine/resource';
 import { processNutrition } from '../process-nutrition/resource';
+import { friendRequest } from '../friend-request/resource';
 
 
 const schema = a.schema({
@@ -90,6 +90,9 @@ const schema = a.schema({
     longest_streak: a.integer(),
     last_log_date: a.string(),
     total_points: a.integer(),
+  }),
+
+  ai_preferences: a.customType({
     coach_tone: a.string(),
   }),
 
@@ -101,39 +104,171 @@ const schema = a.schema({
       avatar_url: a.string(),
       created_at: a.string(),
       updated_at: a.string(),
+      last_active_at: a.string(),
       onboarding_status: a.boolean(),
+      friend_code: a.string(),
+      ai_context_summary: a.string(),
       biometric: a.ref('biometric'),
       goal: a.ref('goal'),
       dietary_profile: a.ref('dietary_profile'),
       gamification: a.ref('gamification'),
+      ai_preferences: a.ref('ai_preferences'),
     })
     .identifier(['user_id'])
+    .secondaryIndexes((index) => [
+      index('friend_code'),
+    ])
     .authorization((allow) => [
       allow.owner(),
     ]),
 
 
   //========================================
-  // Gemini
+  // Food Logs (Meal History)
   //========================================
-  askGemini: a
-    .query()
-    .arguments({
-      action: a.string().required(),
-      payload: a.string(),
-    })
-    .returns(a.string())
-    .handler(a.handler.function(askGemini))
-    .authorization((allow) => [allow.authenticated()]),
+  LogMacros: a.customType({
+    calories: a.float(),
+    protein_g: a.float(),
+    carbs_g: a.float(),
+    fat_g: a.float(),
+    fiber_g: a.float(),
+    sugar_g: a.float(),
+    sodium_mg: a.float(),
+  }),
 
-  askBedrock: a
+  LogIngredient: a.customType({
+    name: a.string(),
+    weight_g: a.float(),
+  }),
+
+  FoodLog: a
+    .model({
+      date: a.string().required(),
+      timestamp: a.datetime().required(),
+      food_id: a.string(),
+      food_name: a.string().required(),
+      meal_type: a.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+      portion: a.float(),
+      portion_unit: a.string(),
+      additions: a.string().array(),
+      ingredients: a.json().array(),
+      macros: a.ref('LogMacros'),
+      micronutrients: a.ref('Micronutrients'),
+      input_method: a.enum(['voice', 'photo', 'manual', 'barcode']),
+      image_key: a.string(),
+    })
+    .secondaryIndexes((index) => [
+      index('date'),
+    ])
+    .authorization((allow) => [
+      allow.owner(),
+    ]),
+
+  //========================================
+  // Fridge Inventory
+  //========================================
+  FridgeItem: a
+    .model({
+      name: a.string().required(),
+      food_id: a.string(),
+      quantity: a.float(),
+      unit: a.string(),
+      added_date: a.datetime(),
+      expiry_date: a.string(),
+      category: a.enum(['meat', 'vegetable', 'fruit', 'dairy', 'pantry', 'other']),
+      emoji: a.string(),
+    })
+    .authorization((allow) => [
+      allow.owner(),
+    ]),
+
+  //========================================
+  // Challenges
+  //========================================
+  Challenge: a
+    .model({
+      creator_id: a.string().required(),
+      challenge_type: a.enum(['calories', 'protein', 'steps', 'streak', 'custom']),
+      title: a.string().required(),
+      description: a.string(),
+      target_value: a.float(),
+      status: a.enum(['pending', 'active', 'completed', 'expired']),
+      start_date: a.string().required(),
+      end_date: a.string().required(),
+      participants: a.hasMany('ChallengeParticipant', 'challengeId'),
+    })
+    .authorization((allow) => [
+      allow.authenticated(),
+    ]),
+
+  ChallengeParticipant: a
+    .model({
+      challengeId: a.id().required(),
+      challenge: a.belongsTo('Challenge', 'challengeId'),
+      user_id: a.string().required(),
+      display_name: a.string(),
+      progress: a.float(),
+      joined_at: a.datetime(),
+    })
+    .secondaryIndexes((index) => [
+      index('user_id'),
+    ])
+    .authorization((allow) => [
+      allow.authenticated(),
+    ]),
+
+  //========================================
+  // Friendships
+  //========================================
+  Friendship: a
+    .model({
+      friend_id: a.string().required(),
+      friend_code: a.string(),
+      friend_name: a.string(),
+      friend_avatar: a.string(),
+      status: a.enum(['pending', 'accepted', 'blocked']),
+      direction: a.enum(['sent', 'received']),
+      linked_id: a.string(),
+    })
+    .secondaryIndexes((index) => [
+      index('friend_id'),
+    ])
+    .authorization((allow) => [
+      allow.owner(),
+    ]),
+
+  //========================================
+  // User Public Stats (readable by friends)
+  //========================================
+  UserPublicStats: a
+    .model({
+      user_id: a.string().required(),
+      display_name: a.string(),
+      avatar_url: a.string(),
+      current_streak: a.integer(),
+      longest_streak: a.integer(),
+      pet_score: a.integer(),
+      pet_level: a.integer(),
+      total_log_days: a.integer(),
+      last_log_date: a.string(),
+    })
+    .identifier(['user_id'])
+    .authorization((allow) => [
+      allow.owner().to(['create', 'update', 'delete', 'read']),
+      allow.authenticated().to(['read']),
+    ]),
+
+  //========================================
+  // AI Engine (Bedrock)
+  //========================================
+  aiEngine: a
     .query()
     .arguments({
       action: a.string().required(),
       payload: a.string(),
     })
     .returns(a.string())
-    .handler(a.handler.function(askBedrock))
+    .handler(a.handler.function(aiEngine))
     .authorization((allow) => [allow.authenticated()]),
 
   //========================================
@@ -144,6 +279,19 @@ const schema = a.schema({
     .arguments({ payload: a.string().required() })
     .returns(a.string())
     .handler(a.handler.function(processNutrition))
+    .authorization((allow) => [allow.authenticated()]),
+
+  //========================================
+  // Friend Request (send/accept/decline/remove/block)
+  //========================================
+  friendRequest: a
+    .mutation()
+    .arguments({
+      action: a.string().required(),
+      payload: a.string().required(),
+    })
+    .returns(a.string())
+    .handler(a.handler.function(friendRequest))
     .authorization((allow) => [allow.authenticated()]),
 });
 

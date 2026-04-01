@@ -5,7 +5,7 @@ import { Colors, Shadows } from '../../src/constants/colors';
 import { useMealStore } from '../../src/store/mealStore';
 import { useFridgeStore } from '../../src/store/fridgeStore';
 import { getUserData, UserData } from '../../src/store/userStore';
-import { generateCoachResponse } from '../../src/services/geminiService';
+import { generateCoachResponse } from '../../src/services/aiService';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 interface Message {
@@ -100,8 +100,7 @@ export default function AiCoachScreen() {
         setInput('');
         setIsLoading(true);
 
-        // Gemini requires the first message in history to be from the user.
-        // We filter out the hardcoded welcome message.
+        // Filter out the hardcoded welcome message from chat history.
         const chatHistory = messages
             .filter(msg => msg.id !== 'welcome')
             .map(msg => ({

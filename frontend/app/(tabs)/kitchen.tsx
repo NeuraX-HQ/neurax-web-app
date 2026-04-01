@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback, Animated } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback, Animated, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Swipeable, TouchableOpacity as GHTouchableOpacity } from 'react-native-gesture-handler';
 import { Colors, Shadows } from '../../src/constants/colors';
-import { mockRecipes } from '../../src/data/mockData';
+import { recipes } from '../../src/data/recipes';
 import { useFridgeStore, FridgeItem } from '../../src/store/fridgeStore';
 import { useMealStore } from '../../src/store/mealStore';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
@@ -15,54 +14,26 @@ export default function KitchenScreen() {
     const { t } = useAppLanguage();
     const [tab, setTab] = useState<'fridge' | 'recipes'>('fridge');
     const [search, setSearch] = useState('');
-    const [recipeSearch, setRecipeSearch] = useState('');
-    const [showMealModal, setShowMealModal] = useState(false);
-    const [pendingItem, setPendingItem] = useState<FridgeItem | null>(null);
-    const searchRef = useRef<TextInput>(null);
-    const { items, loadItems, removeItem, isLoading } = useFridgeStore();
-    const addMeal = useMealStore((state) => state.addMeal);
-
-    const { matchedRecipes, bestMatch } = useMemo(() => {
-        if (!items || items.length === 0) {
-            return {
-                matchedRecipes: mockRecipes.map(r => ({ ...r, matchPercent: 0 })),
-                bestMatch: { ...mockRecipes[0], matchPercent: 0 }
-            };
-        }
-
-        const fridgeNames = items.map(i => i.name.toLowerCase());
-        
-        const scoredRecipes = mockRecipes.map(recipe => {
-            let matchCount = 0;
-            const totalIngredients = recipe.ingredients.length;
-            
-            recipe.ingredients.forEach(ing => {
-                const ingName = ing.name.toLowerCase();
-                const hasMatch = fridgeNames.some(f => f.includes(ingName) || ingName.includes(f));
-                if (hasMatch) matchCount++;
-            });
-
-            const matchPercent = totalIngredients > 0 ? Math.round((matchCount / totalIngredients) * 100) : 0;
-            return { ...recipe, matchPercent };
-        });
-
-        scoredRecipes.sort((a, b) => b.matchPercent - a.matchPercent);
-
-        return {
-            matchedRecipes: scoredRecipes,
-            bestMatch: scoredRecipes[0]
-        };
-    }, [items]);
-
-    const filteredRecipes = useMemo(() => {
-        return matchedRecipes.filter(r => 
-            recipeSearch.trim() === '' || r.name.toLowerCase().includes(recipeSearch.toLowerCase())
-        );
-    }, [matchedRecipes, recipeSearch]);
+    const { items, loadItems, removeItem, isLoading, syncWithCloud, syncPendingItems } = useFridgeStore();
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
-        loadItems();
+        loadItems().then(() => {
+            syncPendingItems();
+            syncWithCloud();
+        });
     }, []);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            await loadItems();
+            await syncPendingItems();
+            await syncWithCloud();
+        } finally {
+            setRefreshing(false);
+        }
+    }, [loadItems, syncPendingItems, syncWithCloud]);
 
     const filtered = items.filter(i =>
         search.trim() === '' || i.name.toLowerCase().includes(search.toLowerCase())
@@ -77,70 +48,9 @@ export default function KitchenScreen() {
         useMealStore.setState({ isAddMenuOpen: true });
     };
 
-    const handleUseItem = (item: FridgeItem) => {
-        setPendingItem(item);
-        setShowMealModal(true);
-    };
-
-    const confirmUseItem = async (mealType: string) => {
-        if (!pendingItem) return;
-        
-        try {
-            await addMeal({
-                name: pendingItem.name,
-                type: mealType as any,
-                calories: pendingItem.calories || 150,
-                protein: pendingItem.protein || 5,
-                carbs: pendingItem.carbs || 15,
-                fat: pendingItem.fat || 5,
-                servingSize: pendingItem.amount,
-                image: pendingItem.emoji,
-            });
-            await removeItem(pendingItem.id);
-            setShowMealModal(false);
-            setPendingItem(null);
-        } catch (error) {
-            console.error('Lỗi khi dùng thực phẩm:', error);
-        }
-    };
-
 
     const openRecipeFlow = (recipeId: string) => {
         router.push({ pathname: '/recipe-ingredients', params: { recipeId } });
-    };
-
-    const getMockNutrition = (name: string) => {
-        const lower = name.toLowerCase();
-        if (lower.includes('phở')) return { calories: 450, protein: 30, carbs: 60, fat: 12 };
-        if (lower.includes('bò') || lower.includes('beef')) return { calories: 250, protein: 26, carbs: 0, fat: 15 };
-        if (lower.includes('gà') || lower.includes('chicken')) return { calories: 165, protein: 31, carbs: 0, fat: 3 };
-        if (lower.includes('com') || lower.includes('cơm')) return { calories: 350, protein: 10, carbs: 60, fat: 5 };
-        if (lower.includes('salad') || lower.includes('cải') || lower.includes('rau')) return { calories: 50, protein: 2, carbs: 10, fat: 0 };
-        if (lower.includes('trứng') || lower.includes('egg')) return { calories: 70, protein: 6, carbs: 1, fat: 5 };
-        if (lower.includes('sữa') || lower.includes('milk')) return { calories: 120, protein: 8, carbs: 12, fat: 5 };
-        if (lower.includes('chuối') || lower.includes('banana')) return { calories: 105, protein: 1, carbs: 27, fat: 0 };
-        if (lower.includes('táo') || lower.includes('apple')) return { calories: 95, protein: 0, carbs: 25, fat: 0 };
-        return { calories: 150, protein: 10, carbs: 20, fat: 5 };
-    };
-
-    const handleCardPress = (item: FridgeItem) => {
-        const macros = getMockNutrition(item.name);
-        const payload = {
-            name: item.name,
-            servingSize: item.amount,
-            calories: macros.calories,
-            protein: macros.protein,
-            carbs: macros.carbs,
-            fat: macros.fat,
-            ingredients: []
-        };
-        router.push({
-            pathname: '/food-detail',
-            params: { 
-                foodData: JSON.stringify(payload),
-                source: 'fridge'
-            },
-        });
     };
 
     const EmptyHint = ({ text }: { text: string }) => (
@@ -167,14 +77,14 @@ export default function KitchenScreen() {
 
             <View style={styles.tabs}>
                 <TouchableOpacity style={[styles.tab, tab === 'fridge' && styles.tabActive]} onPress={() => setTab('fridge')}>
-                    <Text style={[styles.tabText, tab === 'fridge' && styles.tabTextActive]}>🧊 {t('kitchen.tab.fridge')}</Text>
+                    <Text style={[styles.tabText, tab === 'fridge' && styles.tabTextActive]}>{t('kitchen.tab.fridge')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.tab, tab === 'recipes' && styles.tabActive]} onPress={() => setTab('recipes')}>
-                    <Text style={[styles.tabText, tab === 'recipes' && styles.tabTextActive]}>👨‍🍳 {t('kitchen.tab.recipes')}</Text>
+                    <Text style={[styles.tabText, tab === 'recipes' && styles.tabTextActive]}>{t('kitchen.tab.recipes')}</Text>
                 </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
                 {tab === 'fridge' ? (
                     <View style={styles.content}>
                         {/* Search */}
@@ -215,7 +125,7 @@ export default function KitchenScreen() {
                                 {useSoon.length === 0
                                     ? <EmptyHint text={t('kitchen.empty.useSoon')} />
                                     : useSoon.map((item) => (
-                                        <UseSoonCard key={item.id} item={item} onRemove={removeItem} onUse={handleUseItem} onCardPress={handleCardPress} t={t} />
+                                        <UseSoonCard key={item.id} item={item} onRemove={removeItem} t={t} />
                                     ))
                                 }
 
@@ -226,7 +136,7 @@ export default function KitchenScreen() {
                                 {thisWeek.length === 0
                                     ? <EmptyHint text={t('kitchen.empty.thisWeek')} />
                                     : thisWeek.map((item) => (
-                                        <ThisWeekCard key={item.id} item={item} onRemove={removeItem} onUse={handleUseItem} onCardPress={handleCardPress} t={t} />
+                                        <ThisWeekCard key={item.id} item={item} t={t} />
                                     ))
                                 }
 
@@ -237,9 +147,9 @@ export default function KitchenScreen() {
                                 {longTerm.length === 0
                                     ? <EmptyHint text={t('kitchen.empty.longTerm')} />
                                     : (
-                                        <View style={{ gap: 8 }}>
+                                        <View style={styles.gridRow}>
                                             {longTerm.map((item) => (
-                                                <LongTermCard key={item.id} item={item} onRemove={removeItem} onUse={handleUseItem} onCardPress={handleCardPress} t={t} />
+                                                <LongTermCard key={item.id} item={item} />
                                             ))}
                                         </View>
                                     )
@@ -249,108 +159,52 @@ export default function KitchenScreen() {
                     </View>
                 ) : (
                     <View style={styles.content}>
-                        <View style={styles.searchRow}>
-                            <Text style={styles.searchIcon}>🔍</Text>
-                            <TextInput 
-                                style={styles.search} 
-                                placeholder={t('kitchen.searchRecipe')} 
-                                placeholderTextColor={Colors.textLight} 
-                                value={recipeSearch}
-                                onChangeText={setRecipeSearch}
-                            />
-                            {recipeSearch.length > 0 && (
-                                <TouchableOpacity onPress={() => setRecipeSearch('')} style={styles.clearBtn}>
-                                    <Text style={styles.clearBtnText}>✕</Text>
-                                </TouchableOpacity>
-                            )}
-                        </View>
+                        <TextInput style={styles.search} placeholder={t('kitchen.searchRecipe')} placeholderTextColor={Colors.textLight} />
 
                         {/* Featured Recipe */}
                         <Text style={styles.sectionTitle}>{t('kitchen.basedOnFridge')}</Text>
                         <TouchableOpacity
                             style={[styles.featuredRecipe, Shadows.medium]}
                             activeOpacity={0.9}
-                            onPress={() => openRecipeFlow(bestMatch.id)}
+                            onPress={() => openRecipeFlow(recipes[0].id)}
                         >
-                            <Text style={styles.featuredEmoji}>{bestMatch.emoji || '🍲'}</Text>
+                            <Text style={styles.featuredEmoji}>{recipes[0].emoji}</Text>
                             <View style={styles.featuredOverlay}>
                                 <View style={styles.matchBadge}>
-                                    <Text style={styles.matchText}>{t('kitchen.matchPercent', { percent: bestMatch.matchPercent || bestMatch.match })}</Text>
+                                    <Text style={styles.matchText}>{t('kitchen.matchPercent', { percent: recipes[0].match })}</Text>
                                 </View>
-                                <Text style={styles.featuredName}>{bestMatch.name}</Text>
-                                <Text style={styles.featuredDesc}>{bestMatch.description}</Text>
+                                <Text style={styles.featuredName}>{recipes[0].name}</Text>
+                                <Text style={styles.featuredDesc}>{recipes[0].description}</Text>
                                 <View style={styles.featuredMeta}>
-                                    <Text style={styles.metaItem}>🔥 {bestMatch.calories} kcal</Text>
-                                    <Text style={styles.metaItem}>💪 {bestMatch.protein}</Text>
-                                    <Text style={styles.metaItem}>⏱ {bestMatch.time}</Text>
+                                    <Text style={styles.metaItem}>🔥 {recipes[0].calories} kcal</Text>
+                                    <Text style={styles.metaItem}>💪 {recipes[0].protein}</Text>
+                                    <Text style={styles.metaItem}>⏱ {recipes[0].time}</Text>
                                 </View>
                             </View>
                         </TouchableOpacity>
 
                         {/* Quick & Easy */}
                         <Text style={styles.sectionTitle}>{t('kitchen.quickEasy')}</Text>
-                        {filteredRecipes.length > 0 ? (
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recipesScroll}>
-                                {filteredRecipes.filter(r => r.id !== bestMatch.id).map((recipe) => (
-                                    <TouchableOpacity
-                                        key={recipe.id}
-                                        style={[styles.recipeCard, Shadows.small]}
-                                        activeOpacity={0.85}
-                                        onPress={() => openRecipeFlow(recipe.id)}
-                                    >
-                                        <Text style={styles.recipeEmoji}>{recipe.emoji || '🍲'}</Text>
-                                        <Text style={styles.recipeName}>{recipe.name}</Text>
-                                        <Text style={styles.recipeMeta}>🔥 {recipe.calories} kcal • ⏱ {recipe.time}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        ) : (
-                            <EmptyHint text="Không tìm thấy công thức nào." />
-                        )}
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recipesScroll}>
+                            {recipes.map((recipe) => (
+                                <TouchableOpacity
+                                    key={recipe.id}
+                                    style={[styles.recipeCard, Shadows.small]}
+                                    activeOpacity={0.85}
+                                    onPress={() => openRecipeFlow(recipe.id)}
+                                >
+                                    <Text style={styles.recipeEmoji}>{recipe.emoji}</Text>
+                                    <Text style={styles.recipeName}>{recipe.name}</Text>
+                                    <Text style={styles.recipeMeta}>🔥 {recipe.calories} kcal • ⏱ {recipe.time}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
                     </View>
                 )}
 
                 <View style={{ height: 100 }} />
             </ScrollView>
             <View style={{ height: 100 }} />
-
-            {/* Meal Type Selection Modal */}
-            <Modal transparent visible={showMealModal} animationType="fade">
-                <View style={styles.modalOverlay}>
-                    <View style={styles.mealModalContent}>
-                        <Text style={styles.mealModalTitle}>{t('kitchen.selectMeal') || "Dùng cho bữa nào?"}</Text>
-                        <Text style={styles.mealModalSub}>{pendingItem?.name}</Text>
-                        
-                        <View style={styles.mealOptions}>
-                            {[
-                                { id: 'BREAKFAST', label: t('foodDetail.mealType.breakfast'), icon: '🌅' },
-                                { id: 'LUNCH', label: t('foodDetail.mealType.lunch'), icon: '☀️' },
-                                { id: 'DINNER', label: t('foodDetail.mealType.dinner'), icon: '🌙' },
-                                { id: 'SNACK', label: t('foodDetail.mealType.snack'), icon: '🍎' },
-                            ].map((opt) => (
-                                <TouchableOpacity 
-                                    key={opt.id} 
-                                    style={styles.mealOptionBtn}
-                                    onPress={() => confirmUseItem(opt.id)}
-                                >
-                                    <Text style={styles.mealOptionIcon}>{opt.icon}</Text>
-                                    <Text style={styles.mealOptionText}>{opt.label}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-
-                        <TouchableOpacity 
-                            style={styles.cancelBtn} 
-                            onPress={() => {
-                                setShowMealModal(false);
-                                setPendingItem(null);
-                            }}
-                        >
-                            <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
         </SafeAreaView>
     );
 }
@@ -360,84 +214,51 @@ export default function KitchenScreen() {
 function UseSoonCard({
     item,
     onRemove,
-    onUse,
-    onCardPress,
     t,
 }: {
     item: FridgeItem;
     onRemove: (id: string) => Promise<void>;
-    onUse: (item: FridgeItem) => void | Promise<void>;
-    onCardPress: (item: FridgeItem) => void;
     t: (key: string, params?: Record<string, string | number>) => string;
 }) {
-    const renderRightActions = () => {
-        return (
-            <View style={{ flexDirection: 'row', height: '100%', alignItems: 'stretch' }}>
-                <GHTouchableOpacity style={styles.deleteActionBtn} onPress={() => onRemove(item.id)}>
-                    <Text style={styles.actionBtnText}>{t('kitchen.remove')}</Text>
-                </GHTouchableOpacity>
-            </View>
-        );
-    };
-
     return (
-        <Swipeable rightThreshold={10} renderRightActions={renderRightActions} containerStyle={{ marginBottom: 12 }}>
-            <TouchableOpacity activeOpacity={0.8} onPress={() => onCardPress(item)}>
-                <View style={[styles.useSoonCard, Shadows.small]}>
-                    {/* Expiry ribbon */}
-                    <View style={styles.expiryRibbon}>
-                        <Text style={styles.expiryRibbonText}>{t('kitchen.expiryInDays', { days: item.daysLeft })}</Text>
-                    </View>
+        <View style={[styles.useSoonCard, Shadows.small]}>
+            {/* Expiry ribbon */}
+            <View style={styles.expiryRibbon}>
+                <Text style={styles.expiryRibbonText}>{t('kitchen.expiryInDays', { days: item.daysLeft })}</Text>
+            </View>
 
-                    <View style={styles.useSoonRow}>
-                        {/* Emoji thumb */}
-                        <View style={styles.useSoonThumb}>
-                            <Text style={{ fontSize: 32 }}>{item.emoji}</Text>
-                        </View>
+            <View style={styles.useSoonRow}>
+                {/* Emoji thumb */}
+                <View style={styles.useSoonThumb}>
+                    <Text style={{ fontSize: 32 }}>{item.emoji}</Text>
+                </View>
 
-                        {/* Info */}
-                        <View style={styles.useSoonInfo}>
-                            <Text style={styles.fridgeName}>{item.name}</Text>
-                            <Text style={styles.fridgeDetail}>{item.amount} • {item.location}</Text>
-                            <View style={styles.actionRow}>
-                                <TouchableOpacity style={styles.btnUseNow} onPress={() => onUse(item)}>
-                                    <Text style={styles.btnUseNowText}>{t('kitchen.useNow')}</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
+                {/* Info */}
+                <View style={styles.useSoonInfo}>
+                    <Text style={styles.fridgeName}>{item.name}</Text>
+                    <Text style={styles.fridgeDetail}>{item.amount} • {item.location}</Text>
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity style={styles.btnUseNow}>
+                            <Text style={styles.btnUseNowText}>{t('kitchen.useNow')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.btnRemove} onPress={() => onRemove(item.id)}>
+                            <Text style={styles.btnRemoveText}>{t('kitchen.remove')}</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
-            </TouchableOpacity>
-        </Swipeable>
+            </View>
+        </View>
     );
 }
 
 function ThisWeekCard({
     item,
-    onRemove,
-    onUse,
-    onCardPress,
     t,
 }: {
     item: FridgeItem;
-    onRemove: (id: string) => Promise<void>;
-    onUse: (item: FridgeItem) => void | Promise<void>;
-    onCardPress: (item: FridgeItem) => void;
     t: (key: string, params?: Record<string, string | number>) => string;
 }) {
-    const renderRightActions = () => {
-        return (
-            <View style={{ flexDirection: 'row', height: '100%', alignItems: 'stretch' }}>
-                <GHTouchableOpacity style={styles.deleteActionBtn} onPress={() => onRemove(item.id)}>
-                    <Text style={styles.actionBtnText}>{t('kitchen.remove')}</Text>
-                </GHTouchableOpacity>
-            </View>
-        );
-    };
-
     return (
-        <Swipeable rightThreshold={10} renderRightActions={renderRightActions} containerStyle={{ marginBottom: 8 }}>
-        <TouchableOpacity activeOpacity={0.8} onPress={() => onCardPress(item)}>
         <View style={[styles.thisWeekCard, Shadows.small]}>
             <View style={styles.thisWeekThumb}>
                 <Text style={{ fontSize: 26 }}>{item.emoji}</Text>
@@ -445,66 +266,22 @@ function ThisWeekCard({
             <View style={styles.thisWeekInfo}>
                 <Text style={styles.fridgeName}>{item.name}</Text>
                 <Text style={styles.fridgeDetail}>{item.amount} • {t('kitchen.remainingDays', { days: item.daysLeft })}</Text>
-                <View style={styles.actionRow}>
-                    <TouchableOpacity style={styles.btnUseNowSmall} onPress={() => onUse(item)}>
-                        <Text style={styles.btnUseNowTextSmall}>{t('kitchen.useNow')}</Text>
-                    </TouchableOpacity>
-                </View>
             </View>
             <View style={[styles.expiryBadge, { backgroundColor: Colors.accentLight }]}>
                 <Text style={[styles.expiryText, { color: Colors.accent }]}>{item.daysLeft}d</Text>
             </View>
         </View>
-        </TouchableOpacity>
-        </Swipeable>
     );
 }
 
-function LongTermCard({
-    item,
-    onRemove,
-    onUse,
-    onCardPress,
-    t,
-}: {
-    item: FridgeItem;
-    onRemove: (id: string) => Promise<void>;
-    onUse: (item: FridgeItem) => void | Promise<void>;
-    onCardPress: (item: FridgeItem) => void;
-    t: (key: string, params?: Record<string, string | number>) => string;
-}) {
-    const renderRightActions = () => {
-        return (
-            <View style={{ flexDirection: 'row', height: '100%', alignItems: 'stretch' }}>
-                <GHTouchableOpacity style={styles.deleteActionBtn} onPress={() => onRemove(item.id)}>
-                    <Text style={styles.actionBtnText}>{t('kitchen.remove')}</Text>
-                </GHTouchableOpacity>
-            </View>
-        );
-    };
-
+function LongTermCard({ item }: { item: FridgeItem }) {
     return (
-        <Swipeable rightThreshold={10} renderRightActions={renderRightActions} containerStyle={{ marginBottom: 8 }}>
-            <TouchableOpacity activeOpacity={0.8} onPress={() => onCardPress(item)}>
-            <View style={[styles.thisWeekCard, Shadows.small]}>
-                <View style={styles.thisWeekThumb}>
-                    <Text style={{ fontSize: 26 }}>{item.emoji}</Text>
-                </View>
-                <View style={styles.thisWeekInfo}>
-                    <Text style={styles.fridgeName}>{item.name}</Text>
-                    <Text style={styles.fridgeDetail}>{item.amount} • {t('kitchen.remainingDays', { days: item.daysLeft })}</Text>
-                    <View style={styles.actionRow}>
-                        <TouchableOpacity style={styles.btnUseNowSmall} onPress={() => onUse(item)}>
-                            <Text style={styles.btnUseNowTextSmall}>{t('kitchen.useNow')}</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-                <View style={[styles.expiryBadge, { backgroundColor: Colors.accentLight }]}>
-                    <Text style={[styles.expiryText, { color: Colors.accent }]}>{item.daysLeft}d</Text>
-                </View>
+        <View style={styles.longTermCard}>
+            <View style={styles.longTermThumb}>
+                <Text style={{ fontSize: 28 }}>{item.emoji}</Text>
             </View>
-            </TouchableOpacity>
-        </Swipeable>
+            <Text style={styles.longTermName} numberOfLines={1}>{item.name}</Text>
+        </View>
     );
 }
 const styles = StyleSheet.create({
@@ -527,7 +304,7 @@ const styles = StyleSheet.create({
         width: 42,
         height: 42,
         borderRadius: 21,
-        backgroundColor: Colors.accent,
+        backgroundColor: Colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -613,12 +390,6 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
     tabActive: { backgroundColor: '#FFFFFF' },
     tabText: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
     tabTextActive: { color: Colors.primary, fontWeight: '700' },
@@ -654,7 +425,7 @@ const styles = StyleSheet.create({
     emptyFridgeDesc: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
     emptyAddBtn: {
         marginTop: 10,
-        backgroundColor: Colors.accent,
+        backgroundColor: Colors.primary,
         borderRadius: 14,
         paddingHorizontal: 24,
         paddingVertical: 12,
@@ -665,6 +436,7 @@ const styles = StyleSheet.create({
     useSoonCard: {
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
+        marginBottom: 12,
         borderWidth: 1.5,
         borderColor: '#FEE2E2',
         overflow: 'hidden',
@@ -710,6 +482,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         borderRadius: 14,
         padding: 12,
+        marginBottom: 8,
         gap: 12,
     },
     thisWeekThumb: {
@@ -741,31 +514,6 @@ const styles = StyleSheet.create({
         marginBottom: 6,
     },
     longTermName: { fontSize: 12, fontWeight: '600', color: Colors.text, textAlign: 'center' },
-
-    /* ── Swipe Actions ── */
-    editActionBtn: {
-        backgroundColor: Colors.orange,
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: 70,
-        borderRadius: 14,
-        marginLeft: 8,
-        height: '100%',
-    },
-    deleteActionBtn: {
-        backgroundColor: Colors.danger,
-        justifyContent: 'center',
-        alignItems: 'center',
-        width: 70,
-        borderRadius: 14,
-        marginLeft: 8,
-        height: '100%',
-    },
-    actionBtnText: {
-        color: '#FFFFFF',
-        fontSize: 13,
-        fontWeight: '700',
-    },
 
     /* ── Recipes tab ── */
     featuredRecipe: {
@@ -803,39 +551,4 @@ const styles = StyleSheet.create({
     recipeEmoji: { fontSize: 48, marginBottom: 10 },
     recipeName: { fontSize: 14, fontWeight: '600', color: Colors.text, textAlign: 'center', marginBottom: 6 },
     recipeMeta: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center' },
-
-    /* ── Meal Modal ── */
-    mealModalContent: {
-        width: '90%',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
-        padding: 24,
-        alignItems: 'center',
-        ...Shadows.medium,
-    },
-    mealModalTitle: { fontSize: 20, fontWeight: '800', color: Colors.primary, marginBottom: 4 },
-    mealModalSub: { fontSize: 15, color: Colors.textSecondary, marginBottom: 24 },
-    mealOptions: { width: '100%', gap: 12 },
-    mealOptionBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F9FAFB',
-        borderRadius: 16,
-        padding: 16,
-        gap: 16,
-        borderWidth: 1,
-        borderColor: '#F3F4F6',
-    },
-    mealOptionIcon: { fontSize: 24 },
-    mealOptionText: { fontSize: 16, fontWeight: '700', color: Colors.primary },
-    cancelBtn: { marginTop: 20, padding: 10 },
-    cancelBtnText: { fontSize: 15, color: Colors.textLight, fontWeight: '600' },
-
-    btnUseNowSmall: {
-        backgroundColor: Colors.accent,
-        borderRadius: 6,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-    },
-    btnUseNowTextSmall: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
 });

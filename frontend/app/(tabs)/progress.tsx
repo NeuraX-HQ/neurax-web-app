@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
     ScrollView,
     StyleSheet,
@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     View,
     Dimensions,
+    ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
@@ -14,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { useMealStore } from '../../src/store/mealStore';
 import { Colors, Shadows } from '../../src/constants/colors';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
+import { getWeeklyInsight } from '../../src/services/aiService';
 import {
     getCurrentStreak,
     getFlameLevel,
@@ -263,6 +265,44 @@ export default function ProgressScreen() {
         monthlyPoints.filter((v) => v > 0).reduce((a, b) => a + b, 0) / (monthlyPoints.filter((v) => v > 0).length || 1)
     );
 
+    // ── Weekly AI Insight ─────────────────────────────────────────────
+    const [insightText, setInsightText] = useState<string | null>(null);
+    const [insightLoading, setInsightLoading] = useState(false);
+    const [insightError, setInsightError] = useState(false);
+
+    const fetchWeeklyInsight = useCallback(async () => {
+        if (insightLoading || insightText) return;
+        if (daysLogged < 3) return; // need at least 3 days of data
+        setInsightLoading(true);
+        setInsightError(false);
+        try {
+            const weeklySummary = {
+                avg_calories: dailyAvg,
+                total_calories: thisWeekTotal,
+                protein_avg_g: weekProtein,
+                carbs_avg_g: weekCarbs,
+                fat_avg_g: weekFat,
+                days_logged: daysLogged,
+                consistency_pct: consistency,
+            };
+            const patterns = mealBreakdown
+                .filter(m => m.pct > 0)
+                .map(m => `${m.label}: ${m.pct}% (${m.count} bữa)`)
+                .join(', ');
+            const res = await getWeeklyInsight({}, weeklySummary, patterns);
+            if (res.success && res.data) {
+                const text = typeof res.data === 'string' ? res.data : (res.data.summary || res.data.insight || JSON.stringify(res.data));
+                setInsightText(text);
+            } else {
+                setInsightError(true);
+            }
+        } catch {
+            setInsightError(true);
+        } finally {
+            setInsightLoading(false);
+        }
+    }, [insightLoading, insightText, daysLogged, dailyAvg, thisWeekTotal, weekProtein, weekCarbs, weekFat, consistency, mealBreakdown]);
+
     const trendPath = useMemo(() => {
         const filled = monthlyPoints.map((v) => v || 100);
         const maxV = Math.max(...filled, 1);
@@ -309,6 +349,31 @@ export default function ProgressScreen() {
                     </View>
                     <StreakFlameCard streak={streak} flameLevel={flameLevel} compact />
                 </View>
+
+                {/* ── AI Weekly Insight ────────────────────────────── */}
+                {daysLogged >= 3 && (
+                    <View style={[styles.card, Shadows.small, { borderLeftWidth: 3, borderLeftColor: Colors.accent }]}>
+                        <View style={styles.cardHeaderRow}>
+                            <Text style={styles.cardTitle}>🤖 Nhận Xét Từ AI</Text>
+                        </View>
+                        {insightText ? (
+                            <Text style={{ fontSize: 14, color: Colors.text, lineHeight: 22, marginTop: 8 }}>{insightText}</Text>
+                        ) : insightLoading ? (
+                            <ActivityIndicator size="small" color={Colors.accent} style={{ marginTop: 12 }} />
+                        ) : insightError ? (
+                            <TouchableOpacity onPress={fetchWeeklyInsight} style={{ marginTop: 8 }}>
+                                <Text style={{ fontSize: 14, color: Colors.red }}>Lỗi tải. Nhấn thử lại.</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                onPress={fetchWeeklyInsight}
+                                style={{ backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: 10, marginTop: 10, alignItems: 'center' }}
+                            >
+                                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>Xem nhận xét tuần này</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                )}
 
                 {/* ── 2. Weekly Calories Bar Chart ──────────────────── */}
                 <View style={[styles.card, Shadows.small]}>

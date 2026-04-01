@@ -1,7 +1,14 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as mealService from '../services/mealService';
+import * as friendService from '../services/friendService';
 
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
+
+// Map frontend MealType to backend enum
+const mealTypeToBackend = (type: MealType): 'breakfast' | 'lunch' | 'dinner' | 'snack' => {
+    return type.toLowerCase() as 'breakfast' | 'lunch' | 'dinner' | 'snack';
+};
 
 export interface Meal {
     id: string;
@@ -14,10 +21,12 @@ export interface Meal {
     carbs: number;
     fat: number;
     servingSize: string;
-    ingredients?: any[]; // Keep any[] or IngredientItem[] depending on usage, let's use any for Meal
+    ingredients?: any[];
     time: string;
     date: string; // YYYY-MM-DD format
     image?: string; // emoji or base64
+    syncStatus?: 'synced' | 'pending' | 'error'; // DynamoDB sync status
+    remoteId?: string; // DynamoDB record id (different from local id)
 }
 
 export interface Activity {
@@ -64,6 +73,8 @@ interface MealState {
         totalBurnedCalories: number;
     };
     loadMeals: () => Promise<void>;
+    syncWithCloud: () => Promise<void>;
+    syncPendingMeals: () => Promise<void>;
     clearAllMeals: () => Promise<void>;
 }
 
@@ -118,14 +129,60 @@ export const useMealStore = create<MealState>((set, get) => ({
                 ...mealData,
                 id: generateId(),
                 time: getCurrentTime(),
-                date: get().selectedDateStr, // Use the globally selected date
+                date: get().selectedDateStr,
+                syncStatus: 'pending',
             };
 
+            // Optimistic update: instant UI
             const updatedMeals = [...get().meals, newMeal];
             set({ meals: updatedMeals });
-
-            // Persist to storage
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedMeals));
+
+            // Sync to DynamoDB — awaited so remoteId is set before navigation
+            try {
+                const remote = await mealService.createFoodLog({
+                    date: newMeal.date,
+                    food_name: newMeal.name,
+                    meal_type: mealTypeToBackend(newMeal.type),
+                    macros: {
+                        calories: newMeal.calories,
+                        protein_g: newMeal.protein,
+                        carbs_g: newMeal.carbs,
+                        fat_g: newMeal.fat,
+                    },
+                    ingredients: newMeal.ingredients,
+                });
+                const status = remote ? 'synced' as const : 'error' as const;
+                const meals = get().meals.map(m =>
+                    m.id === newMeal.id ? { ...m, syncStatus: status, remoteId: remote?.id } : m
+                );
+                set({ meals });
+                await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(meals));
+            } catch {
+                // Leave as pending — will retry via syncPendingMeals
+            }
+
+            // Update PublicStats for leaderboard (fire-and-forget)
+            try {
+                const { useAuthStore } = require('./authStore');
+                const authState = useAuthStore.getState();
+                if (authState.userId) {
+                    const allMeals = get().meals;
+                    const totalDays = new Set(allMeals.map(m => m.date)).size;
+                    const petLevel = totalDays <= 0 ? 1 : Math.min(5, Math.floor((totalDays - 1) / 36) + 1);
+                    friendService.updateMyPublicStats({
+                        user_id: authState.userId,
+                        display_name: authState.email?.split('@')[0] || 'User',
+                        current_streak: totalDays,
+                        pet_score: totalDays * 20,
+                        pet_level: petLevel,
+                        total_log_days: totalDays,
+                        last_log_date: newMeal.date,
+                    }).catch(() => {});
+                }
+            } catch {
+                // Non-critical — don't block meal logging
+            }
 
             set({ isLoading: false });
         } catch (error) {
@@ -170,12 +227,16 @@ export const useMealStore = create<MealState>((set, get) => ({
         try {
             set({ isLoading: true, error: null });
 
-            const updatedMeals = get().meals.filter(meal => meal.id !== id);
+            const meal = get().meals.find(m => m.id === id);
+            const updatedMeals = get().meals.filter(m => m.id !== id);
             set({ meals: updatedMeals });
-
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedMeals));
-
             set({ isLoading: false });
+
+            // Background: delete from DynamoDB if synced
+            if (meal?.remoteId) {
+                mealService.deleteFoodLog(meal.remoteId);
+            }
         } catch (error) {
             console.error('Error removing meal:', error);
             set({
@@ -193,10 +254,23 @@ export const useMealStore = create<MealState>((set, get) => ({
                 meal.id === id ? { ...meal, ...updates } : meal
             );
             set({ meals: updatedMeals });
-
             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedMeals));
-
             set({ isLoading: false });
+
+            // Background: update in DynamoDB if synced
+            const meal = updatedMeals.find(m => m.id === id);
+            if (meal?.remoteId) {
+                mealService.updateFoodLog(meal.remoteId, {
+                    food_name: meal.name,
+                    meal_type: mealTypeToBackend(meal.type),
+                    macros: {
+                        calories: meal.calories,
+                        protein_g: meal.protein,
+                        carbs_g: meal.carbs,
+                        fat_g: meal.fat,
+                    },
+                });
+            }
         } catch (error) {
             console.error('Error updating meal:', error);
             set({
@@ -277,6 +351,66 @@ export const useMealStore = create<MealState>((set, get) => ({
         }
     },
 
+
+    syncWithCloud: async () => {
+        try {
+            const today = getTodayDate();
+            const remoteLogs = await mealService.fetchFoodLogsByDate(today);
+            if (remoteLogs.length === 0) return;
+
+            const existingIds = new Set(get().meals.map(m => m.remoteId).filter(Boolean));
+            const newMeals: Meal[] = remoteLogs
+                .filter(log => !existingIds.has(log.id))
+                .map(log => ({
+                    id: generateId(),
+                    remoteId: log.id,
+                    name: log.food_name,
+                    type: (log.meal_type?.toUpperCase() || 'SNACK') as MealType,
+                    calories: (log.macros as any)?.calories ?? 0,
+                    protein: (log.macros as any)?.protein_g ?? 0,
+                    carbs: (log.macros as any)?.carbs_g ?? 0,
+                    fat: (log.macros as any)?.fat_g ?? 0,
+                    servingSize: log.portion_unit || '1 phần',
+                    ingredients: log.ingredients as any[] | undefined,
+                    time: log.timestamp ? new Date(log.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
+                    date: log.date,
+                    syncStatus: 'synced' as const,
+                }));
+
+            if (newMeals.length > 0) {
+                const merged = [...get().meals, ...newMeals];
+                set({ meals: merged });
+                await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+            }
+        } catch (error) {
+            console.error('Error syncing with cloud:', error);
+        }
+    },
+
+    syncPendingMeals: async () => {
+        const pending = get().meals.filter(m => m.syncStatus === 'pending' || m.syncStatus === 'error');
+        for (const meal of pending) {
+            const remote = await mealService.createFoodLog({
+                date: meal.date,
+                food_name: meal.name,
+                meal_type: mealTypeToBackend(meal.type),
+                macros: {
+                    calories: meal.calories,
+                    protein_g: meal.protein,
+                    carbs_g: meal.carbs,
+                    fat_g: meal.fat,
+                },
+                ingredients: meal.ingredients,
+            });
+            if (remote) {
+                const meals = get().meals.map(m =>
+                    m.id === meal.id ? { ...m, syncStatus: 'synced' as const, remoteId: remote.id } : m
+                );
+                set({ meals });
+            }
+        }
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(get().meals));
+    },
 
     clearAllMeals: async () => {
         try {

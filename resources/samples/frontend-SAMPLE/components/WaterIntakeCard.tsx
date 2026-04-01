@@ -12,7 +12,7 @@ interface WaterIntakeCardProps {
 
 const WaterIntakeCard = memo(function WaterIntakeCard({
     current = 1800,
-    goal = 2500,
+    goal = 2000,
     glassSize = 250,
     onLogGlass,
 }: WaterIntakeCardProps) {

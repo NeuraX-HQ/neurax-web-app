@@ -46,7 +46,7 @@ export async function startRecording(): Promise<boolean> {
             playThroughEarpieceAndroid: false,
         });
 
-        // Use M4A/AAC recording for Gemini compatibility
+        // Use M4A/AAC recording for AWS Transcribe compatibility
         const recordingOptions: Audio.RecordingOptions = {
             isMeteringEnabled: true,
             android: {

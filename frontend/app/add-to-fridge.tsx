@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors, Shadows } from '../src/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
-import { NutritionInfo } from '../src/services/geminiService';
+import { NutritionInfo } from '../src/services/aiService';
 import { useFridgeStore } from '../src/store/fridgeStore';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 

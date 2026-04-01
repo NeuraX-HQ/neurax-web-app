@@ -1,0 +1,26 @@
+version: 1
+backend:
+  phases:
+    build:
+      commands:
+        - cd backend && npm install --legacy-peer-deps --include=dev && cd amplify/ai-engine && npm install && cd ../../.. && cd amplify/process-nutrition && npm install && cd ../../.. && cd amplify/friend-request && npm install && cd ../../.. && npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --outputs-out-dir ../frontend
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd frontend && npm install --legacy-peer-deps
+    build:
+      commands:
+        - cd frontend && npm run build
+  artifacts:
+    baseDirectory: frontend/dist
+    files:
+      - "**/*"
+  cache:
+    paths:
+      - frontend/node_modules/**/*
+      - frontend/.expo/**/*
+  customRules:
+    - source: </^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>
+      target: /index.html
+      status: '200'

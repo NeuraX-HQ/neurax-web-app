@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
-import { signIn, fetchAuthSession, signInWithRedirect } from "aws-amplify/auth";
+import { signIn, fetchAuthSession, signInWithRedirect, resendSignUpCode } from "aws-amplify/auth";
 import { useAuthStore } from '../src/store/authStore';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
@@ -38,9 +37,12 @@ export default function LoginScreen() {
     const [loading, setLoading] = useState(false);
 
     const handleEmailLogin = async () => {
+        if (!email.trim() || !password) {
+            Alert.alert(t('common.error'), t('login.errorFill'));
+            return;
+        }
 
         try {
-
             setLoading(true);
 
             const isMockCredential =
@@ -54,14 +56,25 @@ export default function LoginScreen() {
             }
 
             const result = await signIn({
-                username: email,
+                username: email.trim(),
                 password: password
             });
 
+            if (result.nextStep?.signInStep === 'CONFIRM_SIGN_UP') {
+                // Account exists but email not verified — resend OTP and redirect
+                try {
+                    await resendSignUpCode({ username: email.trim() });
+                } catch (_) {}
+                Alert.alert(
+                    t('login.unconfirmedTitle'),
+                    t('login.unconfirmedMessage'),
+                    [{ text: 'OK', onPress: () => router.push({ pathname: '/verify-otp', params: { email: email.trim() } }) }]
+                );
+                return;
+            }
+
             if (result.isSignedIn) {
-
                 const session = await fetchAuthSession();
-
                 const userId = session.tokens?.idToken?.payload?.sub;
                 const token = session.tokens?.accessToken?.toString();
 
@@ -70,20 +83,45 @@ export default function LoginScreen() {
                 }
 
                 await login(email, userId, token);
-                
-                // Kiểm tra trạng thái onboarding từ store (vừa sync xong trong login action)
-                // Hoặc fetch trực tiếp từ userService nếu cần chắc chắn
+
                 const { fetchUserProfile } = require('../src/services/userService');
                 const userProfile = await fetchUserProfile(userId);
-                
+
                 if (userProfile && userProfile.onboarding_status) {
                     router.replace("/(tabs)/home");
                 } else {
                     router.replace("/onboarding/step1");
                 }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.log("Login error:", error);
+            const errorName = error?.name || error?.code || '';
+
+            if (errorName === 'UserNotFoundException') {
+                // Account does not exist — redirect to signup
+                Alert.alert(
+                    t('login.notFoundTitle'),
+                    t('login.notFoundMessage'),
+                    [
+                        { text: t('login.signUpNow'), onPress: () => router.push({ pathname: '/signup', params: { email: email.trim() } }) },
+                        { text: t('common.cancel'), style: 'cancel' }
+                    ]
+                );
+            } else if (errorName === 'NotAuthorizedException') {
+                Alert.alert(t('common.error'), t('login.wrongPassword'));
+            } else if (errorName === 'UserNotConfirmedException') {
+                // Email not confirmed — resend OTP and redirect
+                try {
+                    await resendSignUpCode({ username: email.trim() });
+                } catch (_) {}
+                Alert.alert(
+                    t('login.unconfirmedTitle'),
+                    t('login.unconfirmedMessage'),
+                    [{ text: 'OK', onPress: () => router.push({ pathname: '/verify-otp', params: { email: email.trim() } }) }]
+                );
+            } else {
+                Alert.alert(t('common.error'), error?.message || t('login.errorFallback'));
+            }
         } finally {
             setLoading(false);
         }
@@ -92,9 +130,33 @@ export default function LoginScreen() {
     const handleGoogleLogin = async () => {
         try {
             setLoading(true);
+
+            // Patch Amplify's internal browser module to inject prompt=login
+            // into the Cognito authorize URL → forces Google account picker on mobile
+            try {
+                const rtnWebBrowser = require('@aws-amplify/rtn-web-browser');
+                if (rtnWebBrowser?.module?.openAuthSessionAsync) {
+                    const originalOpen = rtnWebBrowser.module.openAuthSessionAsync;
+                    rtnWebBrowser.module.openAuthSessionAsync = async (
+                        url: string,
+                        redirectUrls: string[],
+                        prefersEphemeral?: boolean,
+                    ) => {
+                        const modifiedUrl =
+                            url.includes('/oauth2/authorize') && !url.includes('prompt=')
+                                ? url + '&prompt=login'
+                                : url;
+                        return originalOpen(modifiedUrl, redirectUrls, prefersEphemeral);
+                    };
+                }
+            } catch (_) {
+                // Fallback: proceed without patch
+            }
+
             await signInWithRedirect({ provider: 'Google' });
-        } catch (error) {
+        } catch (error: any) {
             console.log("Google login error:", error);
+            Alert.alert(t('common.error'), t('login.googleError'));
             setLoading(false);
         }
     };
@@ -105,17 +167,22 @@ export default function LoginScreen() {
 
                 <Text style={styles.title}>{t('login.title')}</Text>
 
+                <Text style={styles.label}>Email</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder={t('login.email')}
+                    placeholder="example@email.com"
+                    placeholderTextColor="#9CA3AF"
                     value={email}
                     onChangeText={setEmail}
                     autoCapitalize="none"
+                    keyboardType="email-address"
                 />
 
+                <Text style={styles.label}>{t('login.password')}</Text>
                 <TextInput
                     style={styles.input}
-                    placeholder={t('login.password')}
+                    placeholder="••••••••"
+                    placeholderTextColor="#9CA3AF"
                     secureTextEntry
                     value={password}
                     onChangeText={setPassword}
@@ -173,7 +240,8 @@ const styles = StyleSheet.create({
 
     safeArea: {
         flex: 1,
-        padding: 24
+        padding: 24,
+        justifyContent: 'center'
     },
 
     title: {
@@ -182,12 +250,21 @@ const styles = StyleSheet.create({
         marginBottom: 40
     },
 
+    label: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#374151',
+        marginBottom: 6,
+    },
+
     input: {
         borderWidth: 1,
         borderColor: "#ddd",
         padding: 14,
         borderRadius: 10,
-        marginBottom: 16
+        marginBottom: 16,
+        fontSize: 16,
+        color: '#1F2937',
     },
 
     button: {

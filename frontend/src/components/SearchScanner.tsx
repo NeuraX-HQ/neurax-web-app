@@ -8,9 +8,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, Shadows } from '../constants/colors';
-import { searchFoodNutrition, NutritionInfo } from '../services/geminiService';
+import { searchFoodNutrition, NutritionInfo } from '../services/aiService';
 import { useAppLanguage } from '../i18n/LanguageProvider';
-import { mockRecipes } from '../data/mockData';
+import { recipes } from '../data/recipes';
 
 interface SearchScannerProps {
     visible: boolean;
@@ -328,7 +328,7 @@ const parseProteinInGrams = (proteinLabel: string): number => {
     return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const mapRecipeToFoodTemplateItem = (recipe: typeof mockRecipes[number]): FoodTemplateItem => {
+const mapRecipeToFoodTemplateItem = (recipe: typeof recipes[number]): FoodTemplateItem => {
     const protein = parseProteinInGrams(recipe.protein);
     const fat = Math.max(Math.round((recipe.calories * 0.25) / 9), 1);
     const carbs = Math.max(Math.round((recipe.calories - protein * 4 - fat * 9) / 4), 0);
@@ -344,7 +344,7 @@ const mapRecipeToFoodTemplateItem = (recipe: typeof mockRecipes[number]): FoodTe
     };
 };
 
-const ALL_FOODS: FoodTemplateItem[] = mockRecipes.slice(0, 20).map(mapRecipeToFoodTemplateItem);
+const ALL_FOODS: FoodTemplateItem[] = recipes.slice(0, 20).map(mapRecipeToFoodTemplateItem);
 const POPULAR_FOODS: FoodTemplateItem[] = ALL_FOODS.slice(0, 10);
 const MY_FOODS: FoodTemplateItem[] = ALL_FOODS.slice(10);
 

@@ -21,7 +21,6 @@ export enum StorageType {
 }
 
 export interface StorageConfig {
-  encrypt?: boolean;
   type: StorageType;
 }
 
@@ -69,55 +68,6 @@ export const STORAGE_KEYS = {
 } as const;
 
 // ============================================================================
-// Encryption Utilities
-// ============================================================================
-
-/**
- * Simple encryption for sensitive data
- * Note: This is a basic implementation. In production, consider using a more robust
- * encryption library like react-native-crypto or expo-crypto
- */
-class SimpleEncryption {
-  private static readonly ENCRYPTION_KEY = 'nutritrack_secure_key_v1';
-  
-  /**
-   * Encrypt a string value
-   */
-  static encrypt(value: string): string {
-    try {
-      // Base64 encode with a simple XOR cipher
-      // In production, use a proper encryption library
-      const encrypted = value.split('').map((char, i) => {
-        const keyChar = this.ENCRYPTION_KEY.charCodeAt(i % this.ENCRYPTION_KEY.length);
-        return String.fromCharCode(char.charCodeAt(0) ^ keyChar);
-      }).join('');
-      
-      return Buffer.from(encrypted, 'binary').toString('base64');
-    } catch (error) {
-      throw new Error(`Encryption failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-  
-  /**
-   * Decrypt a string value
-   */
-  static decrypt(encryptedValue: string): string {
-    try {
-      const decoded = Buffer.from(encryptedValue, 'base64').toString('binary');
-      
-      const decrypted = decoded.split('').map((char, i) => {
-        const keyChar = this.ENCRYPTION_KEY.charCodeAt(i % this.ENCRYPTION_KEY.length);
-        return String.fromCharCode(char.charCodeAt(0) ^ keyChar);
-      }).join('');
-      
-      return decrypted;
-    } catch (error) {
-      throw new Error(`Decryption failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-}
-
-// ============================================================================
 // StorageManager Implementation
 // ============================================================================
 
@@ -136,18 +86,6 @@ class StorageManagerImpl implements StorageManager {
     return key.startsWith('secure_') ? StorageType.SECURE : StorageType.STANDARD;
   }
   
-  /**
-   * Check if encryption should be applied
-   */
-  private shouldEncrypt(key: string, config?: StorageConfig): boolean {
-    if (config?.encrypt !== undefined) {
-      return config.encrypt;
-    }
-    
-    // Auto-encrypt sensitive data
-    return key.startsWith('secure_');
-  }
-  
   // ==========================================================================
   // Core Operations
   // ==========================================================================
@@ -158,23 +96,14 @@ class StorageManagerImpl implements StorageManager {
    */
   async setItem(key: string, value: string, config?: StorageConfig): Promise<void> {
     const storageType = this.getStorageType(key, config);
-    const shouldEncrypt = this.shouldEncrypt(key, config);
-    
+
     try {
-      let valueToStore = value;
-      
-      // Encrypt if needed
-      if (shouldEncrypt) {
-        valueToStore = SimpleEncryption.encrypt(value);
-      }
-      
       // Route to appropriate storage
+      // SecureStore already uses hardware-backed encryption (Android Keystore / iOS Secure Enclave)
       if (storageType === StorageType.SECURE) {
-        // SecureStore for sensitive data
-        await SecureStore.setItemAsync(key, valueToStore);
+        await SecureStore.setItemAsync(key, value);
       } else {
-        // AsyncStorage for non-sensitive data
-        await AsyncStorage.setItem(key, valueToStore);
+        await AsyncStorage.setItem(key, value);
       }
     } catch (error) {
       throw new Error(
@@ -189,28 +118,13 @@ class StorageManagerImpl implements StorageManager {
    */
   async getItem(key: string, config?: StorageConfig): Promise<string | null> {
     const storageType = this.getStorageType(key, config);
-    const shouldEncrypt = this.shouldEncrypt(key, config);
-    
+
     try {
-      let value: string | null = null;
-      
-      // Retrieve from appropriate storage
       if (storageType === StorageType.SECURE) {
-        value = await SecureStore.getItemAsync(key);
+        return await SecureStore.getItemAsync(key);
       } else {
-        value = await AsyncStorage.getItem(key);
+        return await AsyncStorage.getItem(key);
       }
-      
-      if (value === null) {
-        return null;
-      }
-      
-      // Decrypt if needed
-      if (shouldEncrypt) {
-        return SimpleEncryption.decrypt(value);
-      }
-      
-      return value;
     } catch (error) {
       throw new Error(
         `Failed to retrieve item '${key}': ${error instanceof Error ? error.message : 'Unknown error'}`

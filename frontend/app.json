@@ -18,7 +18,8 @@
       "bundleIdentifier": "com.nutritrack.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "NutriTrack needs access to your microphone to record voice input for food logging.",
-        "NSCameraUsageDescription": "NutriTrack needs access to your camera to scan food for nutrition analysis."
+        "NSCameraUsageDescription": "NutriTrack needs access to your camera to scan food for nutrition analysis.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

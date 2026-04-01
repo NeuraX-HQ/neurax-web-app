@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
-import { parseVoiceToFood, transcribeAudio, VoiceAnalysisData } from '../services/geminiService';
+import { voiceToFood, NutritionInfo } from '../services/aiService';
 import { startRecording, stopRecording, cancelRecording } from '../services/audioService';
 import { useRouter } from 'expo-router';
 import { useAppLanguage } from '../i18n/LanguageProvider';
@@ -15,9 +15,10 @@ const { width } = Dimensions.get('window');
 interface VoiceModalProps {
     visible: boolean;
     onClose: () => void;
+    onFoodDetected?: (foodData: NutritionInfo) => void;
 }
 
-export function VoiceModal({ visible, onClose }: VoiceModalProps) {
+export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps) {
     const router = useRouter();
     const { t } = useAppLanguage();
     const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -29,23 +30,21 @@ export function VoiceModal({ visible, onClose }: VoiceModalProps) {
     const [listening, setListening] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [analyzing, setAnalyzing] = useState(false);
-    const [transcribing, setTranscribing] = useState(false);
-    const [voiceResult, setVoiceResult] = useState<VoiceAnalysisData | null>(null);
+    const [foodData, setFoodData] = useState<NutritionInfo | null>(null);
 
     useEffect(() => {
         if (visible) {
             setListening(false);
             setTranscript('');
-            setVoiceResult(null);
+            setFoodData(null);
             setAnalyzing(false);
-            setTranscribing(false);
         }
     }, [visible]);
 
     const startListening = async () => {
         setListening(true);
         setTranscript('');
-        setVoiceResult(null);
+        setFoodData(null);
 
         // Start audio recording
         console.log('VoiceModal: Starting audio recording...');
@@ -84,47 +83,27 @@ export function VoiceModal({ visible, onClose }: VoiceModalProps) {
         pulseAnim.stopAnimation();
         waveAnims.forEach(a => a.stopAnimation());
 
-        // Stop recording and get audio
-        setTranscribing(true);
+        // Stop recording and get audio URI
+        setAnalyzing(true);
         console.log('VoiceModal: Stopping recording...');
         const result = await stopRecording();
-        console.log('VoiceModal: Stop result:', { success: result.success, hasBase64: !!result.base64, base64Length: result.base64?.length, error: result.error });
 
-        if (!result.success || !result.base64) {
+        if (!result.success || !result.uri) {
             Alert.alert(t('common.error'), result.error || t('voice.error.cantSaveRecording'));
-            setTranscribing(false);
+            setAnalyzing(false);
             return;
         }
-
-        // Transcribe audio with Gemini
-        console.log('VoiceModal: Sending audio to Gemini for transcription...');
-        const transcription = await transcribeAudio(result.base64);
-        console.log('VoiceModal: Transcription result:', { success: transcription.success, text: transcription.text, error: transcription.error });
-
-        if (!transcription.success || !transcription.text) {
-            Alert.alert(t('common.error'), transcription.error || t('voice.error.cantTranscribe'));
-            setTranscribing(false);
-            return;
-        }
-
-        setTranscript(transcription.text);
-        setTranscribing(false);
-
-        // Analyze the transcribed text
-        console.log('VoiceModal: Analyzing transcribed text:', transcription.text);
-        analyzeVoiceInput(transcription.text);
-    };
-
-    const analyzeVoiceInput = async (text: string) => {
-        setAnalyzing(true);
 
         try {
-            const result = await parseVoiceToFood(text);
+            // Single call: S3 upload → Transcribe → Qwen parse
+            console.log('VoiceModal: Processing voice via S3 + Transcribe + Qwen...');
+            const voiceResult = await voiceToFood(result.uri);
 
-            if (result.success && result.data) {
-                setVoiceResult(result.data);
+            if (voiceResult.success && voiceResult.data) {
+                if (voiceResult.transcript) setTranscript(voiceResult.transcript);
+                setFoodData(voiceResult.data);
             } else {
-                Alert.alert(t('common.error'), result.error || t('voice.error.cantAnalyze'));
+                Alert.alert(t('common.error'), voiceResult.error || t('voice.error.cantAnalyze'));
             }
         } catch (error) {
             Alert.alert(t('common.error'), t('voice.error.analysisFailed'));
@@ -133,30 +112,18 @@ export function VoiceModal({ visible, onClose }: VoiceModalProps) {
         }
     };
 
-    const handleAction = () => {
-        if (!voiceResult) return;
-
-        if (voiceResult.intent === 'log_food' && voiceResult.food_data) {
+    const handleAddMeal = () => {
+        if (foodData) {
+            // Navigate to add meal screen with food data
             router.push({
                 pathname: '/food-detail',
                 params: {
-                    foodData: JSON.stringify(voiceResult.food_data),
+                    foodData: JSON.stringify(foodData),
                     source: 'voice'
                 }
             });
-        } else if (voiceResult.intent === 'log_water' && voiceResult.water_ml) {
-            // For now, since we don't know the exact water handling route, just go to home or hydration
-            router.push('/(tabs)/home'); // Could be /hydration later
-        } else {
-            // ask_coach or unknown
-            router.push({
-                pathname: '/(tabs)/ai-coach',
-                params: {
-                    initialQuery: voiceResult.coach_query || transcript
-                }
-            });
+            onClose();
         }
-        onClose();
     };
 
     return (
@@ -168,8 +135,8 @@ export function VoiceModal({ visible, onClose }: VoiceModalProps) {
 
                     <Text style={vStyles.title}>{t('voice.title')}</Text>
                     <Text style={vStyles.subtitle}>
-                        {transcribing
-                            ? t('voice.converting')
+                        {analyzing
+                            ? t('voice.analyzing')
                             : listening
                                 ? t('voice.listening')
                                 : t('voice.instruction')}
@@ -200,52 +167,31 @@ export function VoiceModal({ visible, onClose }: VoiceModalProps) {
                         </View>
                     )}
 
-                    {/* Transcript */}
-                    {transcribing && (
-                        <View style={vStyles.transcriptBox}>
-                            <ActivityIndicator size="large" color={Colors.primary} />
-                            <Text style={vStyles.analyzingText}>{t('voice.converting')}</Text>
-                        </View>
-                    )}
-
-                    {analyzing && !transcribing && (
+                    {/* Analyzing */}
+                    {analyzing && (
                         <View style={vStyles.transcriptBox}>
                             <ActivityIndicator size="large" color={Colors.primary} />
                             <Text style={vStyles.analyzingText}>{t('voice.analyzing')}</Text>
                         </View>
                     )}
 
-                    {voiceResult && !analyzing && !transcribing && (
+                    {foodData && !analyzing && (
                         <View style={vStyles.transcriptBox}>
                             <Text style={vStyles.transcriptLabel}>{t('voice.detected')}</Text>
-                            <Text style={vStyles.transcriptText}>"{voiceResult.message || transcript}"</Text>
-                            
-                            {voiceResult.intent === 'log_food' && voiceResult.food_data && (
-                                <View style={vStyles.nutritionRow}>
-                                    <Text style={vStyles.nutritionItem}>🔥 {voiceResult.food_data.calories} kcal</Text>
-                                    <Text style={vStyles.nutritionItem}>🥩 {voiceResult.food_data.protein}g</Text>
-                                    <Text style={vStyles.nutritionItem}>🍚 {voiceResult.food_data.carbs}g</Text>
-                                    <Text style={vStyles.nutritionItem}>🥑 {voiceResult.food_data.fat}g</Text>
-                                </View>
-                            )}
-
-                            {voiceResult.intent === 'log_water' && voiceResult.water_ml && (
-                                <View style={vStyles.nutritionRow}>
-                                    <Text style={vStyles.nutritionItem}>💧 {voiceResult.water_ml} ml</Text>
-                                </View>
-                            )}
-
-                            <TouchableOpacity style={vStyles.searchBtn} onPress={handleAction}>
-                                <Text style={vStyles.searchBtnText}>
-                                    {voiceResult.intent === 'log_food' ? t('voice.addFood') : 
-                                     (voiceResult.intent === 'log_water' ? 'Lưu Nước (N/A)' : 
-                                     'Hỏi Trợ lý AI')}
-                                </Text>
+                            <Text style={vStyles.transcriptText}>"{foodData.name}"</Text>
+                            <View style={vStyles.nutritionRow}>
+                                <Text style={vStyles.nutritionItem}>🔥 {foodData.calories} kcal</Text>
+                                <Text style={vStyles.nutritionItem}>🥩 {foodData.protein}g</Text>
+                                <Text style={vStyles.nutritionItem}>🍚 {foodData.carbs}g</Text>
+                                <Text style={vStyles.nutritionItem}>🥑 {foodData.fat}g</Text>
+                            </View>
+                            <TouchableOpacity style={vStyles.searchBtn} onPress={handleAddMeal}>
+                                <Text style={vStyles.searchBtnText}>{t('voice.addFood')}</Text>
                             </TouchableOpacity>
                         </View>
                     )}
 
-                    {transcript && !voiceResult && !analyzing && !transcribing && (
+                    {transcript && !foodData && !analyzing && (
                         <View style={vStyles.transcriptBox}>
                             <Text style={vStyles.transcriptLabel}>{t('voice.youSaid')}</Text>
                             <Text style={vStyles.transcriptText}>"{transcript}"</Text>

@@ -7,6 +7,10 @@ export const storage = defineStorage({
     'incoming/{entity_id}/*': [
       allow.authenticated.to(['read', 'write', 'delete'])
     ],
+    // Voice recordings - tạm lưu để Transcribe xử lý
+    'voice/{entity_id}/*': [
+      allow.authenticated.to(['read', 'write', 'delete'])
+    ],
     // Khu vực lưu trữ vĩnh viễn (Trusted Zone) - Lambda sẽ lưu kết quả tại đây
     'media/{entity_id}/*': [
       allow.authenticated.to(['read', 'delete'])

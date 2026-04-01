@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Colors, Shadows } from '../src/constants/colors';
 import { useMealStore, MealType } from '../src/store/mealStore';
-import { NutritionInfo } from '../src/services/geminiService';
+import { NutritionInfo } from '../src/services/aiService';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
@@ -413,7 +413,6 @@ export default function FoodDetailScreen() {
             {/* Bottom Buttons */}
             <View style={[styles.bottomButtons, { paddingBottom: Math.max(insets.bottom, 24) }]}>
                 <TouchableOpacity style={styles.fridgeButton} onPress={handleAddToFridge}>
-                    <Ionicons name="cube-outline" size={20} color="#111827" />
                     <Text style={styles.fridgeButtonText}>{t('foodDetail.addToFridge')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -640,7 +639,7 @@ const styles = StyleSheet.create({
         paddingRight: 16,
     },
     totalEnergyLabel: {
-        fontSize: 12,
+        fontSize: 10,
         color: '#94A3B8',
         fontWeight: '600',
         marginBottom: 4,
@@ -653,13 +652,13 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     calorieValueLarge: {
-        fontSize: 52,
+        fontSize: 40,
         fontWeight: '800',
         color: '#0F172A',
-        lineHeight: 56,
+        lineHeight: 52,
     },
     calorieUnitText: {
-        fontSize: 16,
+        fontSize: 12,
         color: '#94A3B8',
         fontWeight: '600',
     },
@@ -680,7 +679,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     macroBarLabel: {
-        fontSize: 12,
+        fontSize: 10,
         fontWeight: '700',
         color: '#64748B',
         width: 44,
@@ -697,7 +696,7 @@ const styles = StyleSheet.create({
         borderRadius: 999,
     },
     macroBarValue: {
-        fontSize: 12,
+        fontSize: 10,
         fontWeight: '700',
         color: '#334155',
         minWidth: 28,

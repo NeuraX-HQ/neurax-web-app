@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { saveOnboardingData } from '../../src/store/userStore';
-import { activityLevels } from '../../src/data/mockData';
+import { activityLevels } from '../../src/data/constants';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 

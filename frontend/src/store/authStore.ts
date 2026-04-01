@@ -1,6 +1,16 @@
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as authService from '../services/authService';
 import * as userService from '../services/userService';
+
+// Keys used by all stores — must be cleared on logout to isolate user data
+const USER_DATA_KEYS = [
+    'onboarding_data',
+    'user_data',
+    '@nutritrack_meals',
+    '@nutritrack_activities',
+    '@nutritrack_fridge',
+];
 
 interface AuthState {
     isAuthenticated: boolean;
@@ -42,24 +52,38 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         await authService.saveSession(session);
 
-        // Sync data with DB after login
-        await userService.syncOnboardingWithDB(userId, email);
-
         set({
             isAuthenticated: true,
             userId,
             email,
         });
+
+        // Sync data with DB after login (non-blocking — don't delay navigation)
+        userService.syncOnboardingWithDB(userId, email).catch((e) => {
+            console.warn('[AUTH] syncOnboardingWithDB failed:', e);
+        });
     },
 
     logout: async () => {
-        await authService.clearSession();
+        // Clear local data FIRST — on web, amplifySignOut redirects the page
+        // so anything after clearSession() may never execute
+        await AsyncStorage.multiRemove(USER_DATA_KEYS);
+
+        const { useMealStore } = require('./mealStore');
+        const { useFridgeStore } = require('./fridgeStore');
+        useMealStore.setState({ meals: [], activities: [], currentFoodItem: null });
+        useFridgeStore.setState({ items: [] });
+        const { useFriendStore } = require('./friendStore');
+        useFriendStore.setState({ friends: [], pendingRequests: [], sentRequests: [], myFriendCode: null, leaderboard: [], sendingRequest: false, acceptingId: null, decliningId: null, removingId: null, error: null });
 
         set({
             isAuthenticated: false,
             userId: null,
             email: null,
         });
+
+        // This MUST be last — on web it triggers a full page redirect to Cognito logout
+        await authService.clearSession();
     },
 
     checkSession: async () => {

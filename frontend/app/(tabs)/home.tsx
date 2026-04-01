@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Swipeable, TouchableOpacity as GHTouchableOpacity } from 'react-native-gesture-handler';
 import { Colors, Shadows } from '../../src/constants/colors';
 import { NotificationIcon, SettingsIcon, ProfileIcon } from '../../src/components/TabIcons';
-import { drinkTypes } from '../../src/data/mockData';
+import { drinkTypes } from '../../src/data/constants';
 import { CalorieGauge } from '../../src/components/CalorieGauge';
 import { useMealStore, Meal } from '../../src/store/mealStore';
 import { getOnboardingData, getUserData, saveUserData } from '../../src/store/userStore';
@@ -67,8 +67,9 @@ export default function HomeScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [gender, setGender] = useState<string>('');
     const [userName, setUserName] = useState<string>('');
+    const [avatarUri, setAvatarUri] = useState<string | null>(null);
     const [dailyCalorieTarget, setDailyCalorieTarget] = useState(1800);
-    const [showCaloriesEaten, setShowCaloriesEaten] = useState(false);
+    const [showCaloriesEaten, setShowCaloriesEaten] = useState(true);
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
     const userEmail = useAuthStore((state) => state.email);
@@ -313,10 +314,8 @@ export default function HomeScreen() {
     const protein = getMacroStatus(Math.round(stats.totalProtein), MACROS.p, 'home.protein', Colors.protein);
     const carbs = getMacroStatus(Math.round(stats.totalCarbs), MACROS.c, 'home.carbs', Colors.carbs);
     const fat = getMacroStatus(Math.round(stats.totalFat), MACROS.f, 'home.fat', Colors.fat);
-    const [waterByDate, setWaterByDate] = useState<Record<string, number>>({
-        [todayIso]: 800,
-    });
-    const waterMax = 2500;
+    const [waterByDate, setWaterByDate] = useState<Record<string, number>>({});
+    const waterMax = 2000;
     const waterCurrent = waterByDate[selectedDateStr] ?? 0;
 
     // Use actual calories burned from workout activities (goal: 400 kcal)
@@ -338,6 +337,9 @@ export default function HomeScreen() {
                 const name = onboarding?.name?.trim() || user?.name?.trim();
                 if (name) {
                     setUserName(name);
+                }
+                if (user?.avatar_url) {
+                    setAvatarUri(user.avatar_url);
                 }
             };
             fetchUserData();
@@ -635,7 +637,9 @@ export default function HomeScreen() {
                     <View style={styles.header}>
                         <View style={styles.headerLeft}>
                             <TouchableOpacity style={styles.avatar} onPress={withAutoClose(() => router.push('/profile'))}>
-                                {gender === 'male' ? (
+                                {avatarUri ? (
+                                    <Image source={{ uri: avatarUri }} style={styles.avatarIcon} />
+                                ) : gender === 'male' ? (
                                     <Image source={require('../../assets/images/male.png')} style={styles.avatarIcon} />
                                 ) : gender === 'female' ? (
                                     <Image source={require('../../assets/images/female.png')} style={styles.avatarIcon} />
@@ -745,7 +749,7 @@ export default function HomeScreen() {
                                 current={showCaloriesEaten ? caloriesEaten : (isCaloriesOver ? maxCalories : caloriesLeft)}
                                 max={maxCalories}
                                 size={120}
-                                strokeWidth={14}
+                                strokeWidth={10}
                                 displayValue={calorieGaugeValue}
                                 label={calorieGaugeLabel}
                                 accentColor={calorieAccentColor}
@@ -853,7 +857,7 @@ export default function HomeScreen() {
                                         />
                                     )}
                                 </Svg>
-                                <Text style={styles.macroRingEmoji}>🥑</Text>
+                                <Text style={styles.macroRingEmoji}>🧈</Text>
                             </View>
                         </TouchableOpacity>
                     </View>

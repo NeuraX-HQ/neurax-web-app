@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '../src/constants/colors';
-import { drinkTypes } from '../src/data/mockData';
+import { drinkTypes } from '../src/data/constants';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function AddHydrationScreen() {

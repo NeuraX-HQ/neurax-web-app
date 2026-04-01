@@ -238,7 +238,7 @@ export default function HomeScreen() {
         {/* Water Intake */}
         <WaterIntakeCard
           current={1800}
-          goal={2500}
+          goal={2000}
           glassSize={250}
           onLogGlass={() => { }}
         />

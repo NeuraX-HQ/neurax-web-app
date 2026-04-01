@@ -2,6 +2,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { signOut as amplifySignOut } from 'aws-amplify/auth';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const BIOMETRIC_ENABLED_KEY = 'biometric_enabled';
@@ -126,6 +127,14 @@ export const getSession = async (): Promise<AuthSession | null> => {
 // Clear session (logout)
 export const clearSession = async (): Promise<void> => {
     try {
+        // Sign out from Amplify/Cognito first (clears tokens, cookies, OAuth session)
+        // Use timeout to prevent hanging on Expo Go when session is invalid
+        try {
+            await Promise.race([
+                amplifySignOut({ global: true }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('signOut timeout')), 5000)),
+            ]);
+        } catch {}
         await AsyncStorage.removeItem(SESSION_KEY);
         await deleteAuthToken();
     } catch (error) {

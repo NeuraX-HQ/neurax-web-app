@@ -1,23 +1,18 @@
 import { generateClient } from 'aws-amplify/api';
-import { type Schema } from '../../amplify/data/resource';
+import { type Schema } from '../../../backend/amplify/data/resource';
 import { getOnboardingData, OnboardingData, saveOnboardingData } from '../store/userStore';
 
 const client = generateClient<Schema>();
 
-const calculateTargetCalories = (data: OnboardingData): number => {
-    const activityMultipliers: Record<string, number> = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, extreme: 1.9 };
-    let bmr = (10 * data.currentWeight) + (6.25 * data.height) - (5 * (data.age || 25));
-    bmr += data.gender === 'male' ? 5 : -161;
-    const tdee = bmr * (activityMultipliers[data.activityLevel] || 1.2);
-    
-    let targetCals = tdee;
-    if (data.goal === 'lose') {
-        targetCals = Math.max(1200, tdee - (data.weightChangeSpeed * 1100));
-    } else if (data.goal === 'gain') {
-        targetCals = tdee + (data.weightChangeSpeed * 1100);
+// Generate friend code: 8 chars, excludes I/O/0/1 to avoid ambiguity
+const FRIEND_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function generateFriendCode(): string {
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+        code += FRIEND_CODE_CHARS[Math.floor(Math.random() * FRIEND_CODE_CHARS.length)];
     }
-    return Math.round(targetCals);
-};
+    return code;
+}
 
 export const createUserProfile = async (userId: string, email: string, onboardingData?: OnboardingData) => {
     try {
@@ -27,12 +22,12 @@ export const createUserProfile = async (userId: string, email: string, onboardin
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             onboarding_status: onboardingData ? onboardingData.completed : false,
+            friend_code: generateFriendCode(),
         };
 
         if (onboardingData) {
             input.display_name = onboardingData.name;
             input.biometric = {
-                age: onboardingData.age || 25,
                 gender: onboardingData.gender,
                 height_cm: onboardingData.height,
                 weight_kg: onboardingData.currentWeight,
@@ -40,7 +35,8 @@ export const createUserProfile = async (userId: string, email: string, onboardin
             };
             input.goal = {
                 target_weight_kg: onboardingData.targetWeight,
-                daily_calories: calculateTargetCalories(onboardingData),
+                // Placeholder cho calo, có thể tính toán chính xác hơn sau
+                daily_calories: 2000, 
             };
             input.dietary_profile = {
                 allergies: onboardingData.dietaryRestrictions,
@@ -78,44 +74,68 @@ export const fetchUserProfile = async (userId: string) => {
 
 export const syncOnboardingWithDB = async (userId: string, email: string) => {
     try {
-        const onboardingData = await getOnboardingData();
-        
+        const localData = await getOnboardingData();
+        const localHasData = localData.completed && localData.name !== '';
+
+        // Kiểm tra xem user đã tồn tại trong DB chưa
         const existingUser = await fetchUserProfile(userId);
 
         if (existingUser) {
-            // Chỉ cập nhật nếu user vừa hoàn thành onboarding ở máy này
-            if (onboardingData && onboardingData.completed) {
-                const { data: updatedUser, errors } = await client.models.user.update({
+            // Backfill friend_code for existing users who don't have one
+            if (!existingUser.friend_code) {
+                try {
+                    await client.models.user.update({
+                        user_id: userId,
+                        friend_code: generateFriendCode(),
+                        updated_at: new Date().toISOString(),
+                    });
+                } catch (e) {
+                    console.warn('[USER] Failed to backfill friend_code:', e);
+                }
+            }
+
+            if (localHasData) {
+                // Local có data thật → push lên cloud
+                const { data: updatedUser } = await client.models.user.update({
                     user_id: userId,
-                    display_name: onboardingData.name,
-                    onboarding_status: true,
+                    display_name: localData.name,
+                    onboarding_status: localData.completed,
                     biometric: {
-                        age: onboardingData.age || 25,
-                        gender: onboardingData.gender,
-                        height_cm: onboardingData.height,
-                        weight_kg: onboardingData.currentWeight,
-                        active_level: onboardingData.activityLevel,
+                        gender: localData.gender,
+                        height_cm: localData.height,
+                        weight_kg: localData.currentWeight,
+                        active_level: localData.activityLevel,
                     },
                     goal: {
-                        target_weight_kg: onboardingData.targetWeight,
-                        daily_calories: calculateTargetCalories(onboardingData),
+                        target_weight_kg: localData.targetWeight,
+                        daily_calories: 2000,
                     },
                     dietary_profile: {
-                        allergies: onboardingData.dietaryRestrictions,
+                        allergies: localData.dietaryRestrictions,
                     },
                     updated_at: new Date().toISOString(),
                 });
-                
-                // Sau khi map xong có thể xoá onboarding data local để login lần tới không bị ghi đè
-                // Xoá tạm bỏ qua, đợi test kĩ hơn
-                
                 return updatedUser;
             } else {
+                // Local trống (mới login / đổi device) → restore từ cloud
+                const bio = existingUser.biometric as any;
+                const goal = existingUser.goal as any;
+                const diet = existingUser.dietary_profile as any;
+                await saveOnboardingData({
+                    name: existingUser.display_name || '',
+                    gender: bio?.gender || '',
+                    height: bio?.height_cm || 170,
+                    currentWeight: bio?.weight_kg || 65,
+                    activityLevel: bio?.active_level || '',
+                    targetWeight: goal?.target_weight_kg || 55,
+                    dietaryRestrictions: diet?.allergies || [],
+                    completed: existingUser.onboarding_status ?? false,
+                });
                 return existingUser;
             }
         } else {
-            // Tạo mới
-            return await createUserProfile(userId, email, onboardingData);
+            // User chưa tồn tại trong DB → tạo mới
+            return await createUserProfile(userId, email, localHasData ? localData : undefined);
         }
     } catch (error) {
         console.error('Lỗi syncOnboardingWithDB:', error);
