@@ -1,0 +1,10 @@
+{
+  "name": "resize-image",
+  "version": "1.0.0",
+  "dependencies": {
+    "sharp": "^0.34.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}

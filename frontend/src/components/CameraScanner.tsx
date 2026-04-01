@@ -39,6 +39,28 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
     const [permission, requestPermission] = useCameraPermissions();
     const [isCameraReady, setIsCameraReady] = useState(false);
     const [webCameraReady, setWebCameraReady] = useState(false);
+    const cameraReadyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Reset khi modal đóng/mở
+    useEffect(() => {
+        if (!visible) {
+            setIsCameraReady(false);
+        }
+    }, [visible]);
+
+    // Android fallback: nếu onCameraReady không fire sau 2s thì force ready
+    useEffect(() => {
+        if (visible && Platform.OS !== 'web') {
+            cameraReadyTimeout.current = setTimeout(() => {
+                if (cameraRef.current) {
+                    setIsCameraReady(true);
+                }
+            }, 2000);
+        }
+        return () => {
+            if (cameraReadyTimeout.current) clearTimeout(cameraReadyTimeout.current);
+        };
+    }, [visible]);
 
     // Scanning line animation for BARCODE mode
     const scanLineAnim = useRef(new Animated.Value(0)).current;
@@ -166,7 +188,8 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
     const handleCapture = async () => {
         if (analyzing) return;
         setAnalyzing(true);
-        onAnalyzing?.(true);
+        // NOTE: onAnalyzing(true) được gọi SAU khi chụp xong
+        // Gọi sớm hơn sẽ khiến parent set visible=false → CameraView unmount → cameraRef.current = null
 
         try {
             let s3Key: string;
@@ -174,18 +197,21 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
             if (Platform.OS === 'web') {
                 const base64Data = captureWebFrame();
                 if (!base64Data) throw new Error(t('camera.error.captureWebcam'));
+                onAnalyzing?.(true);
                 s3Key = await uploadFoodImage({ base64: base64Data });
             } else {
-                if (!cameraRef.current || !isCameraReady) throw new Error(t('camera.error.captureFailed'));
+                if (!cameraRef.current) throw new Error(t('camera.error.captureFailed'));
 
-                const photo = await cameraRef.current.takePictureAsync({
+                let photo;
+                photo = await cameraRef.current.takePictureAsync({
                     quality: 0.6,
-                    skipProcessing: Platform.OS === 'android',
+                    base64: false,
                     exif: false,
                 });
-                if (!photo?.uri) throw new Error(t('camera.error.captureFailed'));
 
-                // Upload URI directly — no base64 encode/decode needed on native
+                if (!photo?.uri) throw new Error(t('camera.error.captureFailed'));
+                // Ảnh đã chụp xong → báo parent chuyển sang loading (CameraView sẽ unmount sau đây)
+                onAnalyzing?.(true);
                 s3Key = await uploadFoodImage({ uri: photo.uri });
             }
             const analysisResult = await analyzeFoodImage(s3Key);
@@ -199,6 +225,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                 Alert.alert(t('common.error'), analysisResult.error || t('camera.error.analysisError'));
             }
         } catch (error) {
+            console.error('[CameraScanner] capture error:', error);
             Alert.alert(t('camera.error.captureTitle'), error instanceof Error ? error.message : t('camera.error.captureFailed'));
         } finally {
             setAnalyzing(false);
@@ -206,25 +233,34 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
         }
     };
 
-    if (!permission) return null;
-
-    if (!permission.granted && visible) {
+    // Khi permission chưa load hoặc không có permission — vẫn render Modal
+    // để Android không bị miss transition, chỉ thay nội dung bên trong
+    if (!permission || !permission.granted) {
         return (
-            <Modal visible={visible} animationType="slide">
+            <Modal visible={visible} animationType="slide" transparent={false}>
                 <View style={[s.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
-                    <Ionicons name="camera-outline" size={52} color={EMERALD} />
-                    <Text style={{ color: '#FFF', fontSize: 16, textAlign: 'center', marginVertical: 20, lineHeight: 24 }}>
-                        {t('camera.needPermission')}
-                    </Text>
-                    <TouchableOpacity
-                        style={{ backgroundColor: EMERALD, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14 }}
-                        onPress={requestPermission}
-                    >
-                        <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 15 }}>{t('camera.grantPermission')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={onClose} style={{ marginTop: 20 }}>
-                        <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>{t('common.back')}</Text>
-                    </TouchableOpacity>
+                    {!permission ? (
+                        // Permission đang load
+                        <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(16,185,129,0.15)', justifyContent: 'center', alignItems: 'center' }}>
+                            <Ionicons name="camera-outline" size={28} color={EMERALD} />
+                        </View>
+                    ) : (
+                        <>
+                            <Ionicons name="camera-outline" size={52} color={EMERALD} />
+                            <Text style={{ color: '#FFF', fontSize: 16, textAlign: 'center', marginVertical: 20, lineHeight: 24 }}>
+                                {t('camera.needPermission')}
+                            </Text>
+                            <TouchableOpacity
+                                style={{ backgroundColor: EMERALD, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14 }}
+                                onPress={requestPermission}
+                            >
+                                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 15 }}>{t('camera.grantPermission')}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={onClose} style={{ marginTop: 20 }}>
+                                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>{t('common.back')}</Text>
+                            </TouchableOpacity>
+                        </>
+                    )}
                 </View>
             </Modal>
         );
@@ -262,8 +298,10 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                         style={StyleSheet.absoluteFill}
                         facing="back"
                         flash={flashMode}
-                        mute
-                        onCameraReady={() => setIsCameraReady(true)}
+                        onCameraReady={() => {
+                            if (cameraReadyTimeout.current) clearTimeout(cameraReadyTimeout.current);
+                            setIsCameraReady(true);
+                        }}
                         onMountError={() => Alert.alert(t('camera.error.title'), t('camera.error.initFailed'))}
                     />
                 )}

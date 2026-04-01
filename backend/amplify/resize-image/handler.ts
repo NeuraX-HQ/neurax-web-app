@@ -1,62 +1,73 @@
 import { S3Handler } from 'aws-lambda';
-import { S3Client, HeadObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, HeadObjectCommand, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import sharp from 'sharp';
 
 const s3Client = new S3Client({});
+
+const MAX_DIMENSION = 1280; // px
+const JPEG_QUALITY = 85;
 
 export const handler: S3Handler = async (event) => {
   for (const record of event.Records) {
     const bucket = record.s3.bucket.name;
     const key = decodeURIComponent(record.s3.object.key.replace(/\+/g, ' '));
-    
-    // Cấu trúc mong đợi: incoming/{user_id}/{type}/{filename}
+
+    // Path format: incoming/{entity_id}/{filename}
     const parts = key.split('/');
-    if (parts.length < 4 || parts[0] !== 'incoming') {
-      console.warn(`File ${key} không đúng cấu trúc Landing Zone. Bỏ qua.`);
+    if (parts.length < 3 || parts[0] !== 'incoming') {
+      console.warn(`Skip — unexpected path format: ${key}`);
       continue;
     }
 
-    const userId = parts[1];
-    const type = parts[2];
-    const originalFilename = parts[3];
+    // entity_id is everything between 'incoming/' and the filename
+    const entityId = parts.slice(1, parts.length - 1).join('/');
+    const originalFilename = parts[parts.length - 1];
+    const baseName = originalFilename.replace(/\.[^.]+$/, '');
+    const destKey = `media/${entityId}/${baseName}.jpg`;
 
-    console.log(`Processing: User=${userId}, Type=${type}, File=${originalFilename}`);
+    console.log(`Processing: ${key} → ${destKey}`);
 
     try {
-      // 1. Xác nhận loại ảnh (Secure Check)
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-      const headCommand = new HeadObjectCommand({ Bucket: bucket, Key: key });
-      const objectInfo = await s3Client.send(headCommand);
-      
-      const contentType = objectInfo.ContentType || '';
-      if (!allowedTypes.includes(contentType)) {
-        console.error(`Định dạng không hỗ trợ: ${contentType}. Đang xóa file rác.`);
-        await s3Client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+      // 1. Validate content type
+      const head = await s3Client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+      const contentType = head.ContentType || '';
+      if (!['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'].includes(contentType)) {
+        console.error(`Unsupported content type: ${contentType} for ${key}`);
         continue;
       }
 
-      // 2. Logic Resize & Transcode (Placeholder cho Sharp/Jimp)
-      // Tối ưu: Chuyển sang .webp để giảm dung lượng
-      const newUuid = Math.random().toString(36).substring(2, 11);
-      const processedKey = `media/${userId}/${type}/${newUuid}.webp`;
+      // 2. Read original image
+      const s3Obj = await s3Client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of s3Obj.Body as any) chunks.push(chunk);
+      const originalBuffer = Buffer.concat(chunks);
 
-      console.log(`Đang tối ưu hóa và di chuyển: ${key} -> ${processedKey}`);
-      
-      // 3. Sao chép vào vùng Media (An toàn)
-      // Trong thực tế, bạn sẽ dùng Sharp để buffer -> upload. 
-      // Ở đây ta dùng CopyObject để minh họa luồng di chuyển an toàn.
-      await s3Client.send(new CopyObjectCommand({
+      // 3. Resize — scale down to MAX_DIMENSION on the longest side, keep aspect ratio
+      const resizedBuffer = await sharp(originalBuffer)
+        .rotate()                         // auto-rotate by EXIF orientation
+        .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: JPEG_QUALITY, progressive: true })
+        .toBuffer();
+
+      const originalKB = Math.round(originalBuffer.byteLength / 1024);
+      const resizedKB  = Math.round(resizedBuffer.byteLength / 1024);
+      console.log(`Resized: ${originalKB}KB → ${resizedKB}KB`);
+
+      // 4. Save compressed version to media/ (for food-detail display)
+      await s3Client.send(new PutObjectCommand({
         Bucket: bucket,
-        CopySource: `${bucket}/${key}`,
-        Key: processedKey,
-        ContentType: 'image/webp' // Giả lập sau khi convert
+        Key: destKey,
+        Body: resizedBuffer,
+        ContentType: 'image/jpeg',
       }));
 
-      // 4. Dọn dẹp Landing Zone
-      await s3Client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+      // NOTE: Do NOT delete from incoming/ — aiEngine reads from that path and
+      // food-detail also uses the incoming/ key for its presigned URL.
+      // The S3 lifecycle rule (expirationInDays: 1 on incoming/) handles cleanup.
 
-      console.log(`Hoàn tất: File an toàn đã được lưu tại ${processedKey}`);
+      console.log(`Done: compressed image saved to ${destKey}`);
     } catch (err) {
-      console.error(`Lỗi khi xử lý file ${key}:`, err);
+      console.error(`Error processing ${key}:`, err);
     }
   }
 };
