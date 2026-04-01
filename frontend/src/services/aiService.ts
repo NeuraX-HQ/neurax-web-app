@@ -259,11 +259,14 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
         }
 
         // Step 2: Upload to S3 with {entity_id} path (Amplify resolves identity ID)
-        const fileName = `${Date.now()}.m4a`;
+        const isWeb = Platform.OS === 'web';
+        const ext = isWeb ? 'webm' : 'm4a';
+        const contentType = isWeb ? 'audio/webm' : 'audio/mp4';
+        const fileName = `${Date.now()}.${ext}`;
         const uploadResult = await uploadData({
             path: `voice/{entity_id}/${fileName}`,
             data: Uint8Array.from(atob(base64), c => c.charCodeAt(0)),
-            options: { contentType: 'audio/mp4' },
+            options: { contentType },
         }).result;
 
         const resolvedKey = (uploadResult as any).path || `voice/${fileName}`;

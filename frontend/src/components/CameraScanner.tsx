@@ -77,9 +77,14 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
         if (Platform.OS !== 'web' || !visible) return;
         let stream: MediaStream | null = null;
         const startWebCamera = async () => {
+            if (!navigator?.mediaDevices?.getUserMedia) {
+                Alert.alert(t('camera.error.title'), t('camera.error.noAccess'));
+                return;
+            }
             try {
-                stream = await (navigator as any).mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+                // Use ideal (soft) constraint so mobile browsers fall back gracefully
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
                     audio: false,
                 });
                 webStreamRef.current = stream;

@@ -405,11 +405,13 @@ export const handler = async (event: any) => {
 
             const s3Uri = `s3://${STORAGE_BUCKET}/${s3Key}`;
             const jobName = `nutritrack-voice-${randomUUID()}`;
+            const ext = s3Key.split('.').pop()?.toLowerCase() || 'm4a';
+            const mediaFormat = ext === 'webm' ? 'webm' : ext === 'mp3' ? 'mp3' : 'm4a';
 
             await transcribeClient.send(new StartTranscriptionJobCommand({
                 TranscriptionJobName: jobName,
                 LanguageCode: 'vi-VN',
-                MediaFormat: 'm4a',
+                MediaFormat: mediaFormat as any,
                 Media: { MediaFileUri: s3Uri },
             }));
 
