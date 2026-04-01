@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
     Modal, Alert
@@ -7,10 +7,10 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { getUrl } from 'aws-amplify/storage';
 import { Colors, Shadows } from '../src/constants/colors';
 import { useMealStore, MealType } from '../src/store/mealStore';
 import { NutritionInfo } from '../src/services/aiService';
-import * as FileSystem from 'expo-file-system/legacy';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 type CanonicalUnit = 'g' | 'ml';
@@ -103,7 +103,16 @@ export default function FoodDetailScreen() {
     const currentFoodItem = useMealStore(state => state.currentFoodItem);
 
     const source = params.source as string;
-    const imageUri = params.image as string;
+    const imageParam = params.image as string; // s3Key (e.g. "incoming/us-east-1:xxx/photo.jpg") or empty
+    const [imageUri, setImageUri] = useState<string>('');
+
+    // Resolve S3 key → presigned URL for display
+    useEffect(() => {
+        if (!imageParam) return;
+        getUrl({ path: imageParam })
+            .then(({ url }) => setImageUri(url.toString()))
+            .catch(() => setImageUri(''));
+    }, [imageParam]);
 
     // Initialize from params, and update global state if navigating to a new food item
     React.useEffect(() => {
@@ -157,22 +166,6 @@ export default function FoodDetailScreen() {
         setIsAdding(true);
 
         try {
-            let savedImageUri = imageUri;
-
-            if (imageUri && imageUri.startsWith('file://')) {
-                const filename = imageUri.split('/').pop() || `food_${Date.now()}.jpg`;
-                const newPath = FileSystem.documentDirectory + filename;
-                try {
-                    await FileSystem.copyAsync({
-                        from: imageUri,
-                        to: newPath
-                    });
-                    savedImageUri = newPath;
-                } catch (err) {
-                    console.error('Lỗi khi copy file ảnh:', err);
-                }
-            }
-
             await addMeal({
                 name: foodData.name,
                 name_en: foodData.name_en,
@@ -184,7 +177,8 @@ export default function FoodDetailScreen() {
                 fat: Math.round(foodData.fat * nutritionMultiplier),
                 servingSize: `${portionCount} ${t(selectedPortionUnit.labelKey)}`,
                 ingredients: foodData.ingredients,
-                image: savedImageUri || getEmojiForFood(foodData.name_en || foodData.name),
+                image: imageUri || getEmojiForFood(foodData.name_en || foodData.name),
+                image_key: imageParam || undefined,
             });
 
             // Navigate back to home

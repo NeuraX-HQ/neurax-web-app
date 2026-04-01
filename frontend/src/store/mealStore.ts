@@ -25,7 +25,8 @@ export interface Meal {
     ingredients?: any[];
     time: string;
     date: string; // YYYY-MM-DD format
-    image?: string; // emoji or base64
+    image?: string; // emoji or presigned URL for local display
+    image_key?: string; // S3 key for persistent reference (e.g. "incoming/us-east-1:xxx/photo.jpg")
     syncStatus?: 'synced' | 'pending' | 'error'; // DynamoDB sync status
     remoteId?: string; // DynamoDB record id (different from local id)
 }
@@ -151,7 +152,9 @@ export const useMealStore = create<MealState>((set, get) => ({
                         carbs_g: newMeal.carbs,
                         fat_g: newMeal.fat,
                     },
-                    ingredients: newMeal.ingredients,
+                    ingredients: newMeal.ingredients?.map(ing => JSON.stringify(ing)),
+                    image_key: newMeal.image_key,
+                    input_method: newMeal.image_key ? 'photo' : 'manual',
                 });
                 const status = remote ? 'synced' as const : 'error' as const;
                 const meals = get().meals.map(m =>

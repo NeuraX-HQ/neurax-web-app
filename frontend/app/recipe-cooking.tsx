@@ -148,48 +148,6 @@ export default function RecipeCookingScreen() {
                 </View>
             </View>
 
-            <View style={styles.timerSection}>
-                <View style={[styles.timerCard, Shadows.medium]}>
-                    <View style={styles.timerIconWrap}>
-                        <Ionicons name="timer-outline" size={20} color={Colors.accent} />
-                    </View>
-                    <View style={styles.timerMain}>
-                        <Text style={styles.timerLabel}>{t('recipeCooking.remaining')}</Text>
-                        <View style={styles.timerValueRow}>
-                            {!isStarted && (
-                                <TouchableOpacity style={styles.adjustBtn} onPress={() => adjustTime(-30)}>
-                                    <Ionicons name="remove" size={16} color={Colors.textSecondary} />
-                                </TouchableOpacity>
-                            )}
-                            <Text style={styles.timerValue}>{formatTimer(remainingSec)}</Text>
-                            {!isStarted && (
-                                <TouchableOpacity style={styles.adjustBtn} onPress={() => adjustTime(30)}>
-                                    <Ionicons name="add" size={16} color={Colors.textSecondary} />
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    </View>
-                    
-                    <View style={styles.timerActions}>
-                        {!isStarted ? (
-                            <TouchableOpacity style={styles.startTimerBtn} onPress={handleStartTimer}>
-                                <Text style={styles.startTimerBtnText}>{t('recipeCooking.startTimer')}</Text>
-                                <Ionicons name="play" size={16} color="#FFF" />
-                            </TouchableOpacity>
-                        ) : (
-                            <>
-                                <TouchableOpacity style={styles.timerActionBtn} onPress={togglePause}>
-                                    <Ionicons name={isPaused ? 'play' : 'pause'} size={16} color={Colors.textSecondary} />
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.timerActionBtn} onPress={fastForward}>
-                                    <Ionicons name="play-forward" size={16} color={Colors.textSecondary} />
-                                </TouchableOpacity>
-                            </>
-                        )}
-                    </View>
-                </View>
-            </View>
-
             <View style={styles.content}>
                 <Text style={styles.stepTitle}>{currentStep.title}</Text>
                 <Text style={styles.stepInstruction}>{currentStep.instruction}</Text>

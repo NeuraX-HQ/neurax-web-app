@@ -382,8 +382,11 @@ export default function HomeScreen() {
                     return;
                 }
 
-                // Check if weight update is needed (7+ days since last update)
-                if (daysSinceUpdate >= 7) {
+                // Check if weight update is needed (Every Monday)
+                const isMonday = new Date().getDay() === 1;
+                const wasUpdatedToday = lastUpdateStr && toIsoDate(new Date(lastUpdateStr)) === todayIso;
+
+                if (isMonday && !wasUpdatedToday) {
                     setShowWeightModal(true);
                 }
             };

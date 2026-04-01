@@ -21,12 +21,12 @@ export function CameraScannerWithLoading({ visible, onClose }: CameraScannerWith
 
     return (
         <>
-            <CameraScanner 
-                visible={visible && !isAnalyzing} 
+            <CameraScanner
+                visible={visible && !isAnalyzing}
                 onClose={handleClose}
                 onAnalyzing={setIsAnalyzing}
             />
-            
+
             <Modal
                 visible={isAnalyzing}
                 animationType="fade"

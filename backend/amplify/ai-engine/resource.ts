@@ -5,5 +5,5 @@ export const aiEngine = defineFunction({
   entry: './handler.ts',
   runtime: 22,
   memoryMB: 512,
-  timeoutSeconds: 60, // Bedrock can take some time
+  timeoutSeconds: 120, // voiceToFood: Transcribe polling + Bedrock can exceed 60s
 });

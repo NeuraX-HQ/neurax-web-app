@@ -1,6 +1,6 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 import { TranscribeClient, StartTranscriptionJobCommand, GetTranscriptionJobCommand } from "@aws-sdk/client-transcribe";
-import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
 
 const REGION = "ap-southeast-2";
@@ -334,22 +334,31 @@ export const handler = async (event: any) => {
 
         // ── Image Analysis (Qwen3-VL vision) ──
         if (action === 'analyzeFoodImage') {
-            const { imageBase64 } = data;
-            let cleanBase64 = imageBase64;
-            if (imageBase64.includes('base64,')) {
-                cleanBase64 = imageBase64.split('base64,')[1];
-            }
+            const { s3Key } = data;
+            if (!STORAGE_BUCKET) throw new Error('STORAGE_BUCKET_NAME not configured');
+            if (!s3Key || s3Key.includes('..')) throw new Error('Invalid s3Key');
+
+            // Read image from S3, convert to base64 (avoids large payload through AppSync)
+            const s3Obj = await s3Client.send(new GetObjectCommand({ Bucket: STORAGE_BUCKET, Key: s3Key }));
+            const chunks: Uint8Array[] = [];
+            for await (const chunk of s3Obj.Body as any) chunks.push(chunk);
+            const imageBuffer = Buffer.concat(chunks);
+            const base64 = imageBuffer.toString('base64');
+            const contentType = s3Obj.ContentType || 'image/jpeg';
 
             const text = await callQwen([
                 { role: "system", content: GEN_FOOD_SYSTEM_PROMPT },
                 {
                     role: "user",
                     content: [
-                        { type: "image_url", image_url: { url: `data:image/jpeg;base64,${cleanBase64}` } },
+                        { type: "image_url", image_url: { url: `data:${contentType};base64,${base64}` } },
                         { type: "text", text: "Analyze this food image and estimate its nutritional profile. Return ONLY the JSON object." },
                     ],
                 },
             ]);
+
+            // File stays in incoming/ for food-detail display.
+            // S3 lifecycle rule (expirationInDays: 1 on incoming/) handles cleanup automatically.
             return JSON.stringify({ success: true, text });
         }
 
