@@ -3,11 +3,7 @@ backend:
   phases:
     build:
       commands:
-        - cd backend && npm install --legacy-peer-deps --include=dev
-        - cd backend/amplify/ai-engine && npm install && cd ../../..
-        - cd backend/amplify/process-nutrition && npm install && cd ../../..
-        - cd backend/amplify/friend-request && npm install && cd ../../..
-        - cd backend && npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --outputs-out-dir ../frontend
+        - cd backend && npm install --legacy-peer-deps --include=dev && cd amplify/ai-engine && npm install && cd ../../.. && cd amplify/process-nutrition && npm install && cd ../../.. && cd amplify/friend-request && npm install && cd ../../.. && npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --outputs-out-dir ../frontend
 frontend:
   phases:
     preBuild:
