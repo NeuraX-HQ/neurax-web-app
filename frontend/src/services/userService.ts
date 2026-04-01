@@ -1,5 +1,5 @@
 import { generateClient } from 'aws-amplify/api';
-import { type Schema } from '../../amplify/data/resource';
+import { type Schema } from '../../../backend/amplify/data/resource';
 import { getOnboardingData, OnboardingData, saveOnboardingData } from '../store/userStore';
 
 const client = generateClient<Schema>();

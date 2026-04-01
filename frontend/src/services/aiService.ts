@@ -2,7 +2,7 @@ import { generateClient } from 'aws-amplify/data';
 import { uploadData } from 'aws-amplify/storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
-import type { Schema } from '../../amplify/data/resource';
+import type { Schema } from '../../../backend/amplify/data/resource';
 
 function extractAndParseJSON(text: string): any {
     // Try to find code block first

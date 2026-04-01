@@ -16,7 +16,7 @@ export type { BiometricStatus, BiometricConfig } from './BiometricManager';
 export { SessionManager, sessionManager, DEFAULT_SESSION_CONFIG } from './SessionManager';
 export type { SessionData, SessionConfig } from './SessionManager';
 
-export { InputValidator, inputValidator, VALIDATION_RULES, DANGEROUS_PATTERNS } from './InputValidator';
+export { InputValidator, VALIDATION_RULES, DANGEROUS_PATTERNS } from './InputValidator';
 export type { ValidationRule, ValidationResult } from './InputValidator';
 
 export { ErrorHandler, errorHandler, ErrorSeverity, USER_ERROR_MESSAGES, ERROR_CODES } from './ErrorHandler';
