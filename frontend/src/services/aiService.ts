@@ -4,6 +4,34 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import type { Schema } from '../../../backend/amplify/data/resource';
 
+// Upload a food image to S3 incoming/ path, return resolved s3Key.
+// Native: pass file URI (file://) — read via FileSystem (works on iOS + Android).
+// Web canvas: pass raw base64 string (no data: prefix) — converted via atob.
+export async function uploadFoodImage(
+    source: { uri: string; contentType?: string } | { base64: string; contentType?: string }
+): Promise<string> {
+    const contentType = source.contentType || 'image/jpeg';
+    const ext = contentType.includes('png') ? 'png' : 'jpg';
+    const fileName = `${Date.now()}.${ext}`;
+
+    let data: Uint8Array;
+    if ('uri' in source) {
+        // Native file:// — fetch() doesn't work on Android, use FileSystem instead
+        const base64 = await FileSystem.readAsStringAsync(source.uri, { encoding: 'base64' as any });
+        data = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    } else {
+        // Web canvas: raw base64 string (no data: prefix)
+        data = Uint8Array.from(atob(source.base64), c => c.charCodeAt(0));
+    }
+
+    const result = await uploadData({
+        path: `incoming/{entity_id}/${fileName}`,
+        data,
+        options: { contentType },
+    }).result;
+    return (result as any).path || `incoming/${fileName}`;
+}
+
 function extractAndParseJSON(text: string): any {
     // Try to find code block first
     const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
@@ -203,13 +231,14 @@ export interface WeeklyInsightResponse {
 }
 
 /**
- * Analyze food image using Bedrock Vision through AWS Lambda
+ * Analyze food image using Bedrock Vision through AWS Lambda.
+ * Accepts an s3Key (already uploaded) — image never travels through AppSync.
  */
-export async function analyzeFoodImage(imageBase64: string): Promise<FoodAnalysisResult> {
+export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResult> {
     try {
         const result = await getClient().queries.aiEngine({
             action: 'analyzeFoodImage',
-            payload: JSON.stringify({ imageBase64 })
+            payload: JSON.stringify({ s3Key })
         });
 
         if (result.errors || !result.data) {
@@ -259,11 +288,14 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
         }
 
         // Step 2: Upload to S3 with {entity_id} path (Amplify resolves identity ID)
-        const fileName = `${Date.now()}.m4a`;
+        const isWeb = Platform.OS === 'web';
+        const ext = isWeb ? 'webm' : 'm4a';
+        const contentType = isWeb ? 'audio/webm' : 'audio/mp4';
+        const fileName = `${Date.now()}.${ext}`;
         const uploadResult = await uploadData({
             path: `voice/{entity_id}/${fileName}`,
             data: Uint8Array.from(atob(base64), c => c.charCodeAt(0)),
-            options: { contentType: 'audio/mp4' },
+            options: { contentType },
         }).result;
 
         const resolvedKey = (uploadResult as any).path || `voice/${fileName}`;
@@ -286,8 +318,20 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
 
         const rawData = extractAndParseJSON(responseObj.text);
 
+        // Handle clarification request from Qwen
+        if (rawData.action === 'clarify') {
+            return {
+                success: false,
+                transcript: responseObj.transcript,
+                error: rawData.clarification_question_vi || rawData.clarification_question_en || 'Vui lòng nói rõ hơn món ăn bạn muốn ghi nhận.',
+            };
+        }
+
+        // Voice response wraps food in food_data; fall back to items[] or root for other formats
         let aiData = rawData;
-        if (rawData.items && Array.isArray(rawData.items) && rawData.items.length > 0) {
+        if (rawData.food_data && typeof rawData.food_data === 'object') {
+            aiData = rawData.food_data;
+        } else if (rawData.items && Array.isArray(rawData.items) && rawData.items.length > 0) {
             aiData = rawData.items[0];
         }
 
@@ -412,19 +456,24 @@ function formatProcessedResult(item: any): FoodAnalysisResult {
 
 /**
  * Helper: convert raw AI response to NutritionInfo format (fallback)
+ * Handles both processNutrition format (flat) and Qwen direct format (macros.*. name_vi/name_en)
  */
 function convertAiToNutritionInfo(aiData: any): NutritionInfo {
+    const macros = aiData.macros || {};
+    const serving = aiData.serving || {};
     return {
-        name: aiData.meal_name || aiData.name || 'Unknown',
-        calories: aiData.total_calories || aiData.calories || 0,
-        protein: aiData.total_protein_g || aiData.protein || 0,
-        carbs: aiData.total_carbs_g || aiData.carbs || 0,
-        fat: aiData.total_fat_g || aiData.fat || 0,
-        portion_size: aiData.portion_size,
+        name: aiData.meal_name || aiData.name || aiData.name_vi || aiData.name_en || 'Unknown',
+        name_vi: aiData.name_vi,
+        name_en: aiData.name_en,
+        calories: aiData.total_calories || aiData.calories || macros.calories || 0,
+        protein: aiData.total_protein_g || aiData.protein || macros.protein_g || 0,
+        carbs: aiData.total_carbs_g || aiData.carbs || macros.carbs_g || 0,
+        fat: aiData.total_fat_g || aiData.fat || macros.fat_g || 0,
+        portion_size: aiData.portion_size || (serving.default_g ? `${serving.default_g}g` : undefined),
         ingredients: (aiData.ingredients || []).map((ing: any) => ({
             name: ing.name,
-            amount: ing.estimated_g ? `${ing.estimated_g}g` : ing.amount,
-            estimated_g: ing.estimated_g,
+            amount: ing.weight_g ? `${ing.weight_g}g` : ing.estimated_g ? `${ing.estimated_g}g` : ing.amount,
+            estimated_g: ing.weight_g || ing.estimated_g,
             calories: ing.calories,
             protein_g: ing.protein_g,
             carbs_g: ing.carbs_g,

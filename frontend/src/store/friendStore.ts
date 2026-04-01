@@ -88,9 +88,22 @@ export const useFriendStore = create<FriendState>((set, get) => ({
             const friends = get().friends;
             const myUserData = await getUserData();
             const myAvatar = myUserData?.avatar_url || null;
+            const myDays = new Set(myMeals.map((m: any) => m.date)).size;
+            const myPetLevel = myDays <= 0 ? 1 : Math.min(5, Math.floor((myDays - 1) / 36) + 1);
+            const myActualName = myUserData?.name && myUserData.name !== 'Admin' ? myUserData.name : myDisplayName;
+
+            // Sync own stats to DB so friends can see up-to-date data (fire-and-forget)
+            friendService.updateMyPublicStats({
+                user_id: myUserId,
+                display_name: myActualName,
+                current_streak: myDays,
+                pet_score: myDays * 20,
+                pet_level: myPetLevel,
+                total_log_days: myDays,
+            }).catch(() => {});
+
             if (friends.length === 0) {
                 // Only show "me" with no friends
-                const myDays = new Set(myMeals.map((m: any) => m.date)).size;
                 set({
                     leaderboard: [{
                         user_id: myUserId,
@@ -98,7 +111,7 @@ export const useFriendStore = create<FriendState>((set, get) => ({
                         avatar_url: myAvatar,
                         current_streak: myDays,
                         pet_score: myDays * 20,
-                        pet_level: myDays <= 0 ? 1 : Math.min(5, Math.floor((myDays - 1) / 36) + 1),
+                        pet_level: myPetLevel,
                         total_log_days: myDays,
                         isMe: true,
                     }],
@@ -123,14 +136,13 @@ export const useFriendStore = create<FriendState>((set, get) => ({
             }));
 
             // Add "me"
-            const myDays = new Set(myMeals.map((m: any) => m.date)).size;
             entries.push({
                 user_id: myUserId,
                 display_name: myDisplayName,
                 avatar_url: myAvatar,
                 current_streak: myDays,
                 pet_score: myDays * 20,
-                pet_level: myDays <= 0 ? 1 : Math.min(5, Math.floor((myDays - 1) / 36) + 1),
+                pet_level: myPetLevel,
                 total_log_days: myDays,
                 isMe: true,
             });

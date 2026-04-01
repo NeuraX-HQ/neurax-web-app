@@ -7,8 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import { analyzeFoodImage, NutritionInfo } from '../services/aiService';
+import { analyzeFoodImage, uploadFoodImage } from '../services/aiService';
 import { useRouter } from 'expo-router';
 import { useAppLanguage } from '../i18n/LanguageProvider';
 import { BlurView } from 'expo-blur';
@@ -77,9 +76,14 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
         if (Platform.OS !== 'web' || !visible) return;
         let stream: MediaStream | null = null;
         const startWebCamera = async () => {
+            if (!navigator?.mediaDevices?.getUserMedia) {
+                Alert.alert(t('camera.error.title'), t('camera.error.noAccess'));
+                return;
+            }
             try {
-                stream = await (navigator as any).mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+                // Use ideal (soft) constraint so mobile browsers fall back gracefully
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
                     audio: false,
                 });
                 webStreamRef.current = stream;
@@ -131,28 +135,22 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['images'],
                 quality: 0.6,
-                base64: true,
                 allowsEditing: true,
             });
-            
+
             if (result.canceled || !result.assets?.length) return;
-            
+
             const asset = result.assets[0];
-            let base64Data = asset.base64 || null;
-            const imageUri = asset.uri;
-            
-            if (!base64Data && asset.uri) {
-                base64Data = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' as any });
-            }
+            if (!asset.uri) throw new Error(t('camera.error.readData'));
 
-            if (!base64Data) throw new Error(t('camera.error.readData'));
-
-            const analysisResult = await analyzeFoodImage(base64Data);
+            // Upload URI directly — no base64 needed
+            const s3Key = await uploadFoodImage({ uri: asset.uri });
+            const analysisResult = await analyzeFoodImage(s3Key);
             if (analysisResult.success && analysisResult.data) {
                 onClose();
                 router.push({
                     pathname: '/food-detail',
-                    params: { foodData: JSON.stringify(analysisResult.data), source: 'camera', image: imageUri || '' },
+                    params: { foodData: JSON.stringify(analysisResult.data), source: 'camera', image: s3Key },
                 });
             } else {
                 Alert.alert(t('common.error'), analysisResult.error || t('camera.error.analysisError'));
@@ -171,37 +169,31 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
         onAnalyzing?.(true);
 
         try {
-            let base64Data: string | null = null;
-            let imageUri: string | undefined;
+            let s3Key: string;
 
             if (Platform.OS === 'web') {
-                base64Data = captureWebFrame();
+                const base64Data = captureWebFrame();
                 if (!base64Data) throw new Error(t('camera.error.captureWebcam'));
+                s3Key = await uploadFoodImage({ base64: base64Data });
             } else {
-                if (!cameraRef.current) throw new Error(t('camera.error.captureFailed'));
-                
+                if (!cameraRef.current || !isCameraReady) throw new Error(t('camera.error.captureFailed'));
+
                 const photo = await cameraRef.current.takePictureAsync({
                     quality: 0.6,
-                    base64: true,
+                    skipProcessing: Platform.OS === 'android',
+                    exif: false,
                 });
-                
-                if (!photo) throw new Error(t('camera.error.captureFailed'));
-                base64Data = photo.base64 || null;
-                imageUri = photo.uri;
+                if (!photo?.uri) throw new Error(t('camera.error.captureFailed'));
 
-                if (!base64Data && photo.uri) {
-                    base64Data = await FileSystem.readAsStringAsync(photo.uri, { encoding: 'base64' as any });
-                }
+                // Upload URI directly — no base64 encode/decode needed on native
+                s3Key = await uploadFoodImage({ uri: photo.uri });
             }
-
-            if (!base64Data) throw new Error(t('camera.error.readData'));
-
-            const analysisResult = await analyzeFoodImage(base64Data);
+            const analysisResult = await analyzeFoodImage(s3Key);
             if (analysisResult.success && analysisResult.data) {
                 onClose();
                 router.push({
                     pathname: '/food-detail',
-                    params: { foodData: JSON.stringify(analysisResult.data), source: 'camera', image: imageUri || '' },
+                    params: { foodData: JSON.stringify(analysisResult.data), source: 'camera', image: s3Key },
                 });
             } else {
                 Alert.alert(t('common.error'), analysisResult.error || t('camera.error.analysisError'));
@@ -270,6 +262,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                         style={StyleSheet.absoluteFill}
                         facing="back"
                         flash={flashMode}
+                        mute
                         onCameraReady={() => setIsCameraReady(true)}
                         onMountError={() => Alert.alert(t('camera.error.title'), t('camera.error.initFailed'))}
                     />
@@ -365,36 +358,45 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                         </TouchableOpacity>
 
                         {/* Shutter / capture */}
-                        {isFood ? (
-                            // Food: white circle shutter
-                            <TouchableOpacity
-                                style={s.shutterFood}
-                                onPress={handleCapture}
-                                activeOpacity={0.85}
-                            >
-                                <View style={s.shutterFoodInner} />
-                            </TouchableOpacity>
-                        ) : isBarcode ? (
-                            // Barcode: dark circle with barcode icon + green glow
-                            <TouchableOpacity
-                                style={s.shutterBarcode}
-                                onPress={handleCapture}
-                                activeOpacity={0.85}
-                            >
-                                <Ionicons name="barcode-outline" size={28} color="#FFF" />
-                            </TouchableOpacity>
-                        ) : (
-                            // Label: white blur button with sparkles icon
-                            <TouchableOpacity
-                                style={s.shutterLabel}
-                                onPress={handleCapture}
-                                activeOpacity={0.85}
-                            >
-                                <View style={s.shutterLabelInner}>
-                                    <Ionicons name="sparkles" size={28} color="#1B2838" />
-                                </View>
-                            </TouchableOpacity>
-                        )}
+                        {(() => {
+                            const shutterDisabled = Platform.OS !== 'web' && !isCameraReady;
+                            const shutterOpacity = shutterDisabled ? 0.4 : 1;
+                            if (isFood) return (
+                                // Food: white circle shutter
+                                <TouchableOpacity
+                                    style={[s.shutterFood, { opacity: shutterOpacity }]}
+                                    onPress={handleCapture}
+                                    disabled={shutterDisabled}
+                                    activeOpacity={0.85}
+                                >
+                                    <View style={s.shutterFoodInner} />
+                                </TouchableOpacity>
+                            );
+                            if (isBarcode) return (
+                                // Barcode: dark circle with barcode icon + green glow
+                                <TouchableOpacity
+                                    style={[s.shutterBarcode, { opacity: shutterOpacity }]}
+                                    onPress={handleCapture}
+                                    disabled={shutterDisabled}
+                                    activeOpacity={0.85}
+                                >
+                                    <Ionicons name="barcode-outline" size={28} color="#FFF" />
+                                </TouchableOpacity>
+                            );
+                            return (
+                                // Label: white blur button with sparkles icon
+                                <TouchableOpacity
+                                    style={[s.shutterLabel, { opacity: shutterOpacity }]}
+                                    onPress={handleCapture}
+                                    disabled={shutterDisabled}
+                                    activeOpacity={0.85}
+                                >
+                                    <View style={s.shutterLabelInner}>
+                                        <Ionicons name="sparkles" size={28} color="#1B2838" />
+                                    </View>
+                                </TouchableOpacity>
+                            );
+                        })()}
 
                         {/* Flash/zoom */}
                         <TouchableOpacity style={s.sideBtn} onPress={toggleFlash} activeOpacity={0.75}>
