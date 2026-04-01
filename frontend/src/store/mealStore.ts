@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as mealService from '../services/mealService';
 import * as friendService from '../services/friendService';
+import { getUserData } from './userStore';
 
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
 
@@ -170,14 +171,19 @@ export const useMealStore = create<MealState>((set, get) => ({
                     const allMeals = get().meals;
                     const totalDays = new Set(allMeals.map(m => m.date)).size;
                     const petLevel = totalDays <= 0 ? 1 : Math.min(5, Math.floor((totalDays - 1) / 36) + 1);
-                    friendService.updateMyPublicStats({
-                        user_id: authState.userId,
-                        display_name: authState.email?.split('@')[0] || 'User',
-                        current_streak: totalDays,
-                        pet_score: totalDays * 20,
-                        pet_level: petLevel,
-                        total_log_days: totalDays,
-                        last_log_date: newMeal.date,
+                    getUserData().then(userData => {
+                        const displayName = userData?.name && userData.name !== 'Admin'
+                            ? userData.name
+                            : authState.email?.split('@')[0] || 'User';
+                        friendService.updateMyPublicStats({
+                            user_id: authState.userId,
+                            display_name: displayName,
+                            current_streak: totalDays,
+                            pet_score: totalDays * 20,
+                            pet_level: petLevel,
+                            total_log_days: totalDays,
+                            last_log_date: newMeal.date,
+                        }).catch(() => {});
                     }).catch(() => {});
                 }
             } catch {
