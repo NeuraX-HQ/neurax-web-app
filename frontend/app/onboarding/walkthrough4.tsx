@@ -6,9 +6,11 @@ import { Colors } from '../../src/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
 export default function Walkthrough4Screen() {
     const router = useRouter();
+    const { t } = useAppLanguage();
 
     // Animations
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -134,15 +136,15 @@ export default function Walkthrough4Screen() {
 
                 {/* Text Content */}
                 <Animated.View style={[styles.textContainer, { opacity: fadeAnim }]}>
-                    <Text style={styles.title}>Kỷ luật là sức mạnh</Text>
+                    <Text style={styles.title}>{t('walkthrough4.title')}</Text>
                     <Text style={styles.description}>
-                        Duy trì chuỗi ngày ghi chép <Text style={styles.descriptionHighlight}>(Streak)</Text> để nuôi lớn chú Rồng Chibi của bạn. Chứng kiến sự thay đổi của cơ thể qua từng cấp độ.
+                        {t('walkthrough4.desc1')}<Text style={styles.descriptionHighlight}>(Streak)</Text>{t('walkthrough4.desc2')}
                     </Text>
 
                     {/* Level Progress Visual */}
                     <View style={styles.progressVisual}>
                         <View style={styles.progressVisualTop}>
-                            <Text style={styles.progressVisualLabel}>LEVEL 1: HATCHLING</Text>
+                            <Text style={styles.progressVisualLabel}>{t('walkthrough4.level')}</Text>
                             <Text style={styles.progressVisualValue}>75% EXP</Text>
                         </View>
                         <View style={styles.progressBarTrack}>
@@ -165,7 +167,7 @@ export default function Walkthrough4Screen() {
                     onPress={() => router.push('/onboarding/step1')}
                     activeOpacity={0.9}
                 >
-                    <Text style={styles.buttonText}>Bắt đầu lộ trình</Text>
+                    <Text style={styles.buttonText}>{t('walkthrough4.start')}</Text>
                 </TouchableOpacity>
 
                 {/* Main Progress Indicators */}

@@ -4,11 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors } from '../../src/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 import { Image } from 'expo-image';
 
 export default function Walkthrough2Screen() {
     const router = useRouter();
+    const { t } = useAppLanguage();
 
     // Animations
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -105,11 +106,12 @@ export default function Walkthrough2Screen() {
                         />
                     </View>
                     {/* Floating Chat 1 */}
-                    <Animated.View style={[styles.chatBubble, styles.chat1, { transform: [{ translateY: floatAnim1 }] }]}>                        <Text style={styles.chatText}>Món này bao nhiêu kcal?</Text>
+                    <Animated.View style={[styles.chatBubble, styles.chat1, { transform: [{ translateY: floatAnim1 }] }]}>
+                        <Text style={styles.chatText}>{t('walkthrough2.chat1')}</Text>
                     </Animated.View>
                     {/* Floating Chat 2 */}
                     <Animated.View style={[styles.chatBubble, styles.chat2, { transform: [{ translateY: floatAnim2 }] }]}>
-                        <Text style={styles.chatText}>Gợi ý bữa tối giảm cân?</Text>
+                        <Text style={styles.chatText}>{t('walkthrough2.chat2')}</Text>
                     </Animated.View>
                     {/* Small icon bubble */}
                     <Animated.View style={[styles.iconBubble, { transform: [{ translateY: floatAnim1 }] }]}>
@@ -119,9 +121,9 @@ export default function Walkthrough2Screen() {
 
                 {/* Text Content */}
                 <Animated.View style={[styles.textContainer, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}>
-                    <Text style={styles.title}>AI Bảo - Người đồng hành 24/7</Text>
+                    <Text style={styles.title}>{t('walkthrough2.title')}</Text>
                     <Text style={styles.description}>
-                        Không chỉ là bộ đếm calo, AI Bảo thấu hiểu và đưa ra những lời khuyên cá nhân hóa cho từng bữa ăn của bạn.
+                        {t('walkthrough2.desc')}
                     </Text>
                 </Animated.View>
             </View>
@@ -133,7 +135,7 @@ export default function Walkthrough2Screen() {
                     onPress={() => router.push('/onboarding/walkthrough3')}
                     activeOpacity={0.8}
                 >
-                    <Text style={styles.buttonText}>Tiếp tục</Text>
+                    <Text style={styles.buttonText}>{t('common.continue')}</Text>
                 </TouchableOpacity>
 
                 {/* Progress Indicators */}

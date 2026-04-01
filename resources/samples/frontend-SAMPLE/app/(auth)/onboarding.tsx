@@ -393,7 +393,7 @@ export default function OnboardingScreen() {
                         <ActivityIndicator color={Colors.textOnPrimary} />
                     ) : (
                         <Text style={styles.continueButtonText}>
-                            {currentStep === 4 ? "Bắt đầu ngay! →" : "Tiếp tục →"}
+                            {currentStep === 4 ? "Bắt đầu ngay!" : "Tiếp tục"}
                         </Text>
                     )}
                 </Pressable>

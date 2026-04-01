@@ -270,15 +270,13 @@ function RootLayoutShell() {
 
             {isSwitchingLanguage ? (
                 <View style={styles.languageOverlay} pointerEvents="auto">
-                    <View style={styles.languageOverlayCard}>
-                        <ActivityIndicator size="large" color="#2ECC71" />
-                        <Text style={styles.languageOverlayTitle}>{t('language.switchingTitle')}</Text>
-                        <Text style={styles.languageOverlaySubtitle}>
-                            {t('language.switchingSubtitle', {
-                                language: targetLanguage === 'vi' ? t('language.name.vi') : t('language.name.en'),
-                            })}
-                        </Text>
-                    </View>
+                    <ActivityIndicator size="large" color="#4EDEa3" style={{ marginBottom: 24, transform: [{ scale: 1.5 }] }} />
+                    <Text style={styles.languageOverlayTitle}>{t('language.switchingTitle')}</Text>
+                    <Text style={styles.languageOverlaySubtitle}>
+                        {t('language.switchingSubtitle', {
+                            language: targetLanguage === 'vi' ? t('language.name.vi') : t('language.name.en'),
+                        })}
+                    </Text>
                 </View>
             ) : null}
             </View>
@@ -369,31 +367,24 @@ const styles = StyleSheet.create({
     },
     languageOverlay: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(17, 24, 39, 0.25)',
+        backgroundColor: '#111827', // Dark full screen block
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 24,
+        paddingHorizontal: 32,
         zIndex: 1000,
-    },
-    languageOverlayCard: {
-        width: '100%',
-        maxWidth: 320,
-        borderRadius: 16,
-        backgroundColor: '#FFFFFF',
-        paddingVertical: 22,
-        paddingHorizontal: 18,
-        alignItems: 'center',
     },
     languageOverlayTitle: {
         marginTop: 12,
-        fontSize: 17,
-        fontWeight: '700',
-        color: '#111827',
+        fontSize: 22,
+        fontWeight: '800',
+        color: '#FFFFFF',
+        letterSpacing: 0.5,
     },
     languageOverlaySubtitle: {
-        marginTop: 6,
-        fontSize: 14,
-        color: '#4B5563',
+        marginTop: 12,
+        fontSize: 16,
+        color: '#9CA3AF',
         textAlign: 'center',
+        lineHeight: 24,
     },
 });
