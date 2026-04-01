@@ -101,7 +101,7 @@ export default function ProfileScreen() {
         streak: 0,
         dailyCalories: 0,
         waterIntake: 0,
-        waterGoal: 2500,
+        waterGoal: 2000,
     });
     const [profileName, setProfileName] = React.useState(email || '');
     const [activityLevel, setActivityLevel] = React.useState('');

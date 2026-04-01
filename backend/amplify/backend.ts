@@ -108,12 +108,6 @@ const friendRequestLambda = backend.friendRequest.resources.lambda;
 
 friendRequestLambda.addToRolePolicy(new iam.PolicyStatement({
   effect: iam.Effect.ALLOW,
-  actions: ['dynamodb:ListTables'],
-  resources: ['*'],
-}));
-
-friendRequestLambda.addToRolePolicy(new iam.PolicyStatement({
-  effect: iam.Effect.ALLOW,
   actions: [
     'dynamodb:GetItem',
     'dynamodb:PutItem',
@@ -124,6 +118,7 @@ friendRequestLambda.addToRolePolicy(new iam.PolicyStatement({
     'dynamodb:BatchGetItem',
     'dynamodb:BatchWriteItem',
     'dynamodb:DescribeTable',
+    'dynamodb:TransactWriteItems',
   ],
   resources: [
     'arn:aws:dynamodb:*:*:table/user-*',
@@ -132,3 +127,15 @@ friendRequestLambda.addToRolePolicy(new iam.PolicyStatement({
     'arn:aws:dynamodb:*:*:table/Friendship-*/index/*',
   ],
 }));
+
+// Pass exact table names via env vars — eliminates discoverTables() ambiguity
+// Works in both sandbox and branch deploy (CDK resolves correct table per environment)
+const cfnFriendRequestFn = friendRequestLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;
+cfnFriendRequestFn.addPropertyOverride(
+  'Environment.Variables.USER_TABLE_NAME',
+  backend.data.resources.tables['user'].tableName
+);
+cfnFriendRequestFn.addPropertyOverride(
+  'Environment.Variables.FRIENDSHIP_TABLE_NAME',
+  backend.data.resources.tables['Friendship'].tableName
+);

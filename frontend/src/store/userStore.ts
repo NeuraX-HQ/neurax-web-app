@@ -54,7 +54,7 @@ const defaultUser: UserData = {
     streak: 14,
     dailyCalories: 1800,
     waterIntake: 0,
-    waterGoal: 2500,
+    waterGoal: 2000,
 };
 
 export const saveOnboardingData = async (data: Partial<OnboardingData>) => {

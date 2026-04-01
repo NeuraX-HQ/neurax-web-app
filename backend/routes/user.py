@@ -54,7 +54,7 @@ _DEFAULT_PROFILE = {
     "streak": 0,
     "dailyCalories": 2000,
     "waterIntake": 0,
-    "waterGoal": 2500,
+    "waterGoal": 2000,
 }
 
 _DEFAULT_ONBOARDING = {

@@ -1,4 +1,4 @@
-import { DynamoDBClient, ListTablesCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
   DynamoDBDocumentClient,
   GetCommand,
@@ -12,35 +12,14 @@ const REGION = process.env.AWS_REGION || 'ap-southeast-2';
 const client = new DynamoDBClient({ region: REGION });
 const docClient = DynamoDBDocumentClient.from(client);
 
-// Cache table names
-let userTableName: string | null = null;
-let friendshipTableName: string | null = null;
+// Table names injected by CDK at deploy time — correct for each environment (sandbox + branch deploy)
+const USER_TABLE = process.env.USER_TABLE_NAME;
+const FRIENDSHIP_TABLE = process.env.FRIENDSHIP_TABLE_NAME;
 
-async function discoverTables(): Promise<{ userTable: string; friendshipTable: string }> {
-  if (userTableName && friendshipTableName) {
-    return { userTable: userTableName, friendshipTable: friendshipTableName };
-  }
-
-  // Paginate ListTables — API returns max 100 per call
-  const tables: string[] = [];
-  let lastEvaluated: string | undefined;
-  do {
-    const result = await client.send(new ListTablesCommand({
-      ExclusiveStartTableName: lastEvaluated,
-    }));
-    tables.push(...(result.TableNames || []));
-    lastEvaluated = result.LastEvaluatedTableName;
-  } while (lastEvaluated);
-
-  const uTable = tables.find((n: string) => n.startsWith('user-'));
-  const fTable = tables.find((n: string) => n.startsWith('Friendship-'));
-
-  if (!uTable) throw new Error('user table not found in DynamoDB');
-  if (!fTable) throw new Error('Friendship table not found in DynamoDB');
-
-  userTableName = uTable;
-  friendshipTableName = fTable;
-  return { userTable: uTable, friendshipTable: fTable };
+function getTableNames(): { userTable: string; friendshipTable: string } {
+  if (!USER_TABLE) throw new Error('USER_TABLE_NAME env var not set');
+  if (!FRIENDSHIP_TABLE) throw new Error('FRIENDSHIP_TABLE_NAME env var not set');
+  return { userTable: USER_TABLE, friendshipTable: FRIENDSHIP_TABLE };
 }
 
 // ─── Actions ───
@@ -105,7 +84,7 @@ export const handler = async (event: HandlerEvent): Promise<string> => {
 async function sendRequest(caller: CallerIdentity, friendCode: string) {
   if (!friendCode) throw new Error('friend_code is required');
 
-  const { userTable, friendshipTable } = await discoverTables();
+  const { userTable, friendshipTable } = getTableNames();
 
   // 1. Lookup friend by friend_code
   const friendUser = await findUserByFriendCode(userTable, friendCode);
@@ -193,7 +172,7 @@ async function sendRequest(caller: CallerIdentity, friendCode: string) {
 async function acceptRequest(caller: CallerIdentity, friendshipId: string) {
   if (!friendshipId) throw new Error('friendship_id is required');
 
-  const { friendshipTable } = await discoverTables();
+  const { friendshipTable } = getTableNames();
 
   // 1. Get the received record
   const receivedRecord = await getFriendshipById(friendshipTable, friendshipId);
@@ -242,7 +221,7 @@ async function acceptRequest(caller: CallerIdentity, friendshipId: string) {
 async function declineRequest(caller: CallerIdentity, friendshipId: string) {
   if (!friendshipId) throw new Error('friendship_id is required');
 
-  const { friendshipTable } = await discoverTables();
+  const { friendshipTable } = getTableNames();
 
   const record = await getFriendshipById(friendshipTable, friendshipId);
   if (!record) throw new Error('Friendship record not found');
@@ -277,7 +256,7 @@ async function removeFriend(caller: CallerIdentity, friendshipId: string) {
 async function blockFriend(caller: CallerIdentity, friendshipId: string) {
   if (!friendshipId) throw new Error('friendship_id is required');
 
-  const { friendshipTable } = await discoverTables();
+  const { friendshipTable } = getTableNames();
 
   const record = await getFriendshipById(friendshipTable, friendshipId);
   if (!record) throw new Error('Friendship record not found');

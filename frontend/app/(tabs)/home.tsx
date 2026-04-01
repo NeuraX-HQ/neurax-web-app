@@ -315,7 +315,7 @@ export default function HomeScreen() {
     const carbs = getMacroStatus(Math.round(stats.totalCarbs), MACROS.c, 'home.carbs', Colors.carbs);
     const fat = getMacroStatus(Math.round(stats.totalFat), MACROS.f, 'home.fat', Colors.fat);
     const [waterByDate, setWaterByDate] = useState<Record<string, number>>({});
-    const waterMax = 2500;
+    const waterMax = 2000;
     const waterCurrent = waterByDate[selectedDateStr] ?? 0;
 
     // Use actual calories burned from workout activities (goal: 400 kcal)

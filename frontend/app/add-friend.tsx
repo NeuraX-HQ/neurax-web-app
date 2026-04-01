@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     codeInput: {
         flex: 1, height: 48, borderRadius: 12,
         backgroundColor: '#F5F6F8', paddingHorizontal: 16,
-        fontSize: 18, fontWeight: '700', letterSpacing: 2,
+        fontSize: 13, fontWeight: '700', letterSpacing: 1,
         color: Colors.text, textAlign: 'center',
     },
     sendButton: {
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
         borderWidth: 1.5, borderColor: '#D0D8E8', borderStyle: 'dashed',
     },
     codeText: {
-        fontSize: 22, fontWeight: '800', color: Colors.primary, letterSpacing: 3,
+        fontSize: 16, fontWeight: '800', color: Colors.primary, letterSpacing: 3,
     },
     copyButton: {
         flexDirection: 'row', alignItems: 'center', gap: 6,
