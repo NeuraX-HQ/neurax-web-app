@@ -2,7 +2,7 @@
 
 # dependencies
 node_modules/
-amplify.yml
+
 dist/
 .expo/
 auth-server/
