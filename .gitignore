@@ -54,12 +54,12 @@ backend/.amplify/
 amplifyconfiguration*
 amplify_outputs.json
 
-# Terraform
-.terraform/
+# Terraform artifacts (keep .tf files tracked)
+**/.terraform/
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
-infrastructure/
+infrastructure/terraform.tfvars
 
 # AWS SAM
 .aws-sam/
