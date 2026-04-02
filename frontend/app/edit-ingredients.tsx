@@ -1,13 +1,14 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, TextInput,
-    ScrollView, Alert
+    ScrollView, Alert, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useMealStore } from '../src/store/mealStore';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
+import { fixFood } from '../src/services/aiService';
 
 export default function EditIngredientsScreen() {
     const router = useRouter();
@@ -16,6 +17,7 @@ export default function EditIngredientsScreen() {
     const setCurrentFoodItem = useMealStore(state => state.setCurrentFoodItem);
 
     const [editingText, setEditingText] = useState('');
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (currentFoodItem && currentFoodItem.ingredients) {
@@ -38,7 +40,7 @@ export default function EditIngredientsScreen() {
         }
     }, [currentFoodItem]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const lines = editingText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
         if (lines.length === 0) {
@@ -65,14 +67,29 @@ export default function EditIngredientsScreen() {
             return { name: line, amount: t('editIngredients.defaultAmount') };
         });
 
-        if (currentFoodItem) {
-            setCurrentFoodItem({
-                ...currentFoodItem,
-                ingredients: validIngredients
-            });
+        if (!currentFoodItem) {
+            router.back();
+            return;
         }
 
-        router.back();
+        setSaving(true);
+        try {
+            const correctionQuery = `Recalculate total nutrition based on updated ingredients: ${
+                validIngredients.map((i: any) => `${i.name} ${i.amount}`).join(', ')
+            }`;
+            const result = await fixFood(currentFoodItem, correctionQuery);
+            if (result.success && result.data) {
+                setCurrentFoodItem({ ...result.data, ingredients: validIngredients });
+            } else {
+                // AI failed — keep old macros, still update ingredients
+                setCurrentFoodItem({ ...currentFoodItem, ingredients: validIngredients });
+            }
+        } catch {
+            setCurrentFoodItem({ ...currentFoodItem, ingredients: validIngredients });
+        } finally {
+            setSaving(false);
+            router.back();
+        }
     };
 
     return (
@@ -83,8 +100,10 @@ export default function EditIngredientsScreen() {
                     <Ionicons name="close" size={28} color="#000" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{t('editIngredients.title')}</Text>
-                <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-                    <Text style={styles.saveButtonText}>{t('editIngredients.save')}</Text>
+                <TouchableOpacity onPress={handleSave} style={styles.saveButton} disabled={saving}>
+                    {saving
+                        ? <ActivityIndicator size="small" color="#FFF" />
+                        : <Text style={styles.saveButtonText}>{t('editIngredients.save')}</Text>}
                 </TouchableOpacity>
             </View>
 

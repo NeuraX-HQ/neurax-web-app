@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TouchableWithoutFeedback, Modal, FlatList, Animated, useWindowDimensions } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, TouchableWithoutFeedback, Modal, FlatList, Animated, useWindowDimensions, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -13,6 +14,7 @@ import { useMealStore, Meal } from '../../src/store/mealStore';
 import { getOnboardingData, getUserData, saveUserData } from '../../src/store/userStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { useNotificationStore } from '../../src/store/notificationStore';
+import { getUrl } from 'aws-amplify/storage';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 import { getCurrentStreak } from '../../src/utils/streak';
 import Svg, { Path } from 'react-native-svg';
@@ -85,6 +87,7 @@ export default function HomeScreen() {
     const [oldCalories, setOldCalories] = useState(1800);
     const [newCalories, setNewCalories] = useState(1800);
     const modalCheckedRef = useRef(false);
+    const lastDataLoadedRef = useRef<number>(0);
 
     // Meal store
     const {
@@ -98,7 +101,7 @@ export default function HomeScreen() {
     const [stripBaseDateStr, setStripBaseDateStr] = useState(selectedDateStr);
 
     const hasAnyMeals = meals && meals.length > 0;
-    const displayedMeals = getMealsByDate(selectedDateStr);
+    const displayedMeals = useMemo(() => getMealsByDate(selectedDateStr), [meals, selectedDateStr]);
     const usedMealDates = useMemo(() => new Set(meals.map((meal) => meal.date)), [meals]);
     const currentStreak = useMemo(() => getCurrentStreak(usedMealDates, todayIso), [usedMealDates, todayIso]);
 
@@ -200,12 +203,12 @@ export default function HomeScreen() {
         }
     }, [loadMeals]);
 
-    const withAutoClose = (action: () => void) => () => {
+    const withAutoClose = useCallback((action: () => void) => () => {
         if (closeOpenRow()) return;
         action();
-    };
+    }, []);
 
-    const stats = displayedMeals.reduce(
+    const stats = useMemo(() => displayedMeals.reduce(
         (acc, meal) => ({
             totalCalories: acc.totalCalories + meal.calories,
             totalProtein: acc.totalProtein + meal.protein,
@@ -213,7 +216,7 @@ export default function HomeScreen() {
             totalFat: acc.totalFat + meal.fat,
         }),
         { totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 }
-    );
+    ), [displayedMeals]);
 
     const calorieWindow = useMemo(() => {
         const dailyTarget = Math.max(0, Math.round(dailyCalorieTarget));
@@ -229,7 +232,9 @@ export default function HomeScreen() {
             };
         }
 
-        const startDate = earliestLogDate;
+        // Cap loop to 90 days back from selected date — prevents O(n years) iteration
+        const capDate = addDaysToIso(selectedDateStr, -90);
+        const startDate = earliestLogDate > capDate ? earliestLogDate : capDate;
 
         let carryOver = 0;
         let cursor = startDate;
@@ -314,6 +319,7 @@ export default function HomeScreen() {
     const protein = getMacroStatus(Math.round(stats.totalProtein), MACROS.p, 'home.protein', Colors.protein);
     const carbs = getMacroStatus(Math.round(stats.totalCarbs), MACROS.c, 'home.carbs', Colors.carbs);
     const fat = getMacroStatus(Math.round(stats.totalFat), MACROS.f, 'home.fat', Colors.fat);
+    const WATER_KEY = '@nutritrack_water_by_date';
     const [waterByDate, setWaterByDate] = useState<Record<string, number>>({});
     const waterMax = 2000;
     const waterCurrent = waterByDate[selectedDateStr] ?? 0;
@@ -322,11 +328,18 @@ export default function HomeScreen() {
     const exerciseKcal = Math.round(burnedByDate[selectedDateStr] ?? 0);
     const exerciseKcalTarget = 400;
 
-    // Load meals on mount
+    // Load meals on mount — skip reload if data was loaded < 30s ago (avoids re-fetching on every tab switch)
     useFocusEffect(
         useCallback(() => {
+            const now = Date.now();
+            if (now - lastDataLoadedRef.current < 30_000) return;
+            lastDataLoadedRef.current = now;
+
             loadMeals();
             const fetchUserData = async () => {
+                const savedWater = await AsyncStorage.getItem(WATER_KEY);
+                if (savedWater) setWaterByDate(JSON.parse(savedWater));
+
                 const [onboarding, user] = await Promise.all([getOnboardingData(), getUserData()]);
                 if (onboarding?.gender) {
                     setGender(onboarding.gender.toLowerCase());
@@ -339,7 +352,17 @@ export default function HomeScreen() {
                     setUserName(name);
                 }
                 if (user?.avatar_url) {
-                    setAvatarUri(user.avatar_url);
+                    const raw = user.avatar_url;
+                    if (raw.startsWith('http') || raw.startsWith('file://')) {
+                        setAvatarUri(raw);
+                    } else {
+                        try {
+                            const { url } = await getUrl({ path: raw });
+                            setAvatarUri(url.toString());
+                        } catch (e) {
+                            console.warn("Home avatar resolve failed", e);
+                        }
+                    }
                 }
             };
             fetchUserData();
@@ -460,14 +483,29 @@ export default function HomeScreen() {
 
     const GLASS_H = 240;
     const addWater = () => {
-        setWaterByDate((prev) => ({
-            ...prev,
-            [selectedDateStr]: Math.min((prev[selectedDateStr] ?? 0) + drinkAmount, waterMax),
-        }));
+        const updated = {
+            ...waterByDate,
+            [selectedDateStr]: Math.min((waterByDate[selectedDateStr] ?? 0) + drinkAmount, waterMax),
+        };
+        setWaterByDate(updated);
+        AsyncStorage.setItem(WATER_KEY, JSON.stringify(updated)).catch(() => {});
         setShowHydration(false);
     };
 
+    const isFutureDate = selectedDateStr > todayIso;
+    const yesterdayIso = addDaysToIso(todayIso, -1);
+    const isTooOldDate = selectedDateStr < yesterdayIso;
+    const canLogMeal = !isFutureDate && !isTooOldDate;
+
     const openAddMenu = (mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK') => {
+        if (isFutureDate) {
+            Alert.alert(t('home.futureDate.title'), t('home.futureDate.message'));
+            return;
+        }
+        if (isTooOldDate) {
+            Alert.alert(t('home.pastDate.title'), t('home.pastDate.message'));
+            return;
+        }
         setSelectedMealType(mealType);
         setAddMenuOpen(true);
     };
@@ -508,12 +546,16 @@ export default function HomeScreen() {
         return cells;
     }, [calendarMonth]);
 
-    // Group meals by type
-    const getMealsByType = (type: Meal['type']) => {
-        return displayedMeals.filter(meal => meal.type === type);
-    };
+    // Group meals by type — memoized per displayedMeals change
+    const mealsByType = useMemo(() => ({
+        BREAKFAST: displayedMeals.filter(m => m.type === 'BREAKFAST'),
+        LUNCH:     displayedMeals.filter(m => m.type === 'LUNCH'),
+        DINNER:    displayedMeals.filter(m => m.type === 'DINNER'),
+        SNACK:     displayedMeals.filter(m => m.type === 'SNACK'),
+    }), [displayedMeals]);
+    const getMealsByType = useCallback((type: Meal['type']) => mealsByType[type], [mealsByType]);
 
-    const renderRightActions = (mealId: string) => {
+    const renderRightActions = useCallback((mealId: string) => {
         return (
             <GHTouchableOpacity
                 style={[styles.deleteAction, { height: '100%' }]}
@@ -529,7 +571,7 @@ export default function HomeScreen() {
                 <Text style={styles.deleteActionText}>Delete</Text>
             </GHTouchableOpacity>
         );
-    };
+    }, [removeMeal]);
 
     const renderMealPressable = (meal: Meal) => {
         const displayMealName = language === 'vi' ? (meal.name_vi || meal.name) : (meal.name_en || meal.name);
@@ -561,7 +603,7 @@ export default function HomeScreen() {
                             }),
                             source: 'meal',
                             mealId: meal.id,
-                            image: meal.image,
+                            image: meal.image_key,
                         }
                     });
                 }}
@@ -695,6 +737,7 @@ export default function HomeScreen() {
                                     const isSelected = item.iso === selectedDateStr;
                                     const isPast = item.iso < todayIso;
                                     const isToday = item.iso === todayIso;
+                                    const isFuture = item.iso > todayIso;
                                     const isAfterOrOnStart = item.iso >= earliestLogDate;
 
                                     let ringStyle = {};
@@ -722,6 +765,7 @@ export default function HomeScreen() {
                                                         styles.dayItem,
                                                         isSelected && styles.dayItemSelected,
                                                         !isSelected && isToday && styles.dayItemToday,
+                                                        isFuture && !isSelected && styles.dayItemFuture,
                                                     ]}
                                                     onPress={withAutoClose(() => setSelectedDateStr(item.iso))}
                                                 >
@@ -924,7 +968,7 @@ export default function HomeScreen() {
                         )}
                     </View>
                     {getMealsByType('BREAKFAST').map(renderMealCard)}
-                    {getMealsByType('BREAKFAST').length === 0 && (
+                    {getMealsByType('BREAKFAST').length === 0 && canLogMeal && (
                         <TouchableOpacity
                             style={[styles.logMealCard, Shadows.small]}
                             onPress={withAutoClose(() => openAddMenu('BREAKFAST'))}
@@ -943,7 +987,7 @@ export default function HomeScreen() {
                         )}
                     </View>
                     {getMealsByType('LUNCH').map(renderMealCard)}
-                    {getMealsByType('LUNCH').length === 0 && (
+                    {getMealsByType('LUNCH').length === 0 && canLogMeal && (
                         <TouchableOpacity
                             style={[styles.logMealCard, Shadows.small]}
                             onPress={withAutoClose(() => openAddMenu('LUNCH'))}
@@ -962,7 +1006,7 @@ export default function HomeScreen() {
                         )}
                     </View>
                     {getMealsByType('DINNER').map(renderMealCard)}
-                    {getMealsByType('DINNER').length === 0 && (
+                    {getMealsByType('DINNER').length === 0 && canLogMeal && (
                         <TouchableOpacity
                             style={[styles.logMealCard, Shadows.small]}
                             onPress={withAutoClose(() => openAddMenu('DINNER'))}
@@ -981,7 +1025,7 @@ export default function HomeScreen() {
                         )}
                     </View>
                     {getMealsByType('SNACK').map(renderMealCard)}
-                    {getMealsByType('SNACK').length === 0 && (
+                    {getMealsByType('SNACK').length === 0 && canLogMeal && (
                         <TouchableOpacity
                             style={[styles.logMealCard, Shadows.small]}
                             onPress={withAutoClose(() => openAddMenu('SNACK'))}
@@ -1449,6 +1493,7 @@ const styles = StyleSheet.create({
         borderColor: '#D1D5DB',
     },
     dayItemSelected: { backgroundColor: Colors.primary },
+    dayItemFuture: { opacity: 0.45 },
     dayLabel: { fontSize: 11, color: Colors.textSecondary, fontWeight: '500', marginBottom: 3 },
     dayLabelSelected: { color: '#FFFFFF' },
     dayDate: { fontSize: 14, fontWeight: '700', color: Colors.text },

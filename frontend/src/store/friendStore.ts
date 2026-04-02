@@ -1,7 +1,22 @@
 import { create } from 'zustand';
 import * as friendService from '../services/friendService';
 import type { FriendshipRecord, PublicStats } from '../services/friendService';
-import { getUserData } from './userStore';
+import { getUserData, getOnboardingData } from './userStore';
+import { getUrl } from 'aws-amplify/storage';
+
+// Resolve an S3 key or http URL to a displayable URL.
+// Returns null for file:// URIs (stale local paths) and failed keys.
+async function resolveAvatarUrl(raw: string | null | undefined): Promise<string | null> {
+    if (!raw) return null;
+    if (raw.startsWith('http')) return raw;
+    if (raw.startsWith('file://')) return null;
+    try {
+        const { url } = await getUrl({ path: raw });
+        return url.toString();
+    } catch {
+        return null;
+    }
+}
 
 interface LeaderboardEntry {
     user_id: string;
@@ -86,11 +101,16 @@ export const useFriendStore = create<FriendState>((set, get) => ({
     loadLeaderboard: async (myUserId: string, myDisplayName: string, myMeals: any[]) => {
         try {
             const friends = get().friends;
-            const myUserData = await getUserData();
-            const myAvatar = myUserData?.avatar_url || null;
+            const [myUserData, myOnboarding] = await Promise.all([getUserData(), getOnboardingData()]);
+            const myAvatar = await resolveAvatarUrl(myUserData?.avatar_url);
             const myDays = new Set(myMeals.map((m: any) => m.date)).size;
             const myPetLevel = myDays <= 0 ? 1 : Math.min(5, Math.floor((myDays - 1) / 36) + 1);
-            const myActualName = myUserData?.name && myUserData.name !== 'Admin' ? myUserData.name : myDisplayName;
+            // Prefer onboarding name (restored from cloud by syncOnboardingWithDB) over userData
+            // which may be stale/default on web when local storage is cleared
+            const myActualName =
+                myOnboarding?.name?.trim() ||
+                (myUserData?.name && myUserData.name !== 'Admin' ? myUserData.name.trim() : '') ||
+                myDisplayName;
 
             // Sync own stats to DB so friends can see up-to-date data (fire-and-forget)
             friendService.updateMyPublicStats({
@@ -123,17 +143,17 @@ export const useFriendStore = create<FriendState>((set, get) => ({
             const friendIds = friends.map(f => f.friend_id);
             const stats = await friendService.getFriendsPublicStats(friendIds);
 
-            // Build leaderboard entries from stats
-            const entries: LeaderboardEntry[] = stats.map(s => ({
+            // Build leaderboard entries from stats, resolve avatar keys → presigned URLs
+            const entries: LeaderboardEntry[] = await Promise.all(stats.map(async s => ({
                 user_id: s.user_id,
                 display_name: s.display_name || 'User',
-                avatar_url: s.avatar_url,
+                avatar_url: await resolveAvatarUrl(s.avatar_url),
                 current_streak: s.current_streak || 0,
                 pet_score: s.pet_score || 0,
                 pet_level: s.pet_level || 1,
                 total_log_days: s.total_log_days || 0,
                 isMe: false,
-            }));
+            })));
 
             // Add "me"
             entries.push({

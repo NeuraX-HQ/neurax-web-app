@@ -47,6 +47,10 @@ export const createUserProfile = async (userId: string, email: string, onboardin
         const { data: newUser, errors } = await client.models.user.create(input);
 
         if (errors) {
+            // User may already exist (race condition: auth ready after first check).
+            // Try to return the existing record instead of failing.
+            const existing = await fetchUserProfile(userId);
+            if (existing) return existing;
             console.error('Lỗi khi tạo user profile:', errors);
             return null;
         }

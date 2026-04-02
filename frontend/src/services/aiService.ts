@@ -471,7 +471,9 @@ function convertAiToNutritionInfo(aiData: any): NutritionInfo {
         fat: aiData.total_fat_g || aiData.fat || macros.fat_g || 0,
         portion_size: aiData.portion_size || (serving.default_g ? `${serving.default_g}g` : undefined),
         ingredients: (aiData.ingredients || []).map((ing: any) => ({
-            name: ing.name,
+            name: ing.name_vi || ing.name_en || ing.name || '',
+            name_vi: ing.name_vi,
+            name_en: ing.name_en,
             amount: ing.weight_g ? `${ing.weight_g}g` : ing.estimated_g ? `${ing.estimated_g}g` : ing.amount,
             estimated_g: ing.weight_g || ing.estimated_g,
             calories: ing.calories,

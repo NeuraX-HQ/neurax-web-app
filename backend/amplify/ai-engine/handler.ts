@@ -1,5 +1,5 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
-import { TranscribeClient, StartTranscriptionJobCommand, GetTranscriptionJobCommand } from "@aws-sdk/client-transcribe";
+import { TranscribeClient, StartTranscriptionJobCommand, GetTranscriptionJobCommand, DeleteTranscriptionJobCommand } from "@aws-sdk/client-transcribe";
 import { S3Client, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
 
@@ -44,7 +44,7 @@ OUTPUT FORMAT — always return a single JSON object matching this schema:
       "default_g": 0, "unit": "bowl | plate | serving | piece",
       "portions": { "small": 0.7, "medium": 1.0, "large": 1.3 }
   },
-  "ingredients": [ { "name": "Ingredient Name", "weight_g": 0 } ],
+  "ingredients": [ { "name_vi": "Tên nguyên liệu tiếng Việt", "name_en": "Ingredient Name", "weight_g": 0 } ],
   "verified": false,
   "source": "AI Generated"
 }`;
@@ -352,7 +352,7 @@ export const handler = async (event: any) => {
                     role: "user",
                     content: [
                         { type: "image_url", image_url: { url: `data:${contentType};base64,${base64}` } },
-                        { type: "text", text: "Analyze this food image and estimate its nutritional profile. Return ONLY the JSON object." },
+                        { type: "text", text: "Analyze this food image and estimate its nutritional profile. Use Vietnamese (tiếng Việt) for name_vi and all ingredient name_vi fields. Return ONLY the JSON object." },
                     ],
                 },
             ]);
@@ -414,17 +414,34 @@ export const handler = async (event: any) => {
 
             const s3Uri = `s3://${STORAGE_BUCKET}/${s3Key}`;
             const jobName = `nutritrack-voice-${randomUUID()}`;
+
+            // Map file extension → AWS Transcribe MediaFormat enum
+            // .m4a is MPEG-4 AAC container → must use 'mp4', NOT 'm4a' (invalid enum)
             const ext = s3Key.split('.').pop()?.toLowerCase() || 'm4a';
-            const mediaFormat = ext === 'webm' ? 'webm' : ext === 'mp3' ? 'mp3' : 'm4a';
+            const mediaFormat = ext === 'webm' ? 'webm'
+                : ext === 'mp3'  ? 'mp3'
+                : ext === 'wav'  ? 'wav'
+                : ext === 'flac' ? 'flac'
+                : 'mp4'; // m4a, mp4 → 'mp4'
 
             await transcribeClient.send(new StartTranscriptionJobCommand({
                 TranscriptionJobName: jobName,
-                LanguageCode: 'vi-VN',
+                // Auto-detect vi-VN or en-US — supports bilingual users
+                IdentifyLanguage: true,
+                LanguageOptions: ['vi-VN', 'en-US'],
                 MediaFormat: mediaFormat as any,
                 Media: { MediaFileUri: s3Uri },
             }));
 
             const transcript = await waitForTranscription(jobName);
+
+            // Cleanup Transcribe job after result retrieved
+            try {
+                await transcribeClient.send(new DeleteTranscriptionJobCommand({ TranscriptionJobName: jobName }));
+            } catch (e) {
+                console.warn('Failed to cleanup Transcribe job:', e);
+            }
+
             if (!transcript) {
                 return JSON.stringify({ success: false, error: 'Empty transcription' });
             }
@@ -434,6 +451,7 @@ export const handler = async (event: any) => {
                 { role: "user", content: `User said: "${transcript}"\n\nAnalyze and return JSON following the output format.` },
             ]);
 
+            // Cleanup S3 voice file
             try {
                 await s3Client.send(new DeleteObjectCommand({ Bucket: STORAGE_BUCKET, Key: s3Key }));
             } catch (e) {

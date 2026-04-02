@@ -2,8 +2,28 @@ version: 1
 backend:
   phases:
     build:
-      commands:
-        - cd backend && npm install --legacy-peer-deps --include=dev && cd amplify/ai-engine && npm install --include=dev && cd ../.. && cd amplify/process-nutrition && npm install --include=dev && cd ../.. && cd amplify/friend-request && npm install --include=dev && cd ../.. && cd amplify/resize-image && npm install --include=dev && cd ../.. && npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --outputs-out-dir ../frontend && cd ..
+     commands:
+        - cd backend
+        - npm install --legacy-peer-deps --include=dev
+
+        - cd amplify/ai-engine
+        - npm install --include=dev
+        - cd ../..
+
+        - cd amplify/process-nutrition
+        - npm install --include=dev
+        - cd ../..
+
+        - cd amplify/friend-request
+        - npm install --include=dev
+        - cd ../..
+
+        - cd amplify/resize-image
+        - npm install --include=dev
+        - cd ../..
+
+        - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID --outputs-out-dir ../frontend
+        - cd ..
 frontend:
   phases:
     preBuild:
@@ -24,3 +44,33 @@ frontend:
     - source: </^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>
       target: /index.html
       status: '200'
+  customHeaders:
+    # HTML: luôn fresh
+    - pattern: '**/*.html'
+      headers:
+        - key: Cache-Control
+          value: no-cache
+
+    # JS: cache mạnh (QUAN TRỌNG NHẤT)
+    - pattern: '**/*.js'
+      headers:
+        - key: Cache-Control
+          value: public, max-age=31536000, immutable
+
+    # CSS
+    - pattern: '**/*.css'
+      headers:
+        - key: Cache-Control
+          value: public, max-age=31536000, immutable
+
+    # Images
+    - pattern: '**/*.(png|jpg|jpeg|svg|webp)'
+      headers:
+        - key: Cache-Control
+          value: public, max-age=31536000, immutable
+
+    # Fonts
+    - pattern: '**/*.(woff|woff2|ttf)'
+      headers:
+        - key: Cache-Control
+          value: public, max-age=31536000, immutable
