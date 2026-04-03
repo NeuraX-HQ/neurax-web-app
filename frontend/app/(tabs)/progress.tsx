@@ -178,7 +178,7 @@ const calStyles = StyleSheet.create({
 // ── Main Screen ────────────────────────────────────────────────────────────
 export default function ProgressScreen() {
     const router = useRouter();
-    const { t } = useAppLanguage();
+    const { t, language } = useAppLanguage();
     const { meals } = useMealStore();
 
     const todayIso = toLocalIsoDate(new Date());
@@ -291,7 +291,13 @@ export default function ProgressScreen() {
                 .join(', ');
             const res = await getWeeklyInsight({}, weeklySummary, patterns);
             if (res.success && res.data) {
-                const text = typeof res.data === 'string' ? res.data : (res.data.summary || res.data.insight || JSON.stringify(res.data));
+                const d = res.data;
+                const text = typeof d === 'string'
+                    ? d
+                    : (language === 'vi' ? d.insight_vi : d.insight_en)
+                        || d.insight_vi || d.insight_en
+                        || d.summary || d.insight
+                        || (typeof d === 'object' ? '' : String(d));
                 setInsightText(text);
             } else {
                 setInsightError(true);

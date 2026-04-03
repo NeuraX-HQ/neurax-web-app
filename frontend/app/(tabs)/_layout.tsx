@@ -353,7 +353,14 @@ export default function TabsLayout() {
     const pathname = usePathname();
     const isAiCoachScreen = pathname.includes('ai-coach');
     const { t } = useAppLanguage();
-    const { isAddMenuOpen, setAddMenuOpen, selectedMealType, setSelectedMealType } = useMealStore();
+    const { isAddMenuOpen, setAddMenuOpen, selectedMealType, setSelectedMealType, selectedDateStr } = useMealStore();
+    const todayIso = new Date().toISOString().split('T')[0];
+    const sd = selectedDateStr || todayIso;
+    const isFutureDate = sd > todayIso;
+    // Yesterday: compute manually to avoid importing addDaysToIso
+    const yd = new Date(); yd.setDate(yd.getDate() - 1);
+    const yesterdayIso = yd.toISOString().split('T')[0];
+    const isTooOldDate = sd < yesterdayIso;
     const [menuOpen, setMenuOpen] = useState(false);
     const [directVoiceVisible, setDirectVoiceVisible] = useState(false);
     const [cameraVisible, setCameraVisible] = useState(false);
@@ -490,7 +497,18 @@ export default function TabsLayout() {
                 )}
 
                 {/* FAB */}
-                <TouchableOpacity style={styles.fab} onPress={menuOpen ? closeMenu : openMenu} activeOpacity={0.85}>
+                <TouchableOpacity style={styles.fab} onPress={() => {
+                    if (menuOpen) { closeMenu(); return; }
+                    if (isFutureDate) {
+                        Alert.alert(t('home.futureDate.title'), t('home.futureDate.message'));
+                        return;
+                    }
+                    if (isTooOldDate) {
+                        Alert.alert(t('home.pastDate.title'), t('home.pastDate.message'));
+                        return;
+                    }
+                    openMenu();
+                }} activeOpacity={0.85}>
                     <Animated.View style={{ transform: [{ rotate: fabRotateDeg }] }}>
                         <Ionicons name="add" size={30} color="#FFFFFF" />
                     </Animated.View>

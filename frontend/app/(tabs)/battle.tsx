@@ -10,6 +10,7 @@ import { useFriendStore } from '../../src/store/friendStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { getUserData } from '../../src/store/userStore';
 import { router, useFocusEffect } from 'expo-router';
+import { getUrl } from 'aws-amplify/storage';
 
 type SortMode = 'streak' | 'petScore';
 
@@ -54,6 +55,10 @@ const TOTAL_EVOLUTION_DAYS = 180;
 const TOTAL_STAGES = 5;
 const DAYS_PER_STAGE = TOTAL_EVOLUTION_DAYS / TOTAL_STAGES;
 
+// Only render remote (http/https) URIs — block stale file:// URIs saved before the profile fix
+const isRemoteUri = (uri: string | null | undefined): uri is string =>
+    !!uri && (uri.startsWith('http://') || uri.startsWith('https://'));
+
 export default function BattleScreen() {
     const { t } = useAppLanguage();
     const { meals } = useMealStore();
@@ -73,7 +78,17 @@ export default function BattleScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            getUserData().then((u) => setMyAvatarUri(u?.avatar_url || null));
+            getUserData().then(async (u) => {
+                const raw = u?.avatar_url || null;
+                if (!raw) { setMyAvatarUri(null); return; }
+                if (raw.startsWith('http')) { setMyAvatarUri(raw); return; }
+                if (raw.startsWith('file://')) { setMyAvatarUri(null); return; }
+                // S3 key — resolve to presigned URL
+                try {
+                    const { url } = await getUrl({ path: raw });
+                    setMyAvatarUri(url.toString());
+                } catch { setMyAvatarUri(null); }
+            });
         }, [])
     );
 
@@ -92,6 +107,7 @@ export default function BattleScreen() {
 
     const sortedData = useMemo(() => {
         const data = leaderboard.map(e => ({
+            user_id: e.user_id,
             name: e.display_name || 'User',
             streak: e.current_streak,
             petScore: e.pet_score,
@@ -239,7 +255,7 @@ export default function BattleScreen() {
                         if (!user) return null;
                         const isFirst = idx === 0;
                         return (
-                            <View key={user.name} style={styles.podiumItem}>
+                            <View key={user.user_id || `podium-${idx}`} style={styles.podiumItem}>
                                 {isFirst && <Text style={styles.goldCrown}>👑</Text>}
                                 {!isFirst && <View style={{ height: 28 }} />}
                                 <View style={[
@@ -247,7 +263,7 @@ export default function BattleScreen() {
                                     isFirst && styles.podiumAvatarFirst,
                                     { backgroundColor: podiumColors[idx], borderColor: podiumBorderColors[idx], borderWidth: isFirst ? 3 : 2 },
                                 ]}>
-                                    {(user.isMe && myAvatarUri) || user.avatar_url ? (
+                                    {isRemoteUri(user.isMe ? myAvatarUri : user.avatar_url) ? (
                                         <Image source={{ uri: (user.isMe ? myAvatarUri : user.avatar_url)! }} style={[styles.podiumAvatarImg, isFirst && styles.podiumAvatarImgFirst]} />
                                     ) : (
                                         <Text style={styles.podiumEmoji}>{podiumEmojis[idx]}</Text>
@@ -283,7 +299,7 @@ export default function BattleScreen() {
                                 {String(user.rank).padStart(2, '0')}
                             </Text>
                             <View style={styles.rankAvatar}>
-                                {(user.isMe && myAvatarUri) || user.avatar_url ? (
+                                {isRemoteUri(user.isMe ? myAvatarUri : user.avatar_url) ? (
                                     <Image source={{ uri: (user.isMe ? myAvatarUri : user.avatar_url)! }} style={styles.rankAvatarImage} />
                                 ) : (
                                     <Text>👤</Text>

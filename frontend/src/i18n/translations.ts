@@ -271,6 +271,10 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'home.mealType.lunch': 'BUỔI TRƯA',
         'home.mealType.dinner': 'BUỔI TỐI',
         'home.mealType.snack': 'BỮA PHỤ',
+        'home.futureDate.title': 'Không thể ghi nhật ký',
+        'home.futureDate.message': 'Bạn không thể ghi bữa ăn cho ngày trong tương lai.',
+        'home.pastDate.title': 'Không thể ghi nhật ký',
+        'home.pastDate.message': 'Bạn chỉ có thể ghi bữa ăn cho hôm nay hoặc hôm qua.',
         'home.logMeal.breakfast': '+ Ghi bữa sáng',
         'home.logMeal.lunch': '+ Ghi bữa trưa',
         'home.logMeal.dinner': '+ Ghi bữa tối',
@@ -519,6 +523,7 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'workout.completeMessage': 'Bạn đã hoàn thành {{totalReps}} lần',
         'workout.completeTime': 'Thời gian: {{time}}',
         'workout.done': 'Xong',
+        'workout.sessionTitle': 'Buổi tập',
 
         'onboarding.continue': 'Tiếp tục',
         'onboarding.goal.lose': 'Giảm cân',
@@ -615,6 +620,7 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'voice.error.cantTranscribe': 'Không thể chuyển đổi giọng nói',
         'voice.error.cantAnalyze': 'Không thể phân tích món ăn',
         'voice.error.analysisFailed': 'Có lỗi xảy ra khi phân tích',
+        'voice.addFood': 'Thêm vào nhật ký',
 
         'camera.error.title': 'Lỗi Camera',
         'camera.error.noAccess': 'Không thể truy cập webcam. Kiểm tra quyền truy cập camera.',
@@ -939,6 +945,10 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'home.mealType.lunch': 'LUNCH',
         'home.mealType.dinner': 'DINNER',
         'home.mealType.snack': 'SNACK',
+        'home.futureDate.title': 'Cannot log meals',
+        'home.futureDate.message': 'You cannot log meals for a future date.',
+        'home.pastDate.title': 'Cannot log meals',
+        'home.pastDate.message': 'You can only log meals for today or yesterday.',
         'home.logMeal.breakfast': '+ Log breakfast',
         'home.logMeal.lunch': '+ Log lunch',
         'home.logMeal.dinner': '+ Log dinner',
@@ -1187,6 +1197,7 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'workout.completeMessage': 'You completed {{totalReps}} reps',
         'workout.completeTime': 'Time: {{time}}',
         'workout.done': 'Done',
+        'workout.sessionTitle': 'Workout Session',
 
         'onboarding.continue': 'Continue',
         'onboarding.goal.lose': 'Lose Weight',
@@ -1277,6 +1288,7 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'voice.error.cantTranscribe': 'Cannot transcribe voice',
         'voice.error.cantAnalyze': 'Cannot analyze food',
         'voice.error.analysisFailed': 'An error occurred while analyzing',
+        'voice.addFood': 'Add to Log',
 
         'camera.error.title': 'Camera Error',
         'camera.error.noAccess': 'Unable to access webcam. Please check camera permission.',

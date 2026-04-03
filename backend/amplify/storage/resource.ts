@@ -11,6 +11,13 @@ export const storage = defineStorage({
     'voice/{entity_id}/*': [
       allow.authenticated.to(['read', 'write', 'delete'])
     ],
+    // Avatar - owner write/delete (scoped to their identity), any authenticated user can read
+    // allow.entity('identity') → IAM condition scoped to caller's identity (owner-only write)
+    // allow.authenticated read → no identity scoping → any authenticated user can see any avatar
+    'avatar/{entity_id}/*': [
+      allow.entity('identity').to(['read', 'write', 'delete']),
+      allow.authenticated.to(['read']),
+    ],
     // Khu vực lưu trữ vĩnh viễn (Trusted Zone) - Lambda sẽ lưu kết quả tại đây
     'media/{entity_id}/*': [
       allow.authenticated.to(['read', 'delete'])

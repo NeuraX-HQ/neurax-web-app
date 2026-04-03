@@ -2,9 +2,9 @@ import React, { useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { signOut } from 'aws-amplify/auth';
+import { signOut, fetchAuthSession } from 'aws-amplify/auth';
 import * as ImagePicker from 'expo-image-picker';
-import { uploadData } from 'aws-amplify/storage';
+import { uploadData, getUrl } from 'aws-amplify/storage';
 import { useAuthStore } from '../src/store/authStore';
 import { getOnboardingData, getUserData, saveUserData, UserData } from '../src/store/userStore';
 import { useFriendStore } from '../src/store/friendStore';
@@ -107,6 +107,7 @@ export default function ProfileScreen() {
     const [activityLevel, setActivityLevel] = React.useState('');
     const [avatarUri, setAvatarUri] = React.useState<string | null>(null);
     const [uploadingAvatar, setUploadingAvatar] = React.useState(false);
+    const localAvatarRef = React.useRef(false);
 
     React.useEffect(() => {
         if (userId) {
@@ -126,7 +127,21 @@ export default function ProfileScreen() {
 
                 if (storedUser) {
                     setUserData(storedUser);
-                    if (storedUser.avatar_url) setAvatarUri(storedUser.avatar_url);
+                    if (storedUser.avatar_url && !localAvatarRef.current) {
+                        const raw = storedUser.avatar_url;
+                        if (raw.startsWith('http') || raw.startsWith('file://')) {
+                            setAvatarUri(raw);
+                        } else {
+                            try {
+                                const { url } = await getUrl({ path: raw });
+                                if (!localAvatarRef.current) {
+                                    setAvatarUri(url.toString());
+                                }
+                            } catch (e) {
+                                console.warn("Avatar resolve failed", e);
+                            }
+                        }
+                    }
                 }
 
                 if (onboarding?.name?.trim()) {
@@ -158,29 +173,50 @@ export default function ProfileScreen() {
         if (result.canceled || !result.assets?.[0]) return;
 
         const pickedUri = result.assets[0].uri;
-        setAvatarUri(pickedUri);
+        localAvatarRef.current = true;
+        setAvatarUri(pickedUri); // Immediate local display
 
         // Upload to S3 if user is authenticated
         if (userId) {
             setUploadingAvatar(true);
             try {
+                // Get the Cognito Identity ID — this is the {entity_id} that Amplify
+                // storage access rules use to scope paths like incoming/{entity_id}/*
+                const session = await fetchAuthSession();
+                const identityId = session.identityId;
+                if (!identityId) {
+                    console.warn('[AVATAR] No identityId found — cannot upload');
+                    return;
+                }
+
+                console.log('[AVATAR] identityId:', identityId);
+
+                // Read the picked image as a blob
                 const response = await fetch(pickedUri);
                 const blob = await response.blob();
-                const ext = pickedUri.split('.').pop() || 'jpg';
-                const key = `incoming/${userId}/avatar/avatar.${ext}`;
-                await uploadData({ path: key, data: blob, options: { contentType: `image/${ext}` } }).result;
-                await saveUserData({ avatar_url: pickedUri });
-                // Sync avatar to public stats so friends see the update
-                await updateMyPublicStats({ user_id: userId, avatar_url: pickedUri });
+
+                // Upload directly to avatar/{identityId}/avatar.jpg
+                // Dedicated path with write permission — no Lambda needed for small avatar images
+                const avatarKey = `avatar/${identityId}/avatar.jpg`;
+                console.log('[AVATAR] Uploading to:', avatarKey, 'size:', blob.size);
+                await uploadData({ path: avatarKey, data: blob, options: { contentType: 'image/jpeg' } }).result;
+                console.log('[AVATAR] Upload complete');
+
+                // Resolve presigned URL immediately — file exists right after upload
+                const { url } = await getUrl({ path: avatarKey });
+                const presignedUrl = url.toString();
+                setAvatarUri(presignedUrl);
+                localAvatarRef.current = false;
+
+                // Persist the S3 key (not presigned URL — keys don't expire)
+                await saveUserData({ avatar_url: avatarKey });
+                await updateMyPublicStats({ user_id: userId, avatar_url: avatarKey });
             } catch (e) {
                 console.warn('[AVATAR] Upload failed:', e);
-                // Still save locally
-                await saveUserData({ avatar_url: pickedUri });
+                Alert.alert('Upload Error', 'Could not upload avatar. Please try again.');
             } finally {
                 setUploadingAvatar(false);
             }
-        } else {
-            await saveUserData({ avatar_url: pickedUri });
         }
     };
 

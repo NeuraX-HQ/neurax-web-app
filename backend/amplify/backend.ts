@@ -94,6 +94,7 @@ aiEngineLambda.addToRolePolicy(
     actions: [
       "transcribe:StartTranscriptionJob",
       "transcribe:GetTranscriptionJob",
+      "transcribe:DeleteTranscriptionJob",
     ],
     resources: ["*"],
   })

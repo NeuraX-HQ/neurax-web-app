@@ -5,5 +5,5 @@ export const resizeImage = defineFunction({
   entry: './handler.ts',
   runtime: 22,
   memoryMB: 512,
-  resourceGroupName: 'storage'
+  resourceGroupName: 'storage',
 });
