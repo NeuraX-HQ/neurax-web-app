@@ -17,11 +17,20 @@ export async function uploadFoodImage(
 
     let data: Uint8Array;
     if ('uri' in source) {
-        // Use fetch to get a blob from the URI (works for file:// and web blobs)
+        // Use fetch to get a blob from the URI
         const response = await fetch(source.uri);
         const blob = await response.blob();
-        const arrayBuffer = await blob.arrayBuffer();
-        data = new Uint8Array(arrayBuffer);
+        
+        // Use FileReader to get ArrayBuffer (more compatible with RN/Hermes)
+        data = await new Promise<Uint8Array>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const arrayBuffer = reader.result as ArrayBuffer;
+                resolve(new Uint8Array(arrayBuffer));
+            };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(blob);
+        });
     } else {
         // Web canvas: raw base64 string (no data: prefix)
         data = Uint8Array.from(atob(source.base64), c => c.charCodeAt(0));

@@ -41,7 +41,7 @@ function RootLayoutShell() {
                 const result = await checkAndSetAuth();
                 if (result.authenticated) {
                     hasNavigated.current = true;
-                    router.replace(result.needsOnboarding ? '/onboarding/step1' : '/(tabs)/home');
+                    router.replace(result.needsOnboarding ? '/onboarding/walkthrough1' : '/(tabs)/home');
                 }
             }
             if (payload.event === 'signInWithRedirect_failure') {
@@ -165,7 +165,7 @@ function RootLayoutShell() {
         if (hasSession && needsOnboarding) {
             console.log('[AUTH] → onboarding/step1');
             hasNavigated.current = true;
-            pendingRoute.current = '/onboarding/step1';
+            pendingRoute.current = '/onboarding/walkthrough1';
             setIsReady(true);
             return;
         }

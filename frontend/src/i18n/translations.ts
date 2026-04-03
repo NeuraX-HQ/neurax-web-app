@@ -379,9 +379,12 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'kitchen.basedOnFridge': 'Dựa trên tủ lạnh của bạn',
         'kitchen.matchPercent': '{{percent}}% phù hợp',
         'kitchen.quickEasy': 'Nhanh & Dễ',
-        'kitchen.expiryInDays': 'HẾT HẠN: {{days}} NGÀY',
+        'kitchen.expiryInDays': 'HẾT HẠN SAU {{days}} NGÀY',
         'kitchen.useNow': 'Dùng ngay',
-        'kitchen.remove': 'Xóa',
+        'kitchen.useNowConfirmTitle': 'Dùng món này?',
+        'kitchen.useNowConfirmDesc': 'Bạn muốn ghi nhận việc đã tiêu thụ món ăn này ngay bây giờ?',
+        'kitchen.useNowconfirm': 'Xác nhận dùng ngay?', // Typo safety
+        'kitchen.remove': 'Gỡ bỏ',
         'kitchen.remainingDays': 'Còn {{days}} ngày',
 
         'addHydration.title': 'Thêm nước uống',
@@ -688,7 +691,6 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'auth.biometricPrompt': 'Xác thực để vào NutriTrack',
     },
     en: {
-        'common.back': 'Back',
         'common.cancel': 'Cancel',
         'common.notFound': 'No data found',
         'common.error': 'Error',
@@ -1062,6 +1064,9 @@ export const translations: Record<AppLanguage, TranslationDict> = {
         'kitchen.quickEasy': 'Quick & Easy',
         'kitchen.expiryInDays': 'EXPIRES IN {{days}} DAYS',
         'kitchen.useNow': 'Use now',
+        'kitchen.useNowConfirmTitle': 'Use this item?',
+        'kitchen.useNowConfirmDesc': 'Do you want to log this item as consumed right now?',
+        'kitchen.useNowconfirm': 'Confirm use now?', // Typo safety
         'kitchen.remove': 'Remove',
         'kitchen.remainingDays': '{{days}} days left',
 

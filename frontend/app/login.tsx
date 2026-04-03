@@ -90,7 +90,7 @@ export default function LoginScreen() {
                 if (userProfile && userProfile.onboarding_status) {
                     router.replace("/(tabs)/home");
                 } else {
-                    router.replace("/onboarding/step1");
+                    router.replace("/onboarding/walkthrough1");
                 }
             }
         } catch (error: any) {

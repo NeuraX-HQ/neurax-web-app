@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback, Animated, RefreshControl } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback, Animated, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,6 +57,39 @@ export default function KitchenScreen() {
 
     const openRecipeFlow = (recipeId: string) => {
         router.push({ pathname: '/recipe-ingredients', params: { recipeId } });
+    };
+
+    const handleUseNow = (item: FridgeItem) => {
+        Alert.alert(
+            t('kitchen.useNowConfirmTitle') || 'Dùng món này?',
+            `${t('kitchen.useNowConfirmDesc') || 'Bạn muốn ghi nhận việc đã tiêu thụ món này ngay bây giờ?'} (${item.name})`,
+            [
+                { text: t('common.cancel') || 'Hủy', style: 'cancel' },
+                { 
+                    text: t('kitchen.useNow') || 'Dùng ngay', 
+                    style: 'default',
+                    onPress: async () => {
+                        try {
+                            const { useMealStore } = require('../../src/store/mealStore');
+                            await useMealStore.getState().addMeal({
+                                name: item.name,
+                                type: 'SNACK', // Mặc định log vào Snack
+                                calories: (item as any).calories || 0,
+                                protein: (item as any).protein || 0,
+                                carbs: (item as any).carbs || 0,
+                                fat: (item as any).fat || 0,
+                                servingSize: item.amount,
+                                image: item.emoji || '🍽️'
+                            });
+                            await removeItem(item.id);
+                        } catch (error) {
+                            console.error('Lỗi khi dùng ngay món ăn:', error);
+                            Alert.alert(t('common.error') || 'Lỗi', 'Không thể ghi nhận món ăn.');
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const EmptyHint = ({ text }: { text: string }) => (
@@ -131,7 +164,7 @@ export default function KitchenScreen() {
                                 {useSoon.length === 0
                                     ? <EmptyHint text={t('kitchen.empty.useSoon')} />
                                     : useSoon.map((item) => (
-                                        <UseSoonCard key={item.id} item={item} onRemove={removeItem} t={t} />
+                                        <UseSoonCard key={item.id} item={item} onRemove={removeItem} onUseNow={handleUseNow} t={t} />
                                     ))
                                 }
 
@@ -142,7 +175,7 @@ export default function KitchenScreen() {
                                 {thisWeek.length === 0
                                     ? <EmptyHint text={t('kitchen.empty.thisWeek')} />
                                     : thisWeek.map((item) => (
-                                        <ThisWeekCard key={item.id} item={item} t={t} />
+                                        <ThisWeekCard key={item.id} item={item} onUseNow={handleUseNow} t={t} />
                                     ))
                                 }
 
@@ -226,10 +259,12 @@ export default function KitchenScreen() {
 function UseSoonCard({
     item,
     onRemove,
+    onUseNow,
     t,
 }: {
     item: FridgeItem;
     onRemove: (id: string) => Promise<void>;
+    onUseNow: (item: FridgeItem) => void;
     t: (key: string, params?: Record<string, string | number>) => string;
 }) {
     return (
@@ -250,7 +285,7 @@ function UseSoonCard({
                     <Text style={styles.fridgeName}>{item.name}</Text>
                     <Text style={styles.fridgeDetail}>{item.amount} • {item.location}</Text>
                     <View style={styles.actionRow}>
-                        <TouchableOpacity style={styles.btnUseNow}>
+                        <TouchableOpacity style={styles.btnUseNow} onPress={() => onUseNow(item)}>
                             <Text style={styles.btnUseNowText}>{t('kitchen.useNow')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.btnRemove} onPress={() => onRemove(item.id)}>
@@ -265,13 +300,15 @@ function UseSoonCard({
 
 function ThisWeekCard({
     item,
+    onUseNow,
     t,
 }: {
     item: FridgeItem;
+    onUseNow: (item: FridgeItem) => void;
     t: (key: string, params?: Record<string, string | number>) => string;
 }) {
     return (
-        <View style={[styles.thisWeekCard, Shadows.small]}>
+        <TouchableOpacity style={[styles.thisWeekCard, Shadows.small]} activeOpacity={0.8} onPress={() => onUseNow(item)}>
             <View style={styles.thisWeekThumb}>
                 <Text style={{ fontSize: 26 }}>{item.emoji}</Text>
             </View>
@@ -282,7 +319,7 @@ function ThisWeekCard({
             <View style={[styles.expiryBadge, { backgroundColor: Colors.accentLight }]}>
                 <Text style={[styles.expiryText, { color: Colors.accent }]}>{item.daysLeft}d</Text>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 }
 
