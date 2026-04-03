@@ -266,6 +266,41 @@ export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResul
     }
 }
 
+/** Convert webm base64 → wav base64 using Web Audio API (for Transcribe compatibility) */
+async function convertWebmToWav(base64Webm: string): Promise<string> {
+    const bin = atob(base64Webm);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
+    const ch = audioBuffer.getChannelData(0);
+    const sr = audioBuffer.sampleRate;
+    const pcmLen = ch.length * 2; // 16-bit PCM
+    const buf = new ArrayBuffer(44 + pcmLen);
+    const v = new DataView(buf);
+
+    const ws = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    ws(0, 'RIFF'); v.setUint32(4, 36 + pcmLen, true);
+    ws(8, 'WAVE'); ws(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    ws(36, 'data'); v.setUint32(40, pcmLen, true);
+
+    let off = 44;
+    for (let i = 0; i < ch.length; i++, off += 2) {
+        const s = Math.max(-1, Math.min(1, ch[i]));
+        v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+
+    const wavBytes = new Uint8Array(buf);
+    let binary = '';
+    for (let i = 0; i < wavBytes.length; i++) binary += String.fromCharCode(wavBytes[i]);
+    ctx.close();
+    return btoa(binary);
+}
+
 /**
  * Upload audio to S3, transcribe with AWS Transcribe, parse with Qwen on Bedrock.
  * Returns transcript + nutrition data in one call.
@@ -287,10 +322,13 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
             base64 = await FileSystem.readAsStringAsync(audioUri, { encoding: 'base64' as any });
         }
 
-        // Step 2: Upload to S3 with {entity_id} path (Amplify resolves identity ID)
+        // Step 2: Convert webm→wav on web (Transcribe doesn't support webm batch jobs)
         const isWeb = Platform.OS === 'web';
-        const ext = isWeb ? 'webm' : 'm4a';
-        const contentType = isWeb ? 'audio/webm' : 'audio/mp4';
+        if (isWeb) {
+            base64 = await convertWebmToWav(base64);
+        }
+        const ext = isWeb ? 'wav' : 'm4a';
+        const contentType = isWeb ? 'audio/wav' : 'audio/mp4';
         const fileName = `${Date.now()}.${ext}`;
         const uploadResult = await uploadData({
             path: `voice/{entity_id}/${fileName}`,

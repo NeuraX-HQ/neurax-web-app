@@ -387,7 +387,7 @@ export default function BattleScreen() {
                                 ref={videoRef}
                                 source={dragonVideoSource}
                                 style={styles.dragonVideo}
-                                resizeMode={ResizeMode.COVER}
+                                resizeMode={ResizeMode.CONTAIN}
                                 shouldPlay
                                 isLooping
                                 isMuted
