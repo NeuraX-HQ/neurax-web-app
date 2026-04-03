@@ -85,7 +85,7 @@ aiEngineLambda.addToRolePolicy(
   })
 );
 
-// Grant aiEngine access to S3 (read voice files) + Transcribe
+// Grant aiEngine access to S3 (read voice files, cleanup) + Transcribe
 s3Bucket.grantRead(aiEngineLambda);
 s3Bucket.grantDelete(aiEngineLambda);
 aiEngineLambda.addToRolePolicy(
@@ -99,6 +99,15 @@ aiEngineLambda.addToRolePolicy(
     resources: ["*"],
   })
 );
+
+// Grant Transcribe service direct access to read voice files from S3
+// Transcribe runs async and needs its own S3 access (Lambda's role doesn't transfer)
+s3Bucket.addToResourcePolicy(new iam.PolicyStatement({
+  effect: iam.Effect.ALLOW,
+  principals: [new iam.ServicePrincipal('transcribe.amazonaws.com')],
+  actions: ['s3:GetObject'],
+  resources: [`${s3Bucket.bucketArn}/voice/*`],
+}));
 
 // Pass S3 bucket name to aiEngine Lambda via escape hatch
 const cfnAiEngineFn = aiEngineLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;

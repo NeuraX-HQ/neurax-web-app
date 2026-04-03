@@ -5,19 +5,26 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Colors, Shadows } from '../src/constants/colors';
-import { getRecipeById } from '../src/data/recipes';
+import { getRecipeById, Recipe } from '../src/data/recipes';
+import { useRecipeStore } from '../src/store/recipeStore';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
 
 export default function RecipeIngredientsScreen() {
     const router = useRouter();
     const { t } = useAppLanguage();
+    const { personalRecipes } = useRecipeStore();
     const params = useLocalSearchParams<{ recipeId?: string }>();
     const recipeId = params.recipeId || '1';
-    const recipe = getRecipeById(recipeId);
+    
+    const recipe = useMemo(() => {
+        const system = getRecipeById(recipeId);
+        if (system) return system;
+        return personalRecipes.find((r: Recipe) => r.id === recipeId);
+    }, [recipeId, personalRecipes]);
 
     const initialCheckedMap = useMemo(() => {
         if (!recipe) return {} as Record<string, boolean>;
-        return recipe.ingredients.reduce((acc, ingredient) => {
+        return recipe.ingredients.reduce((acc: Record<string, boolean>, ingredient: any) => {
             acc[ingredient.id] = Boolean(ingredient.defaultChecked);
             return acc;
         }, {} as Record<string, boolean>);
@@ -86,7 +93,7 @@ export default function RecipeIngredientsScreen() {
                 </View>
 
                 <View style={styles.listCard}>
-                    {recipe.ingredients.map((ingredient) => {
+                    {recipe.ingredients.map((ingredient: any) => {
                         const checked = Boolean(checkedMap[ingredient.id]);
                         return (
                             <TouchableOpacity
@@ -110,10 +117,45 @@ export default function RecipeIngredientsScreen() {
                     })}
                 </View>
 
+                {/* Steps Section (Always show as preview) */}
+                {recipe.steps && recipe.steps.length > 0 && (
+                    <>
+                        <View style={[styles.sectionHeader, { marginTop: 10 }]}>
+                            <Text style={styles.sectionTitle}>{t('recipeCooking.steps')}</Text>
+                            <Text style={styles.sectionCount}>{recipe.steps.length} {t('recipeCooking.stepUnit')}</Text>
+                        </View>
+                        <View style={styles.listCard}>
+                            {recipe.steps.map((step: any, idx: number) => (
+                                <View key={step.id || idx} style={styles.stepRowDetailed}>
+                                    <View style={styles.stepHeaderRow}>
+                                        <View style={styles.stepNumDetailed}>
+                                            <Text style={styles.stepNumText}>{idx + 1}</Text>
+                                        </View>
+                                        <Text style={styles.stepTitleDetailed}>{step.title}</Text>
+                                        {step.durationSec && (
+                                            <View style={styles.stepDurationBadge}>
+                                                <Text style={styles.stepDurationText}>⏱ {Math.round(step.durationSec / 60)} {t('home.min')}</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                    <View style={styles.stepBody}>
+                                        <Text style={styles.stepInstructionDetailed}>{step.instruction}</Text>
+                                    </View>
+                                </View>
+                            ))}
+                        </View>
+                    </>
+                )}
+
                 <View style={styles.tipCard}>
                     <Ionicons name="information-circle-outline" size={18} color={Colors.accent} />
                     <Text style={styles.tipText}>{t('recipeIngredients.tip')}</Text>
                 </View>
+                
+                {/* Reference Note */}
+                <Text style={styles.referenceNote}>
+                    Note: Thông tin chỉ mang tính tham khảo, tùy chỉnh để phù hợp với khẩu vị.
+                </Text>
             </ScrollView>
 
             <View style={styles.footer}>
@@ -248,4 +290,67 @@ const styles = StyleSheet.create({
     emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.text },
     backSimpleBtn: { backgroundColor: Colors.primary, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10 },
     backSimpleText: { color: '#FFFFFF', fontWeight: '700' },
+    // Detailed step styles
+    stepRowDetailed: {
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F3F7',
+    },
+    stepHeaderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 8,
+    },
+    stepNumDetailed: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: Colors.accent,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: Colors.accent,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    stepNumText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '900',
+    },
+    stepTitleDetailed: {
+        flex: 1,
+        fontSize: 16,
+        fontWeight: '700',
+        color: Colors.text,
+    },
+    stepDurationBadge: {
+        backgroundColor: '#F3F5F8',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    stepDurationText: {
+        fontSize: 11,
+        color: Colors.textSecondary,
+        fontWeight: '700',
+    },
+    stepBody: {
+        paddingLeft: 38,
+    },
+    stepInstructionDetailed: {
+        fontSize: 14,
+        color: Colors.textSecondary,
+        lineHeight: 22,
+    },
+    referenceNote: {
+        fontSize: 11,
+        color: Colors.textLight,
+        textAlign: 'center',
+        fontStyle: 'italic',
+        marginTop: 10,
+        marginBottom: 20,
+    },
 });

@@ -248,7 +248,7 @@ OUTPUT FORMAT:
   "status": "success or insufficient_data"
 }`;
 
-const AI_COACH_SYSTEM_PROMPT = `You are an AI Nutrition Coach integrated inside a nutrition and health application named NutriTrack.
+const AI_COACH_SYSTEM_PROMPT = `You are Ollie, a friendly AI nutrition assistant for NutriTrack.
 Your role is to act as a professional nutrition advisor that helps users improve their eating habits and health.
 
 SCOPE RESTRICTION — CRITICAL:
@@ -270,13 +270,23 @@ STATISTICS RULES:
 1. Summarize calories vs target. 2. Break down macros. 3. Include STATS_CARD.
 
 STYLE: Friendly, encouraging, evidence-based. Vietnamese casual when user writes in Vietnamese.
-LANGUAGE: Respond in the SAME LANGUAGE as the user.
-
 OUTPUT FORMAT:
-[FOOD_CARD: {"name": "Tên món", "description": "Mô tả", "calories": 450, "emoji": "🍱"}]
-[EXERCISE_CARD: {"name": "Tên bài tập", "description": "Mô tả", "duration_minutes": 30, "calories_burned": 250, "emoji": "🏃"}]
-[STATS_CARD: {"calories_consumed": 1800, "calories_target": 2000, "protein_g": 85, "carbs_g": 210, "fat_g": 60, "summary": "..."}]
-Place all cards at the end of your message.`;
+STRICTLY use standard straight double quotes (" ") for all JSON properties and string values. NEVER use smart/curly quotes (“ ”).
+Instead of inline tags, use these exact delimiters for cards:
+
+===FOOD_CARD_START===
+{"name": "Tên", "description": "Mô tả", "calories": 450, "protein_g": 30, "carbs_g": 40, "fat_g": 10, "time": "25 phút", "emoji": "🍱", "ingredients": [{"name": "Cơm", "amount": "1 chén"}], "steps": [{"title": "Nấu", "instruction": "Vo gạo nấu"}]}
+===FOOD_CARD_END===
+
+===EXERCISE_CARD_START===
+{"name": "Tên bài tập", "description": "Mô tả", "duration_minutes": 30, "calories_burned": 250, "emoji": "🏃"}
+===EXERCISE_CARD_END===
+
+===STATS_CARD_START===
+{"calories_consumed": 1800, "calories_target": 2000, "protein_g": 85, "carbs_g": 210, "fat_g": 60, "summary": "..."}
+===STATS_CARD_END===
+
+Place all cards at the end of your message. Remember to append to your text: "Ghi chú: Thông tin công thức/dinh dưỡng chỉ mang tính tham khảo, bạn có thể tùy chỉnh để phù hợp với khẩu vị cá nhân."`;
 
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
@@ -412,11 +422,9 @@ export const handler = async (event: any) => {
                 throw new Error('Invalid s3Key');
             }
 
-            const s3Uri = `s3://${STORAGE_BUCKET}/${s3Key}`;
             const jobName = `nutritrack-voice-${randomUUID()}`;
 
             // Map file extension → AWS Transcribe MediaFormat enum
-            // .m4a is MPEG-4 AAC container → must use 'mp4', NOT 'm4a' (invalid enum)
             const ext = s3Key.split('.').pop()?.toLowerCase() || 'm4a';
             const mediaFormat = ext === 'webm' ? 'webm'
                 : ext === 'mp3'  ? 'mp3'
@@ -424,23 +432,23 @@ export const handler = async (event: any) => {
                 : ext === 'flac' ? 'flac'
                 : 'mp4'; // m4a, mp4 → 'mp4'
 
+            const s3Uri = `s3://${STORAGE_BUCKET}/${s3Key}`;
             await transcribeClient.send(new StartTranscriptionJobCommand({
                 TranscriptionJobName: jobName,
-                // Auto-detect vi-VN or en-US — supports bilingual users
-                IdentifyLanguage: true,
-                LanguageOptions: ['vi-VN', 'en-US'],
+                // Use specific language — IdentifyLanguage produces empty transcripts with WebM
+                LanguageCode: 'vi-VN',
                 MediaFormat: mediaFormat as any,
                 Media: { MediaFileUri: s3Uri },
             }));
 
             const transcript = await waitForTranscription(jobName);
 
-            // Cleanup Transcribe job after result retrieved
-            try {
-                await transcribeClient.send(new DeleteTranscriptionJobCommand({ TranscriptionJobName: jobName }));
-            } catch (e) {
-                console.warn('Failed to cleanup Transcribe job:', e);
-            }
+            // DEBUG: Skip cleanup to inspect Transcribe job status on console
+            // try {
+            //     await transcribeClient.send(new DeleteTranscriptionJobCommand({ TranscriptionJobName: jobName }));
+            // } catch (e) { /* non-critical */ }
+
+            console.log(`[voiceToFood] jobName=${jobName}, transcript="${transcript}", s3Key=${s3Key}`);
 
             if (!transcript) {
                 return JSON.stringify({ success: false, error: 'Empty transcription' });
@@ -451,12 +459,12 @@ export const handler = async (event: any) => {
                 { role: "user", content: `User said: "${transcript}"\n\nAnalyze and return JSON following the output format.` },
             ]);
 
-            // Cleanup S3 voice file
-            try {
-                await s3Client.send(new DeleteObjectCommand({ Bucket: STORAGE_BUCKET, Key: s3Key }));
-            } catch (e) {
-                console.warn('Failed to cleanup voice file:', e);
-            }
+            // DEBUG: Skip S3 cleanup
+            // try {
+            //     await s3Client.send(new DeleteObjectCommand({ Bucket: STORAGE_BUCKET, Key: s3Key }));
+            // } catch (e) {
+            //     console.warn('Failed to cleanup voice file:', e);
+            // }
 
             return JSON.stringify({ success: true, transcript, text: qwenResult });
         }

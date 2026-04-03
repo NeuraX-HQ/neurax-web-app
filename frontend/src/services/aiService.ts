@@ -1,5 +1,6 @@
 import { generateClient } from 'aws-amplify/data';
 import { uploadData } from 'aws-amplify/storage';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import type { Schema } from '../../../backend/amplify/data/resource';
@@ -16,20 +17,27 @@ export async function uploadFoodImage(
 
     let data: Uint8Array;
     if ('uri' in source) {
-        // Native file:// — fetch() doesn't work on Android, use FileSystem instead
-        const base64 = await FileSystem.readAsStringAsync(source.uri, { encoding: 'base64' as any });
-        data = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        // Use fetch to get a blob from the URI (works for file:// and web blobs)
+        const response = await fetch(source.uri);
+        const blob = await response.blob();
+        const arrayBuffer = await blob.arrayBuffer();
+        data = new Uint8Array(arrayBuffer);
     } else {
         // Web canvas: raw base64 string (no data: prefix)
         data = Uint8Array.from(atob(source.base64), c => c.charCodeAt(0));
     }
 
+    const session = await fetchAuthSession();
+    const identityId = session.identityId;
+    if (!identityId) throw new Error('No identityId — cannot upload image');
+
+    const imgPath = `incoming/${identityId}/${fileName}`;
     const result = await uploadData({
-        path: `incoming/{entity_id}/${fileName}`,
+        path: imgPath,
         data,
         options: { contentType },
     }).result;
-    return (result as any).path || `incoming/${fileName}`;
+    return (result as any).path || imgPath;
 }
 
 function extractAndParseJSON(text: string): any {
@@ -126,6 +134,12 @@ export interface FoodSuggestion {
     name: string;
     description: string;
     calories: number;
+    protein_g?: number;
+    carbs_g?: number;
+    fat_g?: number;
+    time?: string;
+    ingredients?: { name: string; amount: string }[];
+    steps?: { title: string; instruction: string }[];
     emoji: string;
 }
 
@@ -322,21 +336,20 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
             base64 = await FileSystem.readAsStringAsync(audioUri, { encoding: 'base64' as any });
         }
 
-        // Step 2: Convert webm→wav on web (Transcribe doesn't support webm batch jobs)
+        // Step 2: Determine format — web records webm, native records m4a
+        // AWS Transcribe supports webm natively, no conversion needed
         const isWeb = Platform.OS === 'web';
-        if (isWeb) {
-            base64 = await convertWebmToWav(base64);
-        }
-        const ext = isWeb ? 'wav' : 'm4a';
-        const contentType = isWeb ? 'audio/wav' : 'audio/mp4';
+        const ext = isWeb ? 'webm' : 'm4a';
+        const contentType = isWeb ? 'audio/webm' : 'audio/mp4';
         const fileName = `${Date.now()}.${ext}`;
+        const voicePath = `voice/${fileName}`;
         const uploadResult = await uploadData({
-            path: `voice/{entity_id}/${fileName}`,
+            path: voicePath,
             data: Uint8Array.from(atob(base64), c => c.charCodeAt(0)),
             options: { contentType },
         }).result;
 
-        const resolvedKey = (uploadResult as any).path || `voice/${fileName}`;
+        const resolvedKey = (uploadResult as any).path || voicePath;
 
         // Step 3: Call Lambda — Transcribe + Qwen in one shot
         const result = await getClient().queries.aiEngine({
@@ -356,21 +369,29 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
 
         const rawData = extractAndParseJSON(responseObj.text);
 
-        // Handle clarification request from Qwen
-        if (rawData.action === 'clarify') {
-            return {
-                success: false,
-                transcript: responseObj.transcript,
-                error: rawData.clarification_question_vi || rawData.clarification_question_en || 'Vui lòng nói rõ hơn món ăn bạn muốn ghi nhận.',
-            };
-        }
-
         // Voice response wraps food in food_data; fall back to items[] or root for other formats
         let aiData = rawData;
         if (rawData.food_data && typeof rawData.food_data === 'object') {
             aiData = rawData.food_data;
         } else if (rawData.items && Array.isArray(rawData.items) && rawData.items.length > 0) {
             aiData = rawData.items[0];
+        }
+
+        // Handle clarification: AI muốn hỏi thêm nhưng vẫn có food_data tạm → dùng luôn
+        if (rawData.action === 'clarify') {
+            const hasFoodData = rawData.food_data && typeof rawData.food_data === 'object';
+            if (hasFoodData) {
+                return {
+                    success: true,
+                    transcript: responseObj.transcript,
+                    data: convertAiToNutritionInfo(aiData),
+                };
+            }
+            return {
+                success: false,
+                transcript: responseObj.transcript,
+                error: rawData.clarification_question_vi || rawData.clarification_question_en || 'Vui lòng nói rõ hơn món ăn bạn muốn ghi nhận.',
+            };
         }
 
         return {
@@ -736,42 +757,55 @@ export async function generateCoachResponse(
 
         // Extract all FOOD_CARDs
         const foodSuggestions: FoodSuggestion[] = [];
-        const foodMatches = text.matchAll(/\[FOOD_CARD: (\{.*?\})\]/g);
+        const foodMatches = text.matchAll(/(?:\[FOOD_CARD:\s*(\{[\s\S]*?\})\s*\]|===FOOD_CARD_START===\s*([\s\S]*?)\s*===FOOD_CARD_END===)/g);
         for (const match of foodMatches) {
             try {
-                foodSuggestions.push(JSON.parse(match[1]));
+                const rawJson = match[1] || match[2];
+                if (!rawJson) continue;
+                const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+                foodSuggestions.push(JSON.parse(cleanJson));
             } catch (e) {
-                console.error('Failed to parse food card JSON', e);
+                console.error('Failed to parse food card JSON', match[0], e);
             }
         }
 
         // Extract all EXERCISE_CARDs
         const exerciseSuggestions: ExerciseSuggestion[] = [];
-        const exerciseMatches = text.matchAll(/\[EXERCISE_CARD: (\{.*?\})\]/g);
+        const exerciseMatches = text.matchAll(/(?:\[EXERCISE_CARD:\s*(\{[\s\S]*?\})\s*\]|===EXERCISE_CARD_START===\s*([\s\S]*?)\s*===EXERCISE_CARD_END===)/g);
         for (const match of exerciseMatches) {
             try {
-                exerciseSuggestions.push(JSON.parse(match[1]));
+                const rawJson = match[1] || match[2];
+                if (!rawJson) continue;
+                const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+                exerciseSuggestions.push(JSON.parse(cleanJson));
             } catch (e) {
-                console.error('Failed to parse exercise card JSON', e);
+                console.error('Failed to parse exercise card JSON', match[0], e);
             }
         }
 
         // Extract STATS_CARD (only one per response)
         let statsCard: StatsCard | undefined;
-        const statsMatch = text.match(/\[STATS_CARD: (\{.*?\})\]/);
+        const statsMatch = text.match(/(?:\[STATS_CARD:\s*(\{[\s\S]*?\})\s*\]|===STATS_CARD_START===\s*([\s\S]*?)\s*===STATS_CARD_END===)/);
         if (statsMatch) {
             try {
-                statsCard = JSON.parse(statsMatch[1]);
+                const rawJson = statsMatch[1] || statsMatch[2];
+                if (rawJson) {
+                    const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+                    statsCard = JSON.parse(cleanJson);
+                }
             } catch (e) {
-                console.error('Failed to parse stats card JSON', e);
+                console.error('Failed to parse stats card JSON', statsMatch[0], e);
             }
         }
 
         // Clean text (remove all card tags)
         const cleanedText = text
-            .replace(/\[FOOD_CARD: \{.*?\}\]/g, '')
-            .replace(/\[EXERCISE_CARD: \{.*?\}\]/g, '')
-            .replace(/\[STATS_CARD: \{.*?\}\]/g, '')
+            .replace(/\[FOOD_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
+            .replace(/===FOOD_CARD_START===[\s\S]*?===FOOD_CARD_END===/g, '')
+            .replace(/\[EXERCISE_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
+            .replace(/===EXERCISE_CARD_START===[\s\S]*?===EXERCISE_CARD_END===/g, '')
+            .replace(/\[STATS_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
+            .replace(/===STATS_CARD_START===[\s\S]*?===STATS_CARD_END===/g, '')
             .trim();
 
         return {

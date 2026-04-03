@@ -27,17 +27,17 @@ export function LoadingAnalysis({ message }: LoadingAnalysisProps) {
             })
         ).start();
 
-        // Pulse animation
+        // Pulse animation - smoother and simpler
         Animated.loop(
             Animated.sequence([
                 Animated.timing(pulseAnim, {
-                    toValue: 1.1,
-                    duration: 800,
+                    toValue: 1.08,
+                    duration: 1000,
                     useNativeDriver: true,
                 }),
                 Animated.timing(pulseAnim, {
                     toValue: 1,
-                    duration: 800,
+                    duration: 1000,
                     useNativeDriver: true,
                 }),
             ])
