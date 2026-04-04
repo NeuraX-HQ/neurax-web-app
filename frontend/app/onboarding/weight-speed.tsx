@@ -26,7 +26,7 @@ export default function WeightSpeed() {
             const data = await getOnboardingData();
             setGoalType(data.goal);
             if (data.weightChangeSpeed) {
-                // Đảm bảo giá trị đã chọn hợp lệ với danh sách mới
+                // Đảm Olly giá trị đã chọn hợp lệ với danh sách mới
                 const exists = speeds.find(s => s.value === data.weightChangeSpeed);
                 if (exists) setSelected(data.weightChangeSpeed);
             }

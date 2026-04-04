@@ -21,7 +21,7 @@ nutritrack-mobile/
 ├── components/            # Reusable UI components
 │   ├── MacroRing.tsx      # Circular progress for macros
 │   ├── CalendarStrip.tsx  # Weekly calendar with streak
-│   ├── AICoachCard.tsx    # AI Bảo motivation card
+│   ├── AICoachCard.tsx    # AI Olly motivation card
 │   ├── MealCard.tsx       # Logged meal item
 │   ├── MealSection.tsx    # Collapsible meal group
 │   ├── LogSheet.tsx       # Bottom sheet for logging
@@ -49,7 +49,7 @@ nutritrack-mobile/
 - [x] **Kitchen Tab**: Fridge inventory with expiry alerts, AI recipe suggestions
 - [x] **Profile Tab**: User stats, weekly summary, goals, settings menu
 - [x] **Mock Data**: Vietnamese foods (Phở, Cơm tấm, Bánh mì, etc.)
-- [x] **AI Coach Bảo**: Motivational messages with Vietnamese slang
+- [x] **AI Coach Olly**: Motivational messages with Vietnamese slang
 
 ### 🔜 To Be Implemented (Backend Integration)
 
