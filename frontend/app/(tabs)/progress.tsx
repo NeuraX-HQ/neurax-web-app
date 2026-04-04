@@ -23,11 +23,11 @@ import {
     getNextStreakTarget,
 } from '../../src/utils/streak';
 import { StreakFlameCard } from '../../src/components/StreakFlameCard';
+import { getUserData, UserData } from '../../src/store/userStore';
+import { useFocusEffect } from 'expo-router';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CHART_HEIGHT = 100;
-const CALORIE_GOAL = 2000;
-const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 function getWeekDates(todayIso: string, offsetWeeks = 0): string[] {
     const today = new Date(todayIso);
@@ -51,7 +51,8 @@ function getMonthDates(todayIso: string): string[] {
 }
 
 // ── Component: Stacked Macro Bar ──────────────────────────────────────────
-function MacroBar({ protein, carbs, fat }: { protein: number; carbs: number; fat: number }) {
+function MacroBar({ protein, carbs, fat, goal }: { protein: number; carbs: number; fat: number; goal: number }) {
+    const { t } = useAppLanguage();
     const total = protein + carbs + fat || 1;
     const pPct = Math.round((protein / total) * 100);
     const cPct = Math.round((carbs / total) * 100);
@@ -59,9 +60,9 @@ function MacroBar({ protein, carbs, fat }: { protein: number; carbs: number; fat
     return (
         <View>
             <View style={macroStyles.labelRow}>
-                <Text style={macroStyles.label}>🥩 Protein {pPct}%</Text>
-                <Text style={macroStyles.label}>🌾 Carb {cPct}%</Text>
-                <Text style={macroStyles.label}>🧈 Fat {fPct}%</Text>
+                <Text style={macroStyles.label}>🥩 {t('home.protein')} {pPct}%</Text>
+                <Text style={macroStyles.label}>🌾 {t('home.carbs')} {cPct}%</Text>
+                <Text style={macroStyles.label}>🧈 {t('home.fat')} {fPct}%</Text>
             </View>
             <View style={macroStyles.bar}>
                 <View style={[macroStyles.seg, { flex: pPct, backgroundColor: Colors.protein }]} />
@@ -70,9 +71,9 @@ function MacroBar({ protein, carbs, fat }: { protein: number; carbs: number; fat
             </View>
             <View style={macroStyles.targetRow}>
                 <View style={macroStyles.targetDot} />
-                <Text style={macroStyles.targetLabel}>Mục tiêu</Text>
+                <Text style={macroStyles.targetLabel}>{t('progress.nutrition.goal')}</Text>
                 <View style={macroStyles.targetLine} />
-                <Text style={macroStyles.targetValue}>{CALORIE_GOAL} kcal</Text>
+                <Text style={macroStyles.targetValue}>{goal} kcal</Text>
             </View>
         </View>
     );
@@ -91,7 +92,8 @@ const macroStyles = StyleSheet.create({
 });
 
 // ── Component: Activity Calendar ──────────────────────────────────────────
-function ActivityCalendar({ dailyCaloriesMap, todayIso }: { dailyCaloriesMap: Record<string, number>; todayIso: string }) {
+function ActivityCalendar({ dailyCaloriesMap, todayIso, calorieGoal }: { dailyCaloriesMap: Record<string, number>; todayIso: string; calorieGoal: number }) {
+    const { t } = useAppLanguage();
     const [monthOffset, setMonthOffset] = useState(0);
 
     const monthDates = useMemo(() => {
@@ -110,7 +112,7 @@ function ActivityCalendar({ dailyCaloriesMap, todayIso }: { dailyCaloriesMap: Re
     const getCellColor = (iso: string) => {
         const cals = dailyCaloriesMap[iso] || 0;
         if (cals === 0) return '#E5E7EB';
-        const pct = cals / CALORIE_GOAL;
+        const pct = cals / calorieGoal;
         if (pct <= 0.33) return '#D1FAE5';
         if (pct <= 0.66) return '#6EE7B7';
         return Colors.accent;
@@ -118,7 +120,7 @@ function ActivityCalendar({ dailyCaloriesMap, todayIso }: { dailyCaloriesMap: Re
 
     const currentDate = new Date(todayIso);
     currentDate.setMonth(currentDate.getMonth() + monthOffset);
-    const monthLabel = `Tháng ${currentDate.getMonth() + 1}, ${currentDate.getFullYear()}`;
+    const monthLabel = `${t(`calendar.month.${currentDate.getMonth() + 1}`)}, ${currentDate.getFullYear()}`;
 
     return (
         <View style={calStyles.container}>
@@ -150,11 +152,11 @@ function ActivityCalendar({ dailyCaloriesMap, todayIso }: { dailyCaloriesMap: Re
             </ScrollView>
             <View style={calStyles.legend}>
                 <View style={calStyles.legendRight}>
-                    <Text style={calStyles.legendText}>Ít</Text>
+                    <Text style={calStyles.legendText}>{t('progress.activity.low')}</Text>
                     {['#D1FAE5', '#6EE7B7', Colors.accent].map((c, i) => (
                         <View key={i} style={[calStyles.legendDot, { backgroundColor: c }]} />
                     ))}
-                    <Text style={calStyles.legendText}>Nhiều</Text>
+                    <Text style={calStyles.legendText}>{t('progress.activity.high')}</Text>
                 </View>
             </View>
         </View>
@@ -180,6 +182,15 @@ export default function ProgressScreen() {
     const router = useRouter();
     const { t, language } = useAppLanguage();
     const { meals } = useMealStore();
+    const [userData, setUserData] = useState<UserData | null>(null);
+
+    useFocusEffect(
+        useCallback(() => {
+            getUserData().then(setUserData);
+        }, [])
+    );
+
+    const calorieGoal = userData?.dailyCalories || 2000;
 
     const todayIso = toLocalIsoDate(new Date());
     const activeDateSet = useMemo(() => new Set(meals.map((m) => m.date)), [meals]);
@@ -217,13 +228,18 @@ export default function ProgressScreen() {
     const weekFat = Math.round(weekMeals.reduce((s, m) => s + m.fat, 0) / 7);
 
     // ── Goal hit rate ───────────────────────────────────────────────────
-    const goalHitDays = weekCalories.filter((c) => c > 0 && Math.abs(c - CALORIE_GOAL) / CALORIE_GOAL <= 0.15);
+    const goalHitDays = weekCalories.filter((c) => c > 0 && Math.abs(c - calorieGoal) / calorieGoal <= 0.15);
     const daysLogged = weekCalories.filter((c) => c > 0).length;
     const consistency = Math.round((daysLogged / 7) * 100);
 
     // ── Meal type breakdown ─────────────────────────────────────────────
     const mealTypes = ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'] as const;
-    const mealLabels: Record<string, string> = { BREAKFAST: 'Sáng', LUNCH: 'Trưa', DINNER: 'Tối', SNACK: 'Phụ' };
+    const mealLabels: Record<string, string> = { 
+        BREAKFAST: t('home.mealType.breakfast'), 
+        LUNCH: t('home.mealType.lunch'), 
+        DINNER: t('home.mealType.dinner'), 
+        SNACK: t('home.mealType.snack') 
+    };
     const totalWeekCal = weekMeals.reduce((s, m) => s + m.calories, 1);
     const mealBreakdown = mealTypes.map((type) => {
         const typeMeals = weekMeals.filter((m) => m.type === type);
@@ -327,7 +343,7 @@ export default function ProgressScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Tiến Trình</Text>
+                <Text style={styles.headerTitle}>{t('progress.title')}</Text>
                 <TouchableOpacity onPress={() => router.push('/achievements')} style={styles.headerBtn}>
                     <Ionicons name="trophy-outline" size={22} color={Colors.accent} />
                 </TouchableOpacity>
@@ -338,18 +354,24 @@ export default function ProgressScreen() {
                 {/* ── 1. Streak Hero ────────────────────────────────── */}
                 <View style={[styles.streakCard, Shadows.medium]}>
                     <View style={styles.streakLeft}>
-                        <Text style={styles.streakSubLabel}>CHUỖI HIỆN TẠI</Text>
-                        <Text style={styles.streakDays}>{streak} Ngày Streak</Text>
+                        <Text style={styles.streakSubLabel}>{t('progress.streak.current')}</Text>
+                        <Text style={styles.streakDays}>{t('progress.streak.days', { count: streak })}</Text>
                         <Text style={styles.streakMotivation}>
-                            {streak === 0 ? 'Bắt đầu hành trình hôm nay!' : streak < 7 ? 'Tiếp tục nhé! 💪' : 'Bạn đang bứt phá! 🔥'}
+                            {streak === 0 
+                                ? t('progress.streak.start') 
+                                : streak < 7 
+                                    ? t('progress.streak.continue') 
+                                    : t('progress.streak.blaze')}
                         </Text>
                         {nextTarget ? (
                             <View style={styles.nextPill}>
-                                <Text style={styles.nextPillText}>🎯 Còn {nextTarget - streak} ngày → mốc {nextTarget}</Text>
+                                <Text style={styles.nextPillText}>
+                                    {t('progress.streak.nextGoal', { days: nextTarget - streak, target: nextTarget })}
+                                </Text>
                             </View>
                         ) : (
                             <View style={styles.nextPill}>
-                                <Text style={styles.nextPillText}>🏆 Đỉnh cao!</Text>
+                                <Text style={styles.nextPillText}>{t('progress.streak.max')}</Text>
                             </View>
                         )}
                     </View>
@@ -360,7 +382,7 @@ export default function ProgressScreen() {
                 {daysLogged >= 3 && (
                     <View style={[styles.card, Shadows.small, { borderLeftWidth: 3, borderLeftColor: Colors.accent }]}>
                         <View style={styles.cardHeaderRow}>
-                            <Text style={styles.cardTitle}>🤖 Nhận Xét Từ AI</Text>
+                            <Text style={styles.cardTitle}>{t('progress.ai.title')}</Text>
                         </View>
                         {insightText ? (
                             <Text style={{ fontSize: 14, color: Colors.text, lineHeight: 22, marginTop: 8 }}>{insightText}</Text>
@@ -368,14 +390,14 @@ export default function ProgressScreen() {
                             <ActivityIndicator size="small" color={Colors.accent} style={{ marginTop: 12 }} />
                         ) : insightError ? (
                             <TouchableOpacity onPress={fetchWeeklyInsight} style={{ marginTop: 8 }}>
-                                <Text style={{ fontSize: 14, color: Colors.red }}>Lỗi tải. Nhấn thử lại.</Text>
+                                <Text style={{ fontSize: 14, color: Colors.red }}>{t('progress.ai.error')}</Text>
                             </TouchableOpacity>
                         ) : (
                             <TouchableOpacity
                                 onPress={fetchWeeklyInsight}
                                 style={{ backgroundColor: Colors.accent, borderRadius: 10, paddingVertical: 10, marginTop: 10, alignItems: 'center' }}
                             >
-                                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>Xem nhận xét tuần này</Text>
+                                <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>{t('progress.ai.viewWeekly')}</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -384,7 +406,7 @@ export default function ProgressScreen() {
                 {/* ── 2. Weekly Calories Bar Chart ──────────────────── */}
                 <View style={[styles.card, Shadows.small]}>
                     <View style={styles.cardHeaderRow}>
-                        <Text style={styles.cardTitle}>Calo Theo Tuần</Text>
+                        <Text style={styles.cardTitle}>{t('progress.weekly.title')}</Text>
                         <View style={[styles.badge, weekVsWeek >= 0 ? styles.badgeRed : styles.badgeGreen]}>
                             <Ionicons
                                 name={weekVsWeek >= 0 ? 'trending-up' : 'trending-down'}
@@ -392,14 +414,14 @@ export default function ProgressScreen() {
                                 color={weekVsWeek >= 0 ? '#EF4444' : '#10B981'}
                             />
                             <Text style={[styles.badgeText, { color: weekVsWeek >= 0 ? '#EF4444' : '#10B981' }]}>
-                                {weekVsWeek >= 0 ? '+' : ''}{weekVsWeek}% vs tuần trước
+                                {t('progress.weekly.vsLast', { percent: (weekVsWeek >= 0 ? '+' : '') + weekVsWeek })}
                             </Text>
                         </View>
                     </View>
 
                     <View style={styles.avgRow}>
                         <View>
-                            <Text style={styles.avgLabel}>Trung Bình Ngày</Text>
+                            <Text style={styles.avgLabel}>{t('progress.weekly.avgDaily')}</Text>
                             <Text style={styles.avgValue}>{dailyAvg.toLocaleString()} <Text style={styles.avgUnit}>kcal</Text></Text>
                         </View>
                     </View>
@@ -409,7 +431,8 @@ export default function ProgressScreen() {
                             const heightPct = cal / maxCal;
                             const isToday = weekDates[i] === todayIso;
                             const barH = Math.max(heightPct * CHART_HEIGHT, cal > 0 ? 6 : 3);
-                            const overGoal = cal > CALORIE_GOAL * 1.15;
+                            const overGoal = cal > calorieGoal * 1.15;
+                            const weekdays = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
                             return (
                                 <View key={i} style={styles.barColumn}>
                                     <View style={styles.barTrack}>
@@ -423,7 +446,9 @@ export default function ProgressScreen() {
                                             ]}
                                         />
                                     </View>
-                                    <Text style={[styles.barLabel, isToday && styles.barLabelToday]}>{DAY_LABELS[i]}</Text>
+                                    <Text style={[styles.barLabel, isToday && styles.barLabelToday]}>
+                                        {t(`calendar.weekday.${weekdays[i]}`)}
+                                    </Text>
                                 </View>
                             );
                         })}
@@ -432,7 +457,7 @@ export default function ProgressScreen() {
 
                 {/* ── 3. Monthly Trend ──────────────────────────────── */}
                 <View style={[styles.card, Shadows.small]}>
-                    <Text style={styles.cardTitle}>Xu Hướng Tháng</Text>
+                    <Text style={styles.cardTitle}>{t('progress.monthly.title')}</Text>
                     <View style={styles.trendWrap}>
                         <Svg width={svgWidth} height={svgHeight}>
                             <Defs>
@@ -445,25 +470,27 @@ export default function ProgressScreen() {
                             <Path d={trendPath.line} fill="none" stroke={Colors.accent} strokeWidth="2.5" strokeLinecap="round" />
                         </Svg>
                         <View style={styles.trendBadge}>
-                            <Text style={styles.trendBadgeText}>TB: {monthlyAvg.toLocaleString()} kcal</Text>
+                            <Text style={styles.trendBadgeText}>
+                                {t('progress.monthly.avg', { value: monthlyAvg.toLocaleString() })}
+                            </Text>
                         </View>
                     </View>
                     <View style={styles.trendLabels}>
-                        {['Tuần 4', 'Tuần 3', 'Tuần 2', 'Tuần 1'].map((l) => (
-                            <Text key={l} style={styles.trendLabelText}>{l}</Text>
+                        {[4, 3, 2, 1].map((n) => (
+                            <Text key={n} style={styles.trendLabelText}>{t('progress.monthly.week', { n })}</Text>
                         ))}
                     </View>
                 </View>
 
                 {/* ── 4. Macro Breakdown ─────────────────────────────── */}
                 <View style={[styles.card, Shadows.small]}>
-                    <Text style={styles.cardTitle}>Tỉ Lệ Dinh Dưỡng</Text>
-                    <MacroBar protein={weekProtein} carbs={weekCarbs} fat={weekFat} />
+                    <Text style={styles.cardTitle}>{t('progress.nutrition.title')}</Text>
+                    <MacroBar protein={weekProtein} carbs={weekCarbs} fat={weekFat} goal={calorieGoal} />
                     <View style={styles.macroLegendRow}>
                         {[
-                            { label: `Protein ${weekProtein}g`, color: Colors.protein },
-                            { label: `Carb ${weekCarbs}g`, color: Colors.carbs },
-                            { label: `Fat ${weekFat}g`, color: Colors.fat },
+                            { label: `${t('home.protein')} ${weekProtein}g`, color: Colors.protein },
+                            { label: `${t('home.carbs')} ${weekCarbs}g`, color: Colors.carbs },
+                            { label: `${t('home.fat')} ${weekFat}g`, color: Colors.fat },
                         ].map((item) => (
                             <View key={item.label} style={styles.macroLegendItem}>
                                 <View style={[styles.macroLegendDot, { backgroundColor: item.color }]} />
@@ -477,14 +504,14 @@ export default function ProgressScreen() {
                 <View style={styles.twoColRow}>
                     {/* Goal Hit Rate */}
                     <View style={[styles.halfCard, Shadows.small]}>
-                        <Text style={styles.halfLabel}>ĐẠT MỤC TIÊU</Text>
+                        <Text style={styles.halfLabel}>{t('progress.goal.title')}</Text>
                         <View style={styles.halfValueRow}>
                             <Text style={styles.halfValue}>{goalHitDays.length}/7</Text>
-                            <Text style={styles.halfUnit}>ngày</Text>
+                            <Text style={styles.halfUnit}>{t('progress.goal.days')}</Text>
                         </View>
                         <View style={styles.dotsRow}>
                             {weekCalories.map((cal, i) => {
-                                const hit = cal > 0 && Math.abs(cal - CALORIE_GOAL) / CALORIE_GOAL <= 0.15;
+                                const hit = cal > 0 && Math.abs(cal - calorieGoal) / calorieGoal <= 0.15;
                                 return (
                                     <View
                                         key={i}
@@ -497,7 +524,7 @@ export default function ProgressScreen() {
 
                     {/* Consistency */}
                     <View style={[styles.halfCard, Shadows.small]}>
-                        <Text style={styles.halfLabel}>ĐỀU ĐẶN</Text>
+                        <Text style={styles.halfLabel}>{t('progress.consistency.title')}</Text>
                         <View style={styles.halfValueRow}>
                             <Text style={[styles.halfValue, { color: consistency >= 70 ? Colors.accent : Colors.orange }]}>
                                 {consistency}%
@@ -505,14 +532,16 @@ export default function ProgressScreen() {
                         </View>
                         <View style={styles.consistencyRow}>
                             <Ionicons name="calendar-outline" size={13} color={Colors.accent} />
-                            <Text style={styles.consistencyText}>{daysLogged}/7 ngày đã log</Text>
+                            <Text style={styles.consistencyText}>
+                                {t('progress.consistency.logged', { count: daysLogged })}
+                            </Text>
                         </View>
                     </View>
                 </View>
 
                 {/* ── 6. Meal Insights Grid ─────────────────────────── */}
                 <View style={[styles.card, Shadows.small]}>
-                    <Text style={styles.cardTitle}>Phân Bổ Bữa Ăn</Text>
+                    <Text style={styles.cardTitle}>{t('progress.meal.title')}</Text>
                     <View style={styles.mealGrid}>
                         {mealBreakdown.map((item) => {
                             const iconMap: Record<string, string> = {
@@ -524,7 +553,7 @@ export default function ProgressScreen() {
                                         <Text style={styles.mealTypeLabel}>{iconMap[item.type]} {item.label}</Text>
                                         <Text style={styles.mealPct}>{item.pct}%</Text>
                                     </View>
-                                    <Text style={styles.mealCount}>{item.count} lần/tuần</Text>
+                                    <Text style={styles.mealCount}>{t('progress.meal.timesPerWeek', { count: item.count })}</Text>
                                 </View>
                             );
                         })}
@@ -533,23 +562,23 @@ export default function ProgressScreen() {
 
                 {/* ── 7. Activity Calendar (GitHub-style) ──────────── */}
                 <View style={[styles.card, Shadows.small]}>
-                    <Text style={styles.cardTitle}>Hoạt Động</Text>
-                    <ActivityCalendar dailyCaloriesMap={dailyCaloriesMap} todayIso={todayIso} />
+                    <Text style={styles.cardTitle}>{t('progress.activity.title')}</Text>
+                    <ActivityCalendar dailyCaloriesMap={dailyCaloriesMap} todayIso={todayIso} calorieGoal={calorieGoal} />
                 </View>
 
                 {/* ── 8. Quick Stats ────────────────────────────────── */}
                 <View style={styles.twoColRow}>
                     <View style={[styles.halfCard, Shadows.small]}>
-                        <Text style={styles.halfLabel}>TỔNG TUẦN</Text>
+                        <Text style={styles.halfLabel}>{t('progress.stats.totalWeek')}</Text>
                         <Text style={styles.halfValue}>{thisWeekTotal.toLocaleString()}</Text>
-                        <Text style={styles.halfUnit}>kcal đã theo dõi</Text>
+                        <Text style={styles.halfUnit}>{t('progress.stats.tracked')}</Text>
                     </View>
                     <View style={[styles.halfCard, Shadows.small]}>
-                        <Text style={styles.halfLabel}>ĐIỂM NHẤT QUÁN</Text>
+                        <Text style={styles.halfLabel}>{t('progress.stats.consistencyScore')}</Text>
                         <Text style={[styles.halfValue, { color: consistency >= 70 ? Colors.accent : Colors.orange }]}>
                             {consistency}%
                         </Text>
-                        <Text style={styles.halfUnit}>so với mục tiêu</Text>
+                        <Text style={styles.halfUnit}>{t('progress.stats.vsGoal')}</Text>
                     </View>
                 </View>
 
@@ -560,7 +589,7 @@ export default function ProgressScreen() {
                     activeOpacity={0.82}
                 >
                     <Ionicons name="trophy-outline" size={20} color="#FFF" />
-                    <Text style={styles.achieveBtnText}>Xem Thành Tựu & Huy Hiệu</Text>
+                    <Text style={styles.achieveBtnText}>{t('progress.achievements.view')}</Text>
                     <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.7)" />
                 </TouchableOpacity>
 

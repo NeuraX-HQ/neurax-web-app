@@ -22,7 +22,17 @@ export const toLocalIsoDate = (date: Date): string => {
 
 export const getCurrentStreak = (activeDateSet: Set<string>, todayIso: string): number => {
     let streak = 0;
-    const cursor = isoToDate(todayIso);
+    let cursor = isoToDate(todayIso);
+
+    // If today is not logged, check yesterday. If yesterday is also not logged, streak is 0.
+    if (!activeDateSet.has(todayIso)) {
+        const yesterday = new Date(cursor.getTime());
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (!activeDateSet.has(toLocalIsoDate(yesterday))) {
+            return 0;
+        }
+        cursor = yesterday; // Start counting from yesterday
+    }
 
     while (activeDateSet.has(toLocalIsoDate(cursor))) {
         streak += 1;
