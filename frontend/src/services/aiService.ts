@@ -1,12 +1,11 @@
 import { generateClient } from 'aws-amplify/data';
 import { uploadData } from 'aws-amplify/storage';
 import { fetchAuthSession } from 'aws-amplify/auth';
-import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import type { Schema } from '../../../backend/amplify/data/resource';
 
 // Upload a food image to S3 incoming/ path, return resolved s3Key.
-// Native: pass file URI (file://) — read via FileSystem (works on iOS + Android).
+// Native: pass file URI (file://) — read via fetch() (works on iOS + Android).
 // Web canvas: pass raw base64 string (no data: prefix) — converted via atob.
 export async function uploadFoodImage(
     source: { uri: string; contentType?: string } | { base64: string; contentType?: string }
@@ -330,23 +329,22 @@ async function convertWebmToWav(base64Webm: string): Promise<string> {
  */
 export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult & { transcript?: string }> {
     try {
-        // Step 1: Read audio file as base64 (fetch() doesn't work with file:// on RN)
-        let base64: string;
-        if (Platform.OS === 'web' && audioUri.startsWith('blob:')) {
-            const response = await fetch(audioUri);
-            const blob = await response.blob();
-            base64 = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve((reader.result as string).split(',')[1] || '');
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-            });
-        } else {
-            base64 = await FileSystem.readAsStringAsync(audioUri, { encoding: 'base64' as any });
-        }
+        // Step 1: Read audio file via fetch to get a Blob (works for file:// on Native and blob: on Web)
+        const response = await fetch(audioUri);
+        const blob = await response.blob();
+        
+        // Step 2: Convert Blob to Uint8Array for Amplify Storage
+        const data = await new Promise<Uint8Array>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const arrayBuffer = reader.result as ArrayBuffer;
+                resolve(new Uint8Array(arrayBuffer));
+            };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(blob);
+        });
 
-        // Step 2: Determine format — web records webm, native records m4a
-        // AWS Transcribe supports webm natively, no conversion needed
+        // Step 3: Determine format — web records webm, native records m4a
         const isWeb = Platform.OS === 'web';
         const ext = isWeb ? 'webm' : 'm4a';
         const contentType = isWeb ? 'audio/webm' : 'audio/mp4';
@@ -354,7 +352,7 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
         const voicePath = `voice/${fileName}`;
         const uploadResult = await uploadData({
             path: voicePath,
-            data: Uint8Array.from(atob(base64), c => c.charCodeAt(0)),
+            data,
             options: { contentType },
         }).result;
 

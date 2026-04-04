@@ -149,10 +149,10 @@ export const useMealStore = create<MealState>((set, get) => ({
             set({ isLoading: true, error: null });
 
             // Safety net: only allow logging for today and yesterday
-            const selectedDate = get().selectedDateStr;
+            const logDate = mealData.date || get().selectedDateStr;
             const today = getTodayDate();
             const yesterday = getDateNDaysAgo(1);
-            if (selectedDate > today || selectedDate < yesterday) {
+            if (logDate > today || logDate < yesterday) {
                 set({ isLoading: false, error: 'Cannot log meals for this date' });
                 return;
             }

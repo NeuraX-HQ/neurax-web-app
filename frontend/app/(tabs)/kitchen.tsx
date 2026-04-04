@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback, Animated, RefreshControl, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback, Animated, RefreshControl, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,36 +60,45 @@ export default function KitchenScreen() {
     };
 
     const handleUseNow = (item: FridgeItem) => {
-        Alert.alert(
-            t('kitchen.useNowConfirmTitle'),
-            `${t('kitchen.useNowConfirmDesc')} (${item.name})`,
-            [
-                { text: t('common.cancel'), style: 'cancel' },
-                { 
-                    text: t('kitchen.useNow'), 
-                    style: 'default',
-                    onPress: async () => {
-                        try {
-                            await useMealStore.getState().addMeal({
-                                name: item.name,
-                                type: 'SNACK',
-                                calories: item.calories || 0,
-                                protein: item.protein || 0,
-                                carbs: item.carbs || 0,
-                                fat: item.fat || 0,
-                                servingSize: item.amount,
-                                image: item.emoji || '🍽️',
-                                date: getTodayDate() // Luôn log vào ngày hôm nay
-                            });
-                            await removeItem(item.id);
-                        } catch (error) {
-                            console.error('Lỗi khi dùng ngay món ăn:', error);
-                            Alert.alert(t('common.error'), t('kitchen.useNowError'));
-                        }
-                    }
+        const onConfirm = async () => {
+            try {
+                await useMealStore.getState().addMeal({
+                    name: item.name,
+                    type: 'SNACK',
+                    calories: item.calories || 0,
+                    protein: item.protein || 0,
+                    carbs: item.carbs || 0,
+                    fat: item.fat || 0,
+                    servingSize: item.amount,
+                    image: item.emoji || '🍽️',
+                    date: getTodayDate()
+                });
+                await removeItem(item.id);
+            } catch (error) {
+                console.error('Lỗi khi dùng ngay món ăn:', error);
+                if (Platform.OS === 'web') {
+                    window.alert(t('kitchen.useNowError'));
+                } else {
+                    Alert.alert(t('common.error'), t('kitchen.useNowError'));
                 }
-            ]
-        );
+            }
+        };
+
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm(`${t('kitchen.useNowConfirmTitle')}\n\n${t('kitchen.useNowConfirmDesc')} (${item.name})`);
+            if (confirmed) {
+                onConfirm();
+            }
+        } else {
+            Alert.alert(
+                t('kitchen.useNowConfirmTitle'),
+                `${t('kitchen.useNowConfirmDesc')} (${item.name})`,
+                [
+                    { text: t('common.cancel'), style: 'cancel' },
+                    { text: t('kitchen.useNow'), style: 'default', onPress: onConfirm }
+                ]
+            );
+        }
     };
 
     const EmptyHint = ({ text }: { text: string }) => (
