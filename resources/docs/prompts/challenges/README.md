@@ -7,7 +7,7 @@ Dựa theo persona "Ollie - Huấn luyện viên AI", Ollie sẽ phân tích Con
 
 ## 2. File trong thư mục
 - `challenges_prompt.py`: Dữ liệu gốc ở `neurax-ai-core/src/nutritrack/challenges.py` được extract sang.
-  - `CHALLENGE_SYSTEM_PROMPT`: Giới hạn phong cách (Gen-Z) và số lượng từ ngữ trả ra (tối đa 3 câu). Đảm bảo xuất JSON.
+  - `CHALLENGE_SYSTEM_PROMPT`: Giới hạn phong cách (Gen-Z) và số lượng từ ngữ trả ra (tối đa 3 câu). Đảm Olly xuất JSON.
   - `CHALLENGE_USER_PROMPT_TEMPLATE`: Template động điền các thông số Leaderboard theo cơ sở dữ liệu mỗi khi Backend Lambda chạy.
 
 ## 3. Định dạng Output

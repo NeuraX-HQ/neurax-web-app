@@ -83,7 +83,7 @@ export default function Step9() {
                         </View>
                     </Animated.View>
                     <Text style={styles.analyzingTitle}>{t(`onboarding.analyze.${analysisStep}`)}</Text>
-                    <Text style={styles.analyzingSubtitle}>AI Bảo đang xử lý...</Text>
+                    <Text style={styles.analyzingSubtitle}>AI Olly đang xử lý...</Text>
                 </View>
             </SafeAreaView>
         );

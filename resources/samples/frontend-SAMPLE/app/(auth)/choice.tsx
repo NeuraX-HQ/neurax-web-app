@@ -130,7 +130,7 @@ export default function ChoiceScreen() {
                 <Text style={styles.termsText}>
                     Bằng việc tiếp tục, bạn đồng ý với{" "}
                     <Text style={styles.termsLink}>Điều khoản sử dụng</Text> và{" "}
-                    <Text style={styles.termsLink}>Chính sách bảo mật</Text> của chúng
+                    <Text style={styles.termsLink}>Chính sách Olly mật</Text> của chúng
                     tôi.
                 </Text>
             </View>
