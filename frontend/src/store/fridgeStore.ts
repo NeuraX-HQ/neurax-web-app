@@ -13,6 +13,10 @@ export interface FridgeItem {
     addedDate: string; // ISO string
     syncStatus?: 'synced' | 'pending' | 'error';
     remoteId?: string; // DynamoDB record id
+    calories?: number;
+    protein?: number;
+    carbs?: number;
+    fat?: number;
 }
 
 interface FridgeState {
@@ -58,6 +62,10 @@ export const useFridgeStore = create<FridgeState>((set, get) => ({
                 unit: newItem.location,
                 expiry_date: newItem.expiryDate?.split('T')[0],
                 emoji: newItem.emoji,
+                calories: newItem.calories,
+                protein_g: newItem.protein,
+                carbs_g: newItem.carbs,
+                fat_g: newItem.fat,
             }).then((remote) => {
                 const items = get().items.map(i =>
                     i.id === newItem.id
@@ -130,6 +138,10 @@ export const useFridgeStore = create<FridgeState>((set, get) => ({
                         emoji: item.emoji || '',
                         addedDate: item.added_date || new Date().toISOString(),
                         syncStatus: 'synced' as const,
+                        calories: item.calories ?? 0,
+                        protein: item.protein_g ?? 0,
+                        carbs: item.carbs_g ?? 0,
+                        fat: item.fat_g ?? 0,
                     };
                 });
 
@@ -152,6 +164,10 @@ export const useFridgeStore = create<FridgeState>((set, get) => ({
                 unit: item.location,
                 expiry_date: item.expiryDate?.split('T')[0],
                 emoji: item.emoji,
+                calories: item.calories,
+                protein_g: item.protein,
+                carbs_g: item.carbs,
+                fat_g: item.fat,
             });
             if (remote) {
                 const items = get().items.map(i =>

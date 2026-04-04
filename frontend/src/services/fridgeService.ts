@@ -13,6 +13,10 @@ export interface CreateFridgeItemInput {
     expiry_date?: string;       // YYYY-MM-DD
     category?: CategoryEnum;
     emoji?: string;
+    calories?: number;
+    protein_g?: number;
+    carbs_g?: number;
+    fat_g?: number;
 }
 
 /**
@@ -29,6 +33,10 @@ export const createFridgeItem = async (input: CreateFridgeItemInput) => {
             expiry_date: input.expiry_date,
             category: input.category ?? 'other',
             emoji: input.emoji,
+            calories: input.calories,
+            protein_g: input.protein_g,
+            carbs_g: input.carbs_g,
+            fat_g: input.fat_g,
         });
 
         if (errors) {

@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Shadows } from '../../src/constants/colors';
 import { recipes } from '../../src/data/recipes';
 import { useFridgeStore, FridgeItem } from '../../src/store/fridgeStore';
-import { useMealStore } from '../../src/store/mealStore';
+import { useMealStore, getTodayDate } from '../../src/store/mealStore';
 import { useRecipeStore } from '../../src/store/recipeStore';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 import { Recipe } from '../../src/data/recipes';
@@ -70,16 +70,16 @@ export default function KitchenScreen() {
                     style: 'default',
                     onPress: async () => {
                         try {
-                            const { useMealStore } = require('../../src/store/mealStore');
                             await useMealStore.getState().addMeal({
                                 name: item.name,
-                                type: 'SNACK', // Mặc định log vào Snack
-                                calories: (item as any).calories || 0,
-                                protein: (item as any).protein || 0,
-                                carbs: (item as any).carbs || 0,
-                                fat: (item as any).fat || 0,
+                                type: 'SNACK',
+                                calories: item.calories || 0,
+                                protein: item.protein || 0,
+                                carbs: item.carbs || 0,
+                                fat: item.fat || 0,
                                 servingSize: item.amount,
-                                image: item.emoji || '🍽️'
+                                image: item.emoji || '🍽️',
+                                date: getTodayDate() // Luôn log vào ngày hôm nay
                             });
                             await removeItem(item.id);
                         } catch (error) {

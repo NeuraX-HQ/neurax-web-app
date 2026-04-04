@@ -61,7 +61,7 @@ interface MealState {
     setSelectedDateStr: (date: string) => void;
     setSelectedMealType: (type: MealType | null) => void;
     setAddMenuOpen: (open: boolean) => void;
-    addMeal: (meal: Omit<Meal, 'id' | 'time' | 'date'>) => Promise<void>;
+    addMeal: (meal: Omit<Meal, 'id' | 'time' | 'date'> & { date?: string }) => Promise<void>;
     addActivity: (activity: Omit<Activity, 'id' | 'time' | 'date'>) => Promise<void>;
     removeMeal: (id: string) => Promise<void>;
     updateMeal: (id: string, updates: Partial<Meal>) => Promise<void>;
@@ -85,7 +85,7 @@ interface MealState {
 const STORAGE_KEY = '@nutritrack_meals';
 
 // Helper to get today's date in YYYY-MM-DD format
-const getTodayDate = (): string => {
+export const getTodayDate = (): string => {
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -94,7 +94,7 @@ const getTodayDate = (): string => {
 };
 
 // Helper to get current time in HH:MM AM/PM format
-const getCurrentTime = (): string => {
+export const getCurrentTime = (): string => {
     const now = new Date();
     let hours = now.getHours();
     const minutes = now.getMinutes();
@@ -106,7 +106,7 @@ const getCurrentTime = (): string => {
 };
 
 // Helper to generate unique ID
-const generateId = (): string => {
+export const generateId = (): string => {
     return `meal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
@@ -161,7 +161,7 @@ export const useMealStore = create<MealState>((set, get) => ({
                 ...mealData,
                 id: generateId(),
                 time: getCurrentTime(),
-                date: get().selectedDateStr,
+                date: mealData.date || get().selectedDateStr,
                 syncStatus: 'pending',
             };
 
