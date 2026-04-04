@@ -61,12 +61,12 @@ export default function KitchenScreen() {
 
     const handleUseNow = (item: FridgeItem) => {
         Alert.alert(
-            t('kitchen.useNowConfirmTitle') || 'Dùng món này?',
-            `${t('kitchen.useNowConfirmDesc') || 'Bạn muốn ghi nhận việc đã tiêu thụ món này ngay bây giờ?'} (${item.name})`,
+            t('kitchen.useNowConfirmTitle'),
+            `${t('kitchen.useNowConfirmDesc')} (${item.name})`,
             [
-                { text: t('common.cancel') || 'Hủy', style: 'cancel' },
+                { text: t('common.cancel'), style: 'cancel' },
                 { 
-                    text: t('kitchen.useNow') || 'Dùng ngay', 
+                    text: t('kitchen.useNow'), 
                     style: 'default',
                     onPress: async () => {
                         try {
@@ -84,7 +84,7 @@ export default function KitchenScreen() {
                             await removeItem(item.id);
                         } catch (error) {
                             console.error('Lỗi khi dùng ngay món ăn:', error);
-                            Alert.alert(t('common.error') || 'Lỗi', 'Không thể ghi nhận món ăn.');
+                            Alert.alert(t('common.error'), t('kitchen.useNowError'));
                         }
                     }
                 }
@@ -200,10 +200,10 @@ export default function KitchenScreen() {
                     <View style={styles.content}>
                         <View style={styles.recipeSubTabs}>
                             <TouchableOpacity style={[styles.subTab, recipeSubTab === 'system' && styles.subTabActive]} onPress={() => setRecipeSubTab('system')}>
-                                <Text style={[styles.subTabText, recipeSubTab === 'system' && styles.subTabTextActive]}>Hệ thống</Text>
+                                <Text style={[styles.subTabText, recipeSubTab === 'system' && styles.subTabTextActive]}>{t('kitchen.tab.system')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={[styles.subTab, recipeSubTab === 'personal' && styles.subTabActive]} onPress={() => setRecipeSubTab('personal')}>
-                                <Text style={[styles.subTabText, recipeSubTab === 'personal' && styles.subTabTextActive]}>Của Tôi</Text>
+                                <Text style={[styles.subTabText, recipeSubTab === 'personal' && styles.subTabTextActive]}>{t('kitchen.tab.personal')}</Text>
                             </TouchableOpacity>
                         </View>
 
@@ -228,18 +228,18 @@ export default function KitchenScreen() {
                                 {recipes
                                     .filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase()))
                                     .map((recipe) => (
-                                        <RecipeCardHorizontal key={recipe.id} recipe={recipe} onPress={() => openRecipeFlow(recipe.id)} />
+                                        <RecipeCardHorizontal key={recipe.id} recipe={recipe} onPress={() => openRecipeFlow(recipe.id)} t={t} />
                                 ))}
                             </View>
                         ) : (
                             <View style={styles.recipeList}>
                                 {personalRecipes.length === 0 ? (
-                                    <EmptyHint text="Chưa có món ăn lưu từ Ollie." />
+                                    <EmptyHint text={t('kitchen.emptyPersonal')} />
                                 ) : (
                                     personalRecipes
                                         .filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase()))
                                         .map((recipe) => (
-                                            <RecipeCardHorizontal key={recipe.id} recipe={recipe} onPress={() => openRecipeFlow(recipe.id)} />
+                                            <RecipeCardHorizontal key={recipe.id} recipe={recipe} onPress={() => openRecipeFlow(recipe.id)} t={t} />
                                         ))
                                 )}
                             </View>
@@ -334,7 +334,7 @@ function LongTermCard({ item }: { item: FridgeItem }) {
     );
 }
 
-function RecipeCardHorizontal({ recipe, onPress }: { recipe: Recipe, onPress: () => void }) {
+function RecipeCardHorizontal({ recipe, onPress, t }: { recipe: Recipe, onPress: () => void, t: (key: string, params?: any) => string }) {
     return (
         <TouchableOpacity style={[styles.recipeCardHorizontal, Shadows.small]} activeOpacity={0.8} onPress={onPress}>
             <View style={styles.recipeCardHThumb}>
@@ -344,8 +344,8 @@ function RecipeCardHorizontal({ recipe, onPress }: { recipe: Recipe, onPress: ()
                 <Text style={styles.recipeCardHName} numberOfLines={1}>{recipe.name}</Text>
                 <Text style={styles.recipeCardHDesc} numberOfLines={2}>{recipe.description}</Text>
                 <View style={styles.recipeCardHMetaDetails}>
-                    <Text style={styles.recipeCardHLabel}>🥘 {recipe.ingredients?.length || 0} nguyên liệu</Text>
-                    <Text style={styles.recipeCardHLabel}>👨‍🍳 {recipe.steps?.length || 0} bước • ⏱ {recipe.time || '15 min'}</Text>
+                    <Text style={styles.recipeCardHLabel}>🥘 {recipe.ingredients?.length || 0} {t('kitchen.recipeIngredients')}</Text>
+                    <Text style={styles.recipeCardHLabel}>👨‍🍳 {recipe.steps?.length || 0} {t('kitchen.recipeSteps')} • ⏱ {recipe.time || '15 min'}</Text>
                 </View>
             </View>
         </TouchableOpacity>

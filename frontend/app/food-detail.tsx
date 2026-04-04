@@ -235,10 +235,10 @@ export default function FoodDetailScreen() {
                 setCurrentFoodItem(result.data);
                 setFixQuery('');
             } else {
-                Alert.alert(t('common.error'), result.error || 'Ollie không hiểu yêu cầu này lắm, bác nói rõ hơn tí nha!');
+                Alert.alert(t('common.error'), result.error || t('foodDetail.fixIssueError'));
             }
         } catch (error) {
-            Alert.alert(t('common.error'), 'Có lỗi xảy ra khi kết nối với Ollie.');
+            Alert.alert(t('common.error'), t('foodDetail.fixConnectionError'));
         } finally {
             setIsFixing(false);
         }
@@ -310,7 +310,7 @@ export default function FoodDetailScreen() {
                         activeOpacity={0.85}
                         onPress={() => router.push('/edit-calories')}
                     >
-                        <Text style={styles.totalEnergyLabel}>Total Energy</Text>
+                        <Text style={styles.totalEnergyLabel}>{t('foodDetail.totalEnergy')}</Text>
                         <View style={styles.calorieRow}>
                             <Text style={styles.calorieValueLarge}>{scaledCalories}</Text>
                             <Text style={styles.calorieUnitText}>kcal</Text>
@@ -328,7 +328,7 @@ export default function FoodDetailScreen() {
                     >
                         {/* Protein row */}
                         <View style={styles.macroBarRow}>
-                            <Text style={styles.macroBarLabel}>Protein</Text>
+                            <Text style={styles.macroBarLabel}>{t('foodDetail.protein')}</Text>
                             <View style={styles.macroBarTrack}>
                                 <View style={[styles.macroBarFill, { width: `${Math.min(100, (scaledProtein / 140) * 100)}%`, backgroundColor: '#EF4444' }]} />
                             </View>
@@ -336,7 +336,7 @@ export default function FoodDetailScreen() {
                         </View>
                         {/* Carbs row */}
                         <View style={styles.macroBarRow}>
-                            <Text style={styles.macroBarLabel}>Carbs</Text>
+                            <Text style={styles.macroBarLabel}>{t('foodDetail.carbs')}</Text>
                             <View style={styles.macroBarTrack}>
                                 <View style={[styles.macroBarFill, { width: `${Math.min(100, (scaledCarbs / 280) * 100)}%`, backgroundColor: '#F97316' }]} />
                             </View>
@@ -344,7 +344,7 @@ export default function FoodDetailScreen() {
                         </View>
                         {/* Fat row */}
                         <View style={styles.macroBarRow}>
-                            <Text style={styles.macroBarLabel}>Fat</Text>
+                            <Text style={styles.macroBarLabel}>{t('foodDetail.fat')}</Text>
                             <View style={styles.macroBarTrack}>
                                 <View style={[styles.macroBarFill, { width: `${Math.min(100, (scaledFat / 75) * 100)}%`, backgroundColor: '#EAB308' }]} />
                             </View>
@@ -363,8 +363,8 @@ export default function FoodDetailScreen() {
                         <Text style={{ fontSize: 18 }}>💡</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                        <Text style={styles.aiFixTitle}>Sửa thông tin với Ollie</Text>
-                        <Text style={styles.aiFixSub}>Ví dụ: "Cái này là phở bò chứ không phải bún"</Text>
+                        <Text style={styles.aiFixTitle}>{t('foodDetail.aiFixTitle')}</Text>
+                        <Text style={styles.aiFixSub}>{t('foodDetail.aiFixSubtitle')}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={Colors.primary} />
                 </TouchableOpacity>
@@ -373,7 +373,7 @@ export default function FoodDetailScreen() {
                 <View style={styles.portionCard}>
                     <View style={styles.portionCardHeader}>
                         <Text style={styles.portionTitle}>{t('foodDetail.portion')}</Text>
-                        <Text style={styles.editWeightText}>Edit weight</Text>
+                        <Text style={styles.editWeightText}>{t('foodDetail.editWeight')}</Text>
                     </View>
                     <View style={styles.portionControls}>
                         <TouchableOpacity
@@ -405,7 +405,7 @@ export default function FoodDetailScreen() {
                 {ingredientItems.length > 0 && (
                     <View style={styles.macroDetailSection}>
                         <View style={styles.ingredientsHeader}>
-                            <Text style={styles.macroDetailTitle}>Chi tiết thành phần</Text>
+                            <Text style={styles.macroDetailTitle}>{t('foodDetail.ingredientDetails')}</Text>
                             <TouchableOpacity style={styles.editButton} onPress={handleEditIngredients}>
                                 <Ionicons name="create-outline" size={18} color="#666" />
                                 <Text style={styles.editButtonText}>{t('foodDetail.edit')}</Text>
@@ -558,12 +558,12 @@ export default function FoodDetailScreen() {
             >
                 <View style={styles.fixModalOverlay}>
                     <View style={styles.fixModalContent}>
-                        <Text style={styles.modalTitle}>Sửa lỗi cùng Ollie</Text>
-                        <Text style={styles.modalSub}>Hãy mô tả lỗi sai (ví dụ: tên món, nguyên liệu, khối lượng...)</Text>
+                        <Text style={styles.modalTitle}>{t('foodDetail.fixIssueTitle')}</Text>
+                        <Text style={styles.modalSub}>{t('foodDetail.fixIssueDescription')}</Text>
                         
                         <TextInput
                             style={styles.fixInput}
-                            placeholder="Nhập yêu cầu sửa lỗi tại đây..."
+                            placeholder={t('foodDetail.fixIssuePlaceholder')}
                             placeholderTextColor="#94A3B8"
                             multiline
                             numberOfLines={3}
@@ -574,14 +574,14 @@ export default function FoodDetailScreen() {
                         
                         <View style={styles.fixModalButtons}>
                             <TouchableOpacity style={styles.fixCancelBtn} onPress={() => setShowFixModal(false)}>
-                                <Text style={styles.fixCancelText}>Hủy</Text>
+                                <Text style={styles.fixCancelText}>{t('common.cancel')}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity 
                                 style={[styles.fixConfirmBtn, !fixQuery.trim() && { opacity: 0.5 }]} 
                                 onPress={handleFixFood}
                                 disabled={!fixQuery.trim()}
                             >
-                                <Text style={styles.fixConfirmText}>Xác nhận</Text>
+                                <Text style={styles.fixConfirmText}>{t('common.continue')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -591,7 +591,7 @@ export default function FoodDetailScreen() {
             {/* Loading Overlay */}
             {isFixing && (
                 <View style={StyleSheet.absoluteFill}>
-                    <LoadingAnalysis message="Chờ Ollie chỉnh sửa tí nha..." />
+                    <LoadingAnalysis message={t('foodDetail.fixingMessage')} />
                 </View>
             )}
         </View>
