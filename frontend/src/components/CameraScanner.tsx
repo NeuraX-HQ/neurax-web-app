@@ -69,6 +69,26 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
     // Dot pulse animation for LABEL mode
     const dotPulse = useRef(new Animated.Value(1)).current;
 
+    // Analyzing dot pulse animation
+    const analyzingPulse = useRef(new Animated.Value(0.4)).current;
+    const analyzingPulseLoop = useRef<Animated.CompositeAnimation | null>(null);
+
+    useEffect(() => {
+        if (analyzing) {
+            analyzingPulseLoop.current = Animated.loop(
+                Animated.sequence([
+                    Animated.timing(analyzingPulse, { toValue: 1, duration: 600, useNativeDriver: true }),
+                    Animated.timing(analyzingPulse, { toValue: 0.4, duration: 600, useNativeDriver: true }),
+                ])
+            );
+            analyzingPulseLoop.current.start();
+        } else {
+            analyzingPulseLoop.current?.stop();
+            analyzingPulse.setValue(0.4);
+        }
+        return () => { analyzingPulseLoop.current?.stop(); };
+    }, [analyzing]);
+
     useEffect(() => {
         if (mode === 'BARCODE') {
             scanLineLoop.current = Animated.loop(
@@ -142,30 +162,28 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
         return dataUrl.split(',')[1] || null;
     }, []);
 
-    const [flashMode, setFlashMode] = useState<'on' | 'off'>('off');
-
-    const toggleFlash = () => {
-        setFlashMode(prev => prev === 'off' ? 'on' : 'off');
-    };
-
     const handleGallery = async () => {
         if (analyzing) return;
-        setAnalyzing(true);
-        onAnalyzing?.(true);
 
         try {
+            // 1. Mở thư viện ảnh TRƯỚC — chưa bật loading
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ['images'],
                 quality: 0.6,
                 allowsEditing: true,
             });
 
+            // 2. User huỷ → không làm gì
             if (result.canceled || !result.assets?.length) return;
 
             const asset = result.assets[0];
             if (!asset.uri) throw new Error(t('camera.error.readData'));
 
-            // Upload URI directly — no base64 needed
+            // 3. Có ảnh rồi → BẬT loading
+            setAnalyzing(true);
+            onAnalyzing?.(true);
+
+            // 4. Upload & analyze
             const s3Key = await uploadFoodImage({ uri: asset.uri });
             const analysisResult = await analyzeFoodImage(s3Key);
             if (analysisResult.success && analysisResult.data) {
@@ -235,7 +253,8 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
 
     // Khi permission chưa load hoặc không có permission — vẫn render Modal
     // để Android không bị miss transition, chỉ thay nội dung bên trong
-    if (!permission || !permission.granted) {
+    // Web dùng navigator.mediaDevices riêng → bỏ qua expo-camera permission check
+    if (Platform.OS !== 'web' && (!permission || !permission.granted)) {
         return (
             <Modal visible={visible} animationType="slide" transparent={false}>
                 <View style={[s.container, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
@@ -297,7 +316,6 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                         ref={cameraRef}
                         style={StyleSheet.absoluteFill}
                         facing="back"
-                        flash={flashMode}
                         onCameraReady={() => {
                             if (cameraReadyTimeout.current) clearTimeout(cameraReadyTimeout.current);
                             setIsCameraReady(true);
@@ -436,16 +454,8 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                             );
                         })()}
 
-                        {/* Flash/zoom */}
-                        <TouchableOpacity style={s.sideBtn} onPress={toggleFlash} activeOpacity={0.75}>
-                            <BlurView intensity={50} tint="dark" style={StyleSheet.absoluteFill} />
-                            <Ionicons
-                                name={flashMode === 'on' ? 'flash' : 'flash-outline'}
-                                size={22}
-                                color={flashMode === 'on' ? EMERALD : '#FFF'}
-                                style={{ zIndex: 1 }}
-                            />
-                        </TouchableOpacity>
+                        {/* Placeholder to balance layout */}
+                        <View style={{ width: 48, height: 48 }} />
                     </View>
                 </View>
 
@@ -479,8 +489,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                 {/* Analyzing overlay */}
                 {analyzing && (
                     <View style={s.analyzingOverlay}>
-                        <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
-                        <View style={s.analyzingDot} />
+                        <Animated.View style={[s.analyzingDot, { opacity: analyzingPulse }]} />
                         <Text style={s.analyzingText}>AI ANALYZING...</Text>
                     </View>
                 )}
@@ -699,14 +708,15 @@ const s = StyleSheet.create({
         transform: [{ translateX: -90 }],
         flexDirection: 'row', alignItems: 'center', gap: 10,
         borderRadius: 99, paddingHorizontal: 20, paddingVertical: 10,
-        overflow: 'hidden', zIndex: 100,
+        zIndex: 100,
         width: 180,
+        backgroundColor: 'rgba(10, 10, 10, 0.75)',
     },
     analyzingDot: {
-        width: 8, height: 8, borderRadius: 4, backgroundColor: EMERALD, zIndex: 1,
+        width: 8, height: 8, borderRadius: 4, backgroundColor: EMERALD,
     },
     analyzingText: {
         color: '#FFF', fontSize: 10, fontWeight: '800',
-        letterSpacing: 2, zIndex: 1,
+        letterSpacing: 2,
     },
 });

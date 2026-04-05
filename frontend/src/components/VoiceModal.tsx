@@ -94,14 +94,26 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
             return;
         }
 
+        // Transcribe requires minimum 0.5s audio
+        if (result.duration && result.duration < 1000) {
+            Alert.alert(t('common.error'), t('voice.error.tooShort'));
+            setAnalyzing(false);
+            return;
+        }
+
         try {
             // Single call: S3 upload → Transcribe → Qwen parse
-            console.log('VoiceModal: Processing voice via S3 + Transcribe + Qwen...');
             const voiceResult = await voiceToFood(result.uri);
 
             if (voiceResult.success && voiceResult.data) {
                 if (voiceResult.transcript) setTranscript(voiceResult.transcript);
                 setFoodData(voiceResult.data);
+            } else if (voiceResult.transcript) {
+                // AI nhận diện được giọng nói nhưng cần hỏi thêm (clarify)
+                Alert.alert(
+                    `🎙️ "${voiceResult.transcript}"`,
+                    voiceResult.error || t('voice.error.cantAnalyze'),
+                );
             } else {
                 Alert.alert(t('common.error'), voiceResult.error || t('voice.error.cantAnalyze'));
             }
@@ -191,7 +203,7 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
                         </View>
                     )}
 
-                    {transcript && !foodData && !analyzing && (
+                    {!!transcript && !foodData && !analyzing && (
                         <View style={vStyles.transcriptBox}>
                             <Text style={vStyles.transcriptLabel}>{t('voice.youSaid')}</Text>
                             <Text style={vStyles.transcriptText}>"{transcript}"</Text>

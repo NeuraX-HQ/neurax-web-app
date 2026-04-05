@@ -1,0 +1,47 @@
+﻿{
+    "UserPoolClient": {
+        "UserPoolId": "ap-southeast-2_Ynlw0CUrX",
+        "ClientName": "amplifyAuthUserPoolAppClient2626C6F8-2cDzrE7QIOyM",
+        "ClientId": "7kejag3ragvct3ql6qagan9u8l",
+        "LastModifiedDate": "2026-04-01T11:48:57.036000+07:00",
+        "CreationDate": "2026-04-01T11:48:57.036000+07:00",
+        "RefreshTokenValidity": 30,
+        "TokenValidityUnits": {},
+        "ExplicitAuthFlows": [
+            "ALLOW_CUSTOM_AUTH",
+            "ALLOW_REFRESH_TOKEN_AUTH",
+            "ALLOW_USER_SRP_AUTH"
+        ],
+        "SupportedIdentityProviders": [
+            "COGNITO",
+            "Google"
+        ],
+        "CallbackURLs": [
+            "http://localhost:8081/",
+            "https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/",
+            "https://nutri-track.link/",
+            "nutritrack://"
+        ],
+        "LogoutURLs": [
+            "http://localhost:8081/",
+            "https://feat-phase3-frontend-integration.d1glc6vvop0xlb.amplifyapp.com/",
+            "https://nutri-track.link/",
+            "nutritrack://"
+        ],
+        "AllowedOAuthFlows": [
+            "code"
+        ],
+        "AllowedOAuthScopes": [
+            "aws.cognito.signin.user.admin",
+            "email",
+            "openid",
+            "phone",
+            "profile"
+        ],
+        "AllowedOAuthFlowsUserPoolClient": true,
+        "PreventUserExistenceErrors": "ENABLED",
+        "EnableTokenRevocation": true,
+        "EnablePropagateAdditionalUserContextData": false,
+        "AuthSessionValidity": 3
+    }
+}

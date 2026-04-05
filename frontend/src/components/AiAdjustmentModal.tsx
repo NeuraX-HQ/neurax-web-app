@@ -32,7 +32,7 @@ export default function AiAdjustmentModal({
                     {/* Title & Description */}
                     <Text style={styles.title}>Lộ trình đã được tối ưu</Text>
                     <Text style={styles.description}>
-                        AI Bảo đã điều chỉnh mục tiêu Calo dựa trên cân nặng mới để đảm bảo bạn vẫn đạt mục tiêu an toàn.
+                        AI Olly đã điều chỉnh mục tiêu Calo dựa trên cân nặng mới để đảm Olly bạn vẫn đạt mục tiêu an toàn.
                     </Text>
 
                     {/* Comparison Card */}

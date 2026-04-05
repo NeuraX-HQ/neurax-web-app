@@ -21,7 +21,7 @@ You must read and strictly adhere to the following provided files:
     - *Key Flows:* Auth (Choice -> Onboarding), Home Dashboard (Calendar, Macros, Meals), and Navigation.
     - *Implementation:* Use **Expo Router** for file-based routing (tabs/stack). Use **NativeWind** to apply the Tailwind styles from the reference files. Implements `BottomSheet` (using `@gorhom/bottom-sheet` or built-in standard modals).
 
-2. **ALL Marrkdown in `nutritrack-documentation` folder except `UI_UX_DESIGN.md`because it outdated**: Use this to understand the **Product Purpose**, **Target Audience** (Vietnamese Gen Z/Millennials), and **Tone of Voice** (AI Coach "Bảo" - fun, slang, supportive).
+2. **ALL Marrkdown in `nutritrack-documentation` folder except `UI_UX_DESIGN.md`because it outdated**: Use this to understand the **Product Purpose**, **Target Audience** (Vietnamese Gen Z/Millennials), and **Tone of Voice** (AI Coach "Olly" - fun, slang, supportive).
     - *Context:* The app solves "laziness" in tracking calories. It uses Voice/Photo logging (simulate these with UI buttons).
 
 3. **Style/Layout Reference HTML Files**:
@@ -63,7 +63,7 @@ Implement the following screens/components using **React Native Components** (`V
   - *Logic:* Auto-select "Today". Visualise streak data from mock history.
 - **Macro Rings:** Interactive SVG rings for Calories (Main), Protein, Carbs, Fat.
   - *Animation:* Animate progress on load.
-- **AI Coach "Bảo" Card:** A prominent card with a graduated background.
+- **AI Coach "Olly" Card:** A prominent card with a graduated background.
   - *Content:* "45g protein rồi! Respect ✊" (Use Vietnamese slang from Proposal).
 - **Meal Sections:** Breakfast/Lunch/Dinner collapsing cards.
   - *Interaction:* Swipe-to-reveal actions (Edit/Delete) if possible, or use visible action buttons.

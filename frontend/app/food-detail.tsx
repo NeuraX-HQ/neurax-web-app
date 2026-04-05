@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    Modal, Alert
+    Modal, Alert, TextInput
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -10,8 +10,9 @@ import { Image } from 'expo-image';
 import { getUrl } from 'aws-amplify/storage';
 import { Colors, Shadows } from '../src/constants/colors';
 import { useMealStore, MealType } from '../src/store/mealStore';
-import { NutritionInfo } from '../src/services/aiService';
+import { NutritionInfo, fixFood } from '../src/services/aiService';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
+import { LoadingAnalysis } from '../src/components/LoadingAnalysis';
 
 type CanonicalUnit = 'g' | 'ml';
 
@@ -98,6 +99,11 @@ export default function FoodDetailScreen() {
     const [isAdding, setIsAdding] = useState(false);
     const [portionCount, setPortionCount] = useState(1);
     const [portionUnit, setPortionUnit] = useState('serving');
+
+    // AI Fix State
+    const [showFixModal, setShowFixModal] = useState(false);
+    const [fixQuery, setFixQuery] = useState('');
+    const [isFixing, setIsFixing] = useState(false);
 
     const setCurrentFoodItem = useMealStore(state => state.setCurrentFoodItem);
     const currentFoodItem = useMealStore(state => state.currentFoodItem);
@@ -217,6 +223,27 @@ export default function FoodDetailScreen() {
         });
     };
 
+    const handleFixFood = async () => {
+        if (!fixQuery.trim() || !foodData) return;
+        
+        setIsFixing(true);
+        setShowFixModal(false);
+        
+        try {
+            const result = await fixFood(foodData, fixQuery);
+            if (result.success && result.data) {
+                setCurrentFoodItem(result.data);
+                setFixQuery('');
+            } else {
+                Alert.alert(t('common.error'), result.error || t('foodDetail.fixIssueError'));
+            }
+        } catch (error) {
+            Alert.alert(t('common.error'), t('foodDetail.fixConnectionError'));
+        } finally {
+            setIsFixing(false);
+        }
+    };
+
     const getEmojiForFood = (name: string): string => {
         const lowerName = name.toLowerCase();
         if (lowerName.includes('phở')) return '🍜';
@@ -283,7 +310,7 @@ export default function FoodDetailScreen() {
                         activeOpacity={0.85}
                         onPress={() => router.push('/edit-calories')}
                     >
-                        <Text style={styles.totalEnergyLabel}>Total Energy</Text>
+                        <Text style={styles.totalEnergyLabel}>{t('foodDetail.totalEnergy')}</Text>
                         <View style={styles.calorieRow}>
                             <Text style={styles.calorieValueLarge}>{scaledCalories}</Text>
                             <Text style={styles.calorieUnitText}>kcal</Text>
@@ -301,7 +328,7 @@ export default function FoodDetailScreen() {
                     >
                         {/* Protein row */}
                         <View style={styles.macroBarRow}>
-                            <Text style={styles.macroBarLabel}>Protein</Text>
+                            <Text style={styles.macroBarLabel}>{t('foodDetail.protein')}</Text>
                             <View style={styles.macroBarTrack}>
                                 <View style={[styles.macroBarFill, { width: `${Math.min(100, (scaledProtein / 140) * 100)}%`, backgroundColor: '#EF4444' }]} />
                             </View>
@@ -309,7 +336,7 @@ export default function FoodDetailScreen() {
                         </View>
                         {/* Carbs row */}
                         <View style={styles.macroBarRow}>
-                            <Text style={styles.macroBarLabel}>Carbs</Text>
+                            <Text style={styles.macroBarLabel}>{t('foodDetail.carbs')}</Text>
                             <View style={styles.macroBarTrack}>
                                 <View style={[styles.macroBarFill, { width: `${Math.min(100, (scaledCarbs / 280) * 100)}%`, backgroundColor: '#F97316' }]} />
                             </View>
@@ -317,7 +344,7 @@ export default function FoodDetailScreen() {
                         </View>
                         {/* Fat row */}
                         <View style={styles.macroBarRow}>
-                            <Text style={styles.macroBarLabel}>Fat</Text>
+                            <Text style={styles.macroBarLabel}>{t('foodDetail.fat')}</Text>
                             <View style={styles.macroBarTrack}>
                                 <View style={[styles.macroBarFill, { width: `${Math.min(100, (scaledFat / 75) * 100)}%`, backgroundColor: '#EAB308' }]} />
                             </View>
@@ -326,11 +353,27 @@ export default function FoodDetailScreen() {
                     </TouchableOpacity>
                 </View>
 
+                {/* ── AI Fix Button ── */}
+                <TouchableOpacity 
+                    style={styles.aiFixButton} 
+                    onPress={() => setShowFixModal(true)}
+                    activeOpacity={0.7}
+                >
+                    <View style={styles.aiFixIconBox}>
+                        <Text style={{ fontSize: 18 }}>💡</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.aiFixTitle}>{t('foodDetail.aiFixTitle')}</Text>
+                        <Text style={styles.aiFixSub}>{t('foodDetail.aiFixSubtitle')}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={Colors.primary} />
+                </TouchableOpacity>
+
                 {/* ── Portion Size Card ── */}
                 <View style={styles.portionCard}>
                     <View style={styles.portionCardHeader}>
                         <Text style={styles.portionTitle}>{t('foodDetail.portion')}</Text>
-                        <Text style={styles.editWeightText}>Edit weight</Text>
+                        <Text style={styles.editWeightText}>{t('foodDetail.editWeight')}</Text>
                     </View>
                     <View style={styles.portionControls}>
                         <TouchableOpacity
@@ -362,7 +405,7 @@ export default function FoodDetailScreen() {
                 {ingredientItems.length > 0 && (
                     <View style={styles.macroDetailSection}>
                         <View style={styles.ingredientsHeader}>
-                            <Text style={styles.macroDetailTitle}>Chi tiết thành phần</Text>
+                            <Text style={styles.macroDetailTitle}>{t('foodDetail.ingredientDetails')}</Text>
                             <TouchableOpacity style={styles.editButton} onPress={handleEditIngredients}>
                                 <Ionicons name="create-outline" size={18} color="#666" />
                                 <Text style={styles.editButtonText}>{t('foodDetail.edit')}</Text>
@@ -505,6 +548,52 @@ export default function FoodDetailScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Fix Issues Input Modal */}
+            <Modal
+                visible={showFixModal}
+                animationType="fade"
+                transparent={true}
+                onRequestClose={() => setShowFixModal(false)}
+            >
+                <View style={styles.fixModalOverlay}>
+                    <View style={styles.fixModalContent}>
+                        <Text style={styles.modalTitle}>{t('foodDetail.fixIssueTitle')}</Text>
+                        <Text style={styles.modalSub}>{t('foodDetail.fixIssueDescription')}</Text>
+                        
+                        <TextInput
+                            style={styles.fixInput}
+                            placeholder={t('foodDetail.fixIssuePlaceholder')}
+                            placeholderTextColor="#94A3B8"
+                            multiline
+                            numberOfLines={3}
+                            value={fixQuery}
+                            onChangeText={setFixQuery}
+                            autoFocus
+                        />
+                        
+                        <View style={styles.fixModalButtons}>
+                            <TouchableOpacity style={styles.fixCancelBtn} onPress={() => setShowFixModal(false)}>
+                                <Text style={styles.fixCancelText}>{t('common.cancel')}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={[styles.fixConfirmBtn, !fixQuery.trim() && { opacity: 0.5 }]} 
+                                onPress={handleFixFood}
+                                disabled={!fixQuery.trim()}
+                            >
+                                <Text style={styles.fixConfirmText}>{t('common.continue')}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Loading Overlay */}
+            {isFixing && (
+                <View style={StyleSheet.absoluteFill}>
+                    <LoadingAnalysis message={t('foodDetail.fixingMessage')} />
+                </View>
+            )}
         </View>
     );
 }
@@ -1027,5 +1116,102 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontSize: 18,
         fontWeight: '700',
+    },
+
+    // ── AI Fix ────────────────────────────────────────
+    aiFixButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F8FAFC',
+        marginHorizontal: 16,
+        marginTop: 14,
+        padding: 12,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        gap: 12,
+    },
+    aiFixIconBox: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: '#FFFFFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+    },
+    aiFixTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#0F172A',
+    },
+    aiFixSub: {
+        fontSize: 11,
+        color: '#64748B',
+        marginTop: 1,
+    },
+
+    // Fix Modal
+    fixModalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    fixModalContent: {
+        width: '100%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 24,
+        padding: 24,
+        gap: 16,
+    },
+    modalSub: {
+        fontSize: 13,
+        color: '#64748B',
+        marginTop: -8,
+        lineHeight: 18,
+    },
+    fixInput: {
+        backgroundColor: '#F8FAFC',
+        borderRadius: 16,
+        padding: 16,
+        fontSize: 15,
+        color: '#0F172A',
+        height: 100,
+        textAlignVertical: 'top',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    fixModalButtons: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    fixCancelBtn: {
+        flex: 1,
+        height: 52,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#F1F5F9',
+    },
+    fixCancelText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#64748B',
+    },
+    fixConfirmBtn: {
+        flex: 2,
+        height: 52,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: Colors.primary,
+    },
+    fixConfirmText: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#FFFFFF',
     },
 });

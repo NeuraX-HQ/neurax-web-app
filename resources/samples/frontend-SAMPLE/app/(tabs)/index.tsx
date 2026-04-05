@@ -247,7 +247,7 @@ export default function HomeScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* AI Bảo FAB */}
+      {/* AI Olly FAB */}
       <AIBaoFAB onPress={() => { }} />
     </SafeAreaView>
   );

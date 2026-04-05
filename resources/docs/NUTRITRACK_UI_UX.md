@@ -3,7 +3,7 @@
 **Phiên bản:** 4.0 (TECH STACK UPDATE)  
 **Ngày:** 04/02/2026  
 **Tech Stack:** React Native + Expo, TypeScript, NativeWind  
-**Bổ sung:** OAuth-only Auth, 5-Tab Navigation, Calendar+Streak, Smart Photo Analysis, Challenges Tab, AI Bảo Integration, Workout Tracking (Phase 2)
+**Bổ sung:** OAuth-only Auth, 5-Tab Navigation, Calendar+Streak, Smart Photo Analysis, Challenges Tab, AI Olly Integration, Workout Tracking (Phase 2)
 
 ---
 
@@ -25,7 +25,7 @@
 - ✅ **Home Screen**: Thêm Calendar + Streak visualization, Meal sections (B/L/D)
 - ✅ **Photo Analysis**: Smart detection (Meal vs Groceries), inline actions
 - ✅ **Challenges Tab**: Dedicated tab cho gamification features
-- ✅ **AI Bảo**: Float bubble (FAB) + Contextual cards
+- ✅ **AI Olly**: Float bubble (FAB) + Contextual cards
 - ✅ **Grocery Scan**: Bulk add flow với smart expiry detection
 
 ### 🔧 Rationale
@@ -65,7 +65,7 @@
 │
 ├── 🔐 Auth Stack (Unauthenticated)
 │   ├── Splash Screen (2-3s loading)
-│   ├── Welcome Carousel (4 slides: Voice, AI Bảo, Challenges, Kitchen)
+│   ├── Welcome Carousel (4 slides: Voice, AI Olly, Challenges, Kitchen)
 │   ├── OAuth Choice Screen (Apple / Google / Guest)
 │   └── Onboarding Wizard (4 steps: Goals, Stats, Prefs, Notifications)
 │
@@ -75,7 +75,7 @@
     │   ├── Calendar + Streak Visualization (swipeable weeks)
     │   ├── Macro Progress Rings (Protein, Carbs, Fat, Calories)
     │   ├── Meal Sections (Breakfast, Lunch, Dinner, Snacks)
-    │   ├── AI Bảo FAB (floating action button)
+    │   ├── AI Olly FAB (floating action button)
     │   └── Sub-screens:
     │       ├── Food Detail (nutritional breakdown)
     │       ├── Edit Log (modify logged meals)
@@ -131,7 +131,7 @@
 **Modal Navigation:**
 
 - Log (+): Bottom sheet modal (dismissible)
-- AI Bảo Chat: Full-screen modal
+- AI Olly Chat: Full-screen modal
 - Filters/Settings: Bottom sheet
 
 ---
@@ -276,7 +276,7 @@ Auth Check
 │   Log bữa ăn chỉ 5 giây             │
 │   bằng giọng nói                    │
 │                                     │
-│   "Ê Bảo, vừa ăn phở bò"            │
+│   "Ê Olly, vừa ăn phở bò"            │
 │   → Instant tracking ✨             │
 │                                     │
 │   ● ○ ○ ○                          │
@@ -285,13 +285,13 @@ Auth Check
 └─────────────────────────────────────┘
 ```
 
-**Slide 2: AI Bảo Coach**
+**Slide 2: AI Olly Coach**
 
 ```
 ┌─────────────────────────────────────┐
 │        [Illustration: AI Chat]      │
 │                                     │
-│   AI Bảo giúp bạn đạt mục tiêu      │
+│   AI Olly giúp bạn đạt mục tiêu      │
 │                                     │
 │   💬 "45g protein? Over-delivered!  │
 │       Respect ✊"                    │
@@ -377,7 +377,7 @@ Auth Check
 │                                     │
 │  Bằng việc tiếp tục, bạn đồng ý với │
 │  Điều khoản sử dụng và Chính sách   │
-│  bảo mật của chúng tôi.             │
+│  Olly mật của chúng tôi.             │
 │                                     │
 │  🌐 [Tiếng Việt ▼]                  │
 └─────────────────────────────────────┘
@@ -558,7 +558,7 @@ Auth Check
 - Max 20 meal logs
 - No cloud sync (local storage only)
 - No challenges with friends
-- No AI Coach Bảo (limited to basic tips)
+- No AI Coach Olly (limited to basic tips)
 
 **Upgrade Prompts:**
 
@@ -568,7 +568,7 @@ Auth Check
 │                                     │
 │  Đăng ký ngay để:                   │
 │  ✅ Sync across devices             │
-│  ✅ Unlock AI Coach Bảo             │
+│  ✅ Unlock AI Coach Olly             │
 │  ✅ Join challenges                 │
 │  ✅ Unlimited logs                  │
 │                                     │
@@ -610,10 +610,10 @@ Auth Check
 │  │  Fats:   42/60g   ███████░░░  │  │
 │  └───────────────────────────────┘  │
 ├─────────────────────────────────────┤
-│  💬 AI Bảo says:                    │ ← Contextual card
+│  💬 AI Olly says:                    │ ← Contextual card
 │  "45g protein rồi! Over-delivered   │   (Auto-appears)
 │   Respect ✊"                        │
-│  [Ask Bảo] [Dismiss]                │
+│  [Ask Olly] [Dismiss]                │
 ├─────────────────────────────────────┤
 │  🎯 Today's Micro-Commitment:       │ ← Daily goal
 │  ✅ Log 1 meal [Done]                │
@@ -644,7 +644,7 @@ Auth Check
 
                     [Log +]                   ← Log center button
                       ↓
-            [AI Bảo Float Bubble]             ← FAB (bottom right)
+            [AI Olly Float Bubble]             ← FAB (bottom right)
 ```
 
 ### 3.2 Calendar Component (Detailed)
@@ -722,7 +722,7 @@ if (hasStreakFreeze && missedToday) {
 - 7 days → Badge "Week Warrior"
 - 14 days → Badge "Fortnight Fighter"
 - 30 days → Badge "Monthly Master" + 1 Streak Freeze
-- 100 days → Badge "Centurion" + AI Bảo special message
+- 100 days → Badge "Centurion" + AI Olly special message
 
 ---
 
@@ -818,14 +818,14 @@ if (hasStreakFreeze && missedToday) {
 
 ---
 
-### 3.4 AI Bảo Integration
+### 3.4 AI Olly Integration
 
 #### Float Bubble (FAB)
 
 ```
                           ┌─────┐
-                          │  😎 │ ← Bảo avatar
-                          │ Bảo │
+                          │  😎 │ ← Olly avatar
+                          │ Olly │
                           └─────┘
                                ↑
                      Bottom right corner
@@ -843,13 +843,13 @@ if (hasStreakFreeze && missedToday) {
 
 ```
 ┌─────────────────────────────────────┐
-│  AI Bảo Chat                    [×] │ ← Bottom sheet (70% height)
+│  AI Olly Chat                    [×] │ ← Bottom sheet (70% height)
 ├─────────────────────────────────────┤
 │                                     │
 │  [Chat history]                     │
-│  Bảo: "Sáng rồi! Hôm nay ăn gì?"    │
+│  Olly: "Sáng rồi! Hôm nay ăn gì?"    │
 │  You: "Tối nay ăn gì?"              │
-│  Bảo: "Bạn còn thịt ba chỉ trong    │
+│  Olly: "Bạn còn thịt ba chỉ trong    │
 │       tủ lạnh (expires tomorrow).   │
 │       Thịt kho trứng đi! 30 phút,   │
 │       easy, high protein 🍖"        │
@@ -865,10 +865,10 @@ if (hasStreakFreeze && missedToday) {
 
 ```
 ┌─────────────────────────────────────┐
-│  💬 AI Bảo (8:00 AM)                │
+│  💬 AI Olly (8:00 AM)                │
 │  "Sáng rồi! Hôm nay ăn gì? Nhớ đạm  │
 │   đủ đó 🍗"                          │
-│  [Ask Bảo] [Dismiss]                │
+│  [Ask Olly] [Dismiss]                │
 └─────────────────────────────────────┘
 ```
 
@@ -876,10 +876,10 @@ if (hasStreakFreeze && missedToday) {
 
 ```
 ┌─────────────────────────────────────┐
-│  💬 AI Bảo (just now)               │
+│  💬 AI Olly (just now)               │
 │  "Ê, 45g protein? Over-delivered!   │
 │   Respect ✊"                        │
-│  [Ask Bảo] [Dismiss]                │
+│  [Ask Olly] [Dismiss]                │
 └─────────────────────────────────────┘
 ```
 
@@ -887,7 +887,7 @@ if (hasStreakFreeze && missedToday) {
 
 ```
 ┌─────────────────────────────────────┐
-│  💬 AI Bảo (6:00 PM)                │
+│  💬 AI Olly (6:00 PM)                │
 │  "Hôm nay thiếu đạm. Không sao, tối │
 │   ăn thêm trứng luộc là đủ. Ez game!│
 │   😎"                                │
@@ -900,7 +900,7 @@ if (hasStreakFreeze && missedToday) {
 - Auto-dismiss after 24 hours
 - Max 2 cards visible at once
 - User can swipe away
-- Tap [Ask Bảo] → Opens FAB chat with context pre-filled
+- Tap [Ask Olly] → Opens FAB chat with context pre-filled
 
 ---
 
@@ -2372,7 +2372,7 @@ NET BALANCE:
 • Net deficit: -500 kcal
 • Est. weight loss: ~0.5kg
 
-💡 AI Bảo says:
+💡 AI Olly says:
 "Gym 4 lần/tuần = chắc chắn! Tăng protein
 lên 100g vào gym days nhé. Ăn thịt kho 
 sau tập = perfect recovery! 💪"
@@ -2493,7 +2493,7 @@ sau tập = perfect recovery! 💪"
 - [ ] Photo analysis (Meal detection, inline gram editor, meal type selector)
 - [ ] Voice logging (Transcribe + parse)
 - [ ] Manual search & add
-- [ ] AI Bảo FAB + Contextual cards
+- [ ] AI Olly FAB + Contextual cards
 
 ### ✅ PHASE 2: Smart Kitchen & Gamification (Week 7-8)
 
@@ -3329,10 +3329,10 @@ Performance.measure('meal-log', 'meal-log-start', 'meal-log-end');
    - **Impact**: 3x engagement with challenges (internal testing)
    - **Why it works**: Visibility = usage. If users don't see it, they won't use it. Social features need prominence to drive retention.
 
-8. **AI Bảo as FAB + Contextual cards**
+8. **AI Olly as FAB + Contextual cards**
    - **Problem**: Chatbot buried in menu = feels like "support", not "coach"
    - **Solution**: Float bubble = always accessible. Contextual cards = proactive coaching
-   - **Impact**: 2x more AI interactions (users actually talk to Bảo)
+   - **Impact**: 2x more AI interactions (users actually talk to Olly)
    - **Why it works**: Hybrid model: Pull (chat when needed) + Push (cards when relevant). Best of both worlds.
 
 ---

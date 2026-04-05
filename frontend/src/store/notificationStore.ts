@@ -22,7 +22,7 @@ interface NotificationState {
 const initialMockNotifications: Notification[] = [
     {
         id: '1',
-        title: "AI Bảo: Don't forget your water goal! 💧",
+        title: "AI Olly: Don't forget your water goal! 💧",
         body: 'Keep hydrated to maintain energy.',
         time: '2m ago',
         icon: '💧',

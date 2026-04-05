@@ -39,7 +39,7 @@ const AIBaoFAB = memo(function AIBaoFAB({ onPress }: AIBaoFABProps) {
                         style={styles.gradient}
                     >
                         <Text style={styles.sparkle}>✨</Text>
-                        <Text style={styles.label}>BẢO</Text>
+                        <Text style={styles.label}>Olly</Text>
                     </LinearGradient>
                 </View>
             </Pressable>

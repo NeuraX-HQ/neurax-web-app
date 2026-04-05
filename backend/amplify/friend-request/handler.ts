@@ -9,8 +9,17 @@ import {
 import { randomUUID } from 'node:crypto';
 
 const REGION = process.env.AWS_REGION || 'ap-southeast-2';
+const IS_DEBUG = process.env.DEBUG === "true" || process.env.NODE_ENV === "development";
+
 const client = new DynamoDBClient({ region: REGION });
 const docClient = DynamoDBDocumentClient.from(client);
+
+// Simple debug logger - respects DEBUG env var
+const debug = (message: string, data?: any) => {
+  if (IS_DEBUG) {
+    console.log(`[friend-request] ${message}`, data || "");
+  }
+};
 
 // Table names injected by CDK at deploy time — correct for each environment (sandbox + branch deploy)
 const USER_TABLE = process.env.USER_TABLE_NAME;
@@ -73,7 +82,7 @@ export const handler = async (event: HandlerEvent): Promise<string> => {
         return JSON.stringify({ success: false, error: `Unknown action: ${action}` });
     }
   } catch (error: any) {
-    console.error(`[FRIEND] ${action} error:`, error);
+    debug(`${action} error`, error.message || String(error));
     return JSON.stringify({ success: false, error: error.message || 'Internal error' });
   }
 };

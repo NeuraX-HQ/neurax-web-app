@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable, Image, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Shadows } from '../../src/constants/colors';
 import Svg, { Path } from 'react-native-svg';
@@ -234,135 +234,135 @@ export default function BattleScreen() {
                         </TouchableOpacity>
                     </View>
                 ) : (
-                <>
-                    <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Sort badge */}
-                <View style={styles.sortBadgeRow}>
-                    <View style={styles.sortBadge}>
-                        <Text style={styles.sortBadgeIcon}>
-                            {SORT_OPTIONS.find(o => o.key === sortMode)?.icon}
-                        </Text>
-                        <Text style={styles.sortBadgeText}>
-                            {t(SORT_OPTIONS.find(o => o.key === sortMode)?.labelKey || 'battle.sort.streak')}
-                        </Text>
-                    </View>
-                </View>
+                    <>
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            {/* Sort badge */}
+                            <View style={styles.sortBadgeRow}>
+                                <View style={styles.sortBadge}>
+                                    <Text style={styles.sortBadgeIcon}>
+                                        {SORT_OPTIONS.find(o => o.key === sortMode)?.icon}
+                                    </Text>
+                                    <Text style={styles.sortBadgeText}>
+                                        {t(SORT_OPTIONS.find(o => o.key === sortMode)?.labelKey || 'battle.sort.streak')}
+                                    </Text>
+                                </View>
+                            </View>
 
-                {/* Podium */}
-                <View style={styles.podium}>
-                    {podiumOrder.map((idx) => {
-                        const user = top3[idx];
-                        if (!user) return null;
-                        const isFirst = idx === 0;
-                        return (
-                            <View key={user.user_id || `podium-${idx}`} style={styles.podiumItem}>
-                                {isFirst && <Text style={styles.goldCrown}>👑</Text>}
-                                {!isFirst && <View style={{ height: 28 }} />}
-                                <View style={[
-                                    styles.podiumAvatar,
-                                    isFirst && styles.podiumAvatarFirst,
-                                    { backgroundColor: podiumColors[idx], borderColor: podiumBorderColors[idx], borderWidth: isFirst ? 3 : 2 },
-                                ]}>
-                                    {isRemoteUri(user.isMe ? myAvatarUri : user.avatar_url) ? (
-                                        <Image source={{ uri: (user.isMe ? myAvatarUri : user.avatar_url)! }} style={[styles.podiumAvatarImg, isFirst && styles.podiumAvatarImgFirst]} />
-                                    ) : (
-                                        <Text style={styles.podiumEmoji}>{podiumEmojis[idx]}</Text>
-                                    )}
-                                    <View style={[styles.crown, { backgroundColor: podiumBorderColors[idx] }]}>
-                                        <Text style={styles.crownText}>{idx + 1}</Text>
+                            {/* Podium */}
+                            <View style={styles.podium}>
+                                {podiumOrder.map((idx) => {
+                                    const user = top3[idx];
+                                    if (!user) return null;
+                                    const isFirst = idx === 0;
+                                    return (
+                                        <View key={user.user_id || `podium-${idx}`} style={styles.podiumItem}>
+                                            {isFirst && <Text style={styles.goldCrown}>👑</Text>}
+                                            {!isFirst && <View style={{ height: 28 }} />}
+                                            <View style={[
+                                                styles.podiumAvatar,
+                                                isFirst && styles.podiumAvatarFirst,
+                                                { backgroundColor: podiumColors[idx], borderColor: podiumBorderColors[idx], borderWidth: isFirst ? 3 : 2 },
+                                            ]}>
+                                                {isRemoteUri(user.isMe ? myAvatarUri : user.avatar_url) ? (
+                                                    <Image source={{ uri: (user.isMe ? myAvatarUri : user.avatar_url)! }} style={[styles.podiumAvatarImg, isFirst && styles.podiumAvatarImgFirst]} />
+                                                ) : (
+                                                    <Text style={styles.podiumEmoji}>{podiumEmojis[idx]}</Text>
+                                                )}
+                                                <View style={[styles.crown, { backgroundColor: podiumBorderColors[idx] }]}>
+                                                    <Text style={styles.crownText}>{idx + 1}</Text>
+                                                </View>
+                                            </View>
+                                            <Text style={styles.podiumName}>{user.name}</Text>
+                                            <Text style={[styles.podiumScore, isFirst && styles.podiumScoreFirst]}>
+                                                {getDisplayScoreShort(user)}
+                                            </Text>
+                                            <View style={[styles.podiumBar, {
+                                                height: podiumBarHeights[idx],
+                                                backgroundColor: podiumColors[idx],
+                                            }]} />
+                                        </View>
+                                    );
+                                })}
+                            </View>
+
+                            {/* Rankings divider */}
+                            <View style={styles.rankingsDivider}>
+                                <Text style={styles.rankingsLabel}>{t('battle.rankings')}</Text>
+                                <Text style={styles.rankingsTimer}>{t('battle.refreshInHours', { hours: 4 })}</Text>
+                            </View>
+
+                            {/* Rankings List */}
+                            <View style={styles.rankings}>
+                                {rest.map((user) => (
+                                    <View key={user.rank} style={[styles.rankRow, Shadows.small]}>
+                                        <Text style={styles.rankNum}>
+                                            {String(user.rank).padStart(2, '0')}
+                                        </Text>
+                                        <View style={styles.rankAvatar}>
+                                            {isRemoteUri(user.isMe ? myAvatarUri : user.avatar_url) ? (
+                                                <Image source={{ uri: (user.isMe ? myAvatarUri : user.avatar_url)! }} style={styles.rankAvatarImage} />
+                                            ) : (
+                                                <Text>👤</Text>
+                                            )}
+                                        </View>
+                                        <View style={styles.rankInfo}>
+                                            <Text style={styles.rankName}>{user.name}</Text>
+                                            <Text style={styles.rankStreak}>
+                                                {sortMode === 'streak'
+                                                    ? t('battle.streakWithEmoji', { count: user.streak })
+                                                    : t('battle.petScoreWithEmoji', { score: user.petScore })}
+                                            </Text>
+                                        </View>
+                                        <Text style={styles.rankScore}>{getDisplayScoreShort(user)}</Text>
+                                        {user.change !== 0 && (
+                                            <View style={styles.rankChangeContainer}>
+                                                {user.change > 0 ? (
+                                                    <View style={styles.rankChangeRow}>
+                                                        <ArrowUp size={12} />
+                                                        <Text style={[styles.rankChange, styles.rankUp]}>{user.change}</Text>
+                                                    </View>
+                                                ) : (
+                                                    <View style={styles.rankChangeRow}>
+                                                        <ArrowDown size={12} />
+                                                        <Text style={[styles.rankChange, styles.rankDown]}>{Math.abs(user.change)}</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        )}
                                     </View>
-                                </View>
-                                <Text style={styles.podiumName}>{user.name}</Text>
-                                <Text style={[styles.podiumScore, isFirst && styles.podiumScoreFirst]}>
-                                    {getDisplayScoreShort(user)}
-                                </Text>
-                                <View style={[styles.podiumBar, {
-                                    height: podiumBarHeights[idx],
-                                    backgroundColor: podiumColors[idx],
-                                }]} />
+                                ))}
                             </View>
-                        );
-                    })}
-                </View>
 
-                {/* Rankings divider */}
-                <View style={styles.rankingsDivider}>
-                    <Text style={styles.rankingsLabel}>{t('battle.rankings')}</Text>
-                    <Text style={styles.rankingsTimer}>{t('battle.refreshInHours', { hours: 4 })}</Text>
-                </View>
+                            <View style={{ height: 140 }} />
+                        </ScrollView>
 
-                {/* Rankings List */}
-                <View style={styles.rankings}>
-                    {rest.map((user) => (
-                        <View key={user.rank} style={[styles.rankRow, Shadows.small]}>
-                            <Text style={styles.rankNum}>
-                                {String(user.rank).padStart(2, '0')}
-                            </Text>
-                            <View style={styles.rankAvatar}>
-                                {isRemoteUri(user.isMe ? myAvatarUri : user.avatar_url) ? (
-                                    <Image source={{ uri: (user.isMe ? myAvatarUri : user.avatar_url)! }} style={styles.rankAvatarImage} />
-                                ) : (
-                                    <Text>👤</Text>
-                                )}
-                            </View>
-                            <View style={styles.rankInfo}>
-                                <Text style={styles.rankName}>{user.name}</Text>
-                                <Text style={styles.rankStreak}>
-                                    {sortMode === 'streak'
-                                        ? t('battle.streakWithEmoji', { count: user.streak })
-                                        : t('battle.petScoreWithEmoji', { score: user.petScore })}
+                        {/* You bar - sticky at bottom */}
+                        <View style={styles.youBar}>
+                            <View style={[styles.rankRow, styles.rankRowYou, Shadows.medium]}>
+                                <Text style={[styles.rankNum, { color: Colors.primary }]}>
+                                    {myEntry ? String(myEntry.rank).padStart(2, '0') : '--'}
                                 </Text>
-                            </View>
-                            <Text style={styles.rankScore}>{getDisplayScoreShort(user)}</Text>
-                            {user.change !== 0 && (
-                                <View style={styles.rankChangeContainer}>
-                                    {user.change > 0 ? (
-                                        <View style={styles.rankChangeRow}>
-                                            <ArrowUp size={12} />
-                                            <Text style={[styles.rankChange, styles.rankUp]}>{user.change}</Text>
-                                        </View>
+                                <View style={[styles.rankAvatar, { backgroundColor: '#E8ECF0' }]}>
+                                    {myAvatarUri ? (
+                                        <Image source={{ uri: myAvatarUri }} style={styles.rankAvatarImage} />
                                     ) : (
-                                        <View style={styles.rankChangeRow}>
-                                            <ArrowDown size={12} />
-                                            <Text style={[styles.rankChange, styles.rankDown]}>{Math.abs(user.change)}</Text>
-                                        </View>
+                                        <Text>👤</Text>
                                     )}
                                 </View>
-                            )}
-                        </View>
-                    ))}
-                </View>
-
-                <View style={{ height: 140 }} />
-                    </ScrollView>
-
-                    {/* You bar - sticky at bottom */}
-                    <View style={styles.youBar}>
-                        <View style={[styles.rankRow, styles.rankRowYou, Shadows.medium]}>
-                            <Text style={[styles.rankNum, { color: Colors.primary }]}>
-                                {myEntry ? String(myEntry.rank).padStart(2, '0') : '--'}
-                            </Text>
-                            <View style={[styles.rankAvatar, { backgroundColor: '#E8ECF0' }]}>
-                                {myAvatarUri ? (
-                                    <Image source={{ uri: myAvatarUri }} style={styles.rankAvatarImage} />
-                                ) : (
-                                    <Text>👤</Text>
-                                )}
-                            </View>
-                            <View style={styles.rankInfo}>
-                                <Text style={[styles.rankName, { color: Colors.primary }]}>{t('battle.you')}</Text>
-                                <Text style={styles.rankStreak}>
-                                    {sortMode === 'streak'
-                                        ? t('battle.streakWithEmoji', { count: petStreak })
-                                        : t('battle.petScoreWithEmoji', { score: petScore })}
+                                <View style={styles.rankInfo}>
+                                    <Text style={[styles.rankName, { color: Colors.primary }]}>{t('battle.you')}</Text>
+                                    <Text style={styles.rankStreak}>
+                                        {sortMode === 'streak'
+                                            ? t('battle.streakWithEmoji', { count: petStreak })
+                                            : t('battle.petScoreWithEmoji', { score: petScore })}
+                                    </Text>
+                                </View>
+                                <Text style={[styles.rankScore, { color: Colors.primary }]}>
+                                    {sortMode === 'streak' ? String(petStreak) : String(petScore)}
                                 </Text>
                             </View>
-                            <Text style={[styles.rankScore, { color: Colors.primary }]}>
-                                {sortMode === 'streak' ? String(petStreak) : String(petScore)}
-                            </Text>
                         </View>
-                    </View>
-                </>
+                    </>
                 )
             ) : (
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.achievementsContent}>
@@ -378,16 +378,13 @@ export default function BattleScreen() {
                     </View>
 
                     <View style={styles.petArena}>
-                        <View
-                            style={[
-                                styles.dragonWrap,
-                            ]}
-                        >
+                        <View style={styles.dragonWrap}>
                             <Video
                                 ref={videoRef}
                                 source={dragonVideoSource}
                                 style={styles.dragonVideo}
-                                resizeMode={ResizeMode.COVER}
+                                videoStyle={{ width: '100%', height: '100%' } as any}
+                                resizeMode={ResizeMode.CONTAIN}
                                 shouldPlay
                                 isLooping
                                 isMuted
@@ -673,21 +670,23 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: 220,
     },
     dragonWrap: {
         width: '100%',
         aspectRatio: 16 / 9,
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
+        overflow: 'hidden',
         alignItems: 'center',
         justifyContent: 'center',
         ...Shadows.medium,
-        overflow: 'hidden',
     },
     dragonVideo: {
         width: '100%',
         height: '100%',
+        position: 'absolute',
+        top: 0,
+        left: 0,
     },
     petName: {
         textAlign: 'center',

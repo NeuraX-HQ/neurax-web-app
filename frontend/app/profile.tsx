@@ -253,12 +253,17 @@ export default function ProfileScreen() {
     };
 
     const formatActivityLevel = (value: string) => {
-        const normalized = value.toLowerCase();
-        if (normalized.includes('light')) return t('profile.activity.light');
-        if (normalized.includes('moderate')) return t('profile.activity.moderate');
-        if (normalized.includes('active')) return t('profile.activity.active');
-        if (normalized.includes('very')) return t('profile.activity.veryActive');
-        return value || t('profile.activity.notSet');
+        if (!value) return t('profile.activity.notSet');
+        
+        // Handle custom values mapped to translations
+        const translationKey = `profile.activityOption.${value}.label`;
+        const translated = t(translationKey);
+        
+        // Fallback if missing
+        if (translated === translationKey) {
+            return value;
+        }
+        return translated;
     };
 
     const stats = [

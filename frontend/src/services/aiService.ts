@@ -1,11 +1,12 @@
 import { generateClient } from 'aws-amplify/data';
 import { uploadData } from 'aws-amplify/storage';
-import * as FileSystem from 'expo-file-system/legacy';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { Platform } from 'react-native';
 import type { Schema } from '../../../backend/amplify/data/resource';
+import { secureLogger } from '../security/SecureLogger';
 
 // Upload a food image to S3 incoming/ path, return resolved s3Key.
-// Native: pass file URI (file://) — read via FileSystem (works on iOS + Android).
+// Native: pass file URI (file://) — read via fetch() (works on iOS + Android).
 // Web canvas: pass raw base64 string (no data: prefix) — converted via atob.
 export async function uploadFoodImage(
     source: { uri: string; contentType?: string } | { base64: string; contentType?: string }
@@ -16,20 +17,36 @@ export async function uploadFoodImage(
 
     let data: Uint8Array;
     if ('uri' in source) {
-        // Native file:// — fetch() doesn't work on Android, use FileSystem instead
-        const base64 = await FileSystem.readAsStringAsync(source.uri, { encoding: 'base64' as any });
-        data = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        // Use fetch to get a blob from the URI
+        const response = await fetch(source.uri);
+        const blob = await response.blob();
+        
+        // Use FileReader to get ArrayBuffer (more compatible with RN/Hermes)
+        data = await new Promise<Uint8Array>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const arrayBuffer = reader.result as ArrayBuffer;
+                resolve(new Uint8Array(arrayBuffer));
+            };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(blob);
+        });
     } else {
         // Web canvas: raw base64 string (no data: prefix)
         data = Uint8Array.from(atob(source.base64), c => c.charCodeAt(0));
     }
 
+    const session = await fetchAuthSession();
+    const identityId = session.identityId;
+    if (!identityId) throw new Error('No identityId — cannot upload image');
+
+    const imgPath = `incoming/${identityId}/${fileName}`;
     const result = await uploadData({
-        path: `incoming/{entity_id}/${fileName}`,
+        path: imgPath,
         data,
         options: { contentType },
     }).result;
-    return (result as any).path || `incoming/${fileName}`;
+    return (result as any).path || imgPath;
 }
 
 function extractAndParseJSON(text: string): any {
@@ -126,6 +143,12 @@ export interface FoodSuggestion {
     name: string;
     description: string;
     calories: number;
+    protein_g?: number;
+    carbs_g?: number;
+    fat_g?: number;
+    time?: string;
+    ingredients?: { name: string; amount: string }[];
+    steps?: { title: string; instruction: string }[];
     emoji: string;
 }
 
@@ -226,6 +249,8 @@ export interface WeeklyInsightResponse {
         insight_vi: string;
         insight_en: string;
         status: 'success' | 'insufficient_data';
+        summary?: string;
+        insight?: string;
     };
     error?: string;
 }
@@ -242,7 +267,7 @@ export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResul
         });
 
         if (result.errors || !result.data) {
-            console.error('Amplify GraphQL Errors:', result.errors);
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
             return { success: false, error: 'GraphQL error occurred' };
         }
 
@@ -258,12 +283,47 @@ export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResul
             data: convertAiToNutritionInfo(rawData),
         };
     } catch (error) {
-        console.error('Bedrock image analysis error:', error);
+        secureLogger.error('Bedrock image analysis error', { error: error instanceof Error ? error.message : String(error) });
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to analyze image',
         };
     }
+}
+
+/** Convert webm base64 → wav base64 using Web Audio API (for Transcribe compatibility) */
+async function convertWebmToWav(base64Webm: string): Promise<string> {
+    const bin = atob(base64Webm);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
+    const ch = audioBuffer.getChannelData(0);
+    const sr = audioBuffer.sampleRate;
+    const pcmLen = ch.length * 2; // 16-bit PCM
+    const buf = new ArrayBuffer(44 + pcmLen);
+    const v = new DataView(buf);
+
+    const ws = (o: number, s: string) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    ws(0, 'RIFF'); v.setUint32(4, 36 + pcmLen, true);
+    ws(8, 'WAVE'); ws(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    ws(36, 'data'); v.setUint32(40, pcmLen, true);
+
+    let off = 44;
+    for (let i = 0; i < ch.length; i++, off += 2) {
+        const s = Math.max(-1, Math.min(1, ch[i]));
+        v.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+
+    const wavBytes = new Uint8Array(buf);
+    let binary = '';
+    for (let i = 0; i < wavBytes.length; i++) binary += String.fromCharCode(wavBytes[i]);
+    ctx.close();
+    return btoa(binary);
 }
 
 /**
@@ -272,33 +332,34 @@ export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResul
  */
 export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult & { transcript?: string }> {
     try {
-        // Step 1: Read audio file as base64 (fetch() doesn't work with file:// on RN)
-        let base64: string;
-        if (Platform.OS === 'web' && audioUri.startsWith('blob:')) {
-            const response = await fetch(audioUri);
-            const blob = await response.blob();
-            base64 = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve((reader.result as string).split(',')[1] || '');
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-            });
-        } else {
-            base64 = await FileSystem.readAsStringAsync(audioUri, { encoding: 'base64' as any });
-        }
+        // Step 1: Read audio file via fetch to get a Blob (works for file:// on Native and blob: on Web)
+        const response = await fetch(audioUri);
+        const blob = await response.blob();
+        
+        // Step 2: Convert Blob to Uint8Array for Amplify Storage
+        const data = await new Promise<Uint8Array>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const arrayBuffer = reader.result as ArrayBuffer;
+                resolve(new Uint8Array(arrayBuffer));
+            };
+            reader.onerror = reject;
+            reader.readAsArrayBuffer(blob);
+        });
 
-        // Step 2: Upload to S3 with {entity_id} path (Amplify resolves identity ID)
+        // Step 3: Determine format — web records webm, native records m4a
         const isWeb = Platform.OS === 'web';
         const ext = isWeb ? 'webm' : 'm4a';
         const contentType = isWeb ? 'audio/webm' : 'audio/mp4';
         const fileName = `${Date.now()}.${ext}`;
+        const voicePath = `voice/${fileName}`;
         const uploadResult = await uploadData({
-            path: `voice/{entity_id}/${fileName}`,
-            data: Uint8Array.from(atob(base64), c => c.charCodeAt(0)),
+            path: voicePath,
+            data,
             options: { contentType },
         }).result;
 
-        const resolvedKey = (uploadResult as any).path || `voice/${fileName}`;
+        const resolvedKey = (uploadResult as any).path || voicePath;
 
         // Step 3: Call Lambda — Transcribe + Qwen in one shot
         const result = await getClient().queries.aiEngine({
@@ -307,7 +368,7 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
         });
 
         if (result.errors || !result.data) {
-            console.error('Amplify GraphQL Errors:', result.errors);
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
             return { success: false, error: 'GraphQL error occurred' };
         }
 
@@ -318,15 +379,6 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
 
         const rawData = extractAndParseJSON(responseObj.text);
 
-        // Handle clarification request from Qwen
-        if (rawData.action === 'clarify') {
-            return {
-                success: false,
-                transcript: responseObj.transcript,
-                error: rawData.clarification_question_vi || rawData.clarification_question_en || 'Vui lòng nói rõ hơn món ăn bạn muốn ghi nhận.',
-            };
-        }
-
         // Voice response wraps food in food_data; fall back to items[] or root for other formats
         let aiData = rawData;
         if (rawData.food_data && typeof rawData.food_data === 'object') {
@@ -335,13 +387,30 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
             aiData = rawData.items[0];
         }
 
+        // Handle clarification: AI muốn hỏi thêm nhưng vẫn có food_data tạm → dùng luôn
+        if (rawData.action === 'clarify') {
+            const hasFoodData = rawData.food_data && typeof rawData.food_data === 'object';
+            if (hasFoodData) {
+                return {
+                    success: true,
+                    transcript: responseObj.transcript,
+                    data: convertAiToNutritionInfo(aiData),
+                };
+            }
+            return {
+                success: false,
+                transcript: responseObj.transcript,
+                error: rawData.clarification_question_vi || rawData.clarification_question_en || 'Vui lòng nói rõ hơn món ăn bạn muốn ghi nhận.',
+            };
+        }
+
         return {
             success: true,
             transcript: responseObj.transcript,
             data: convertAiToNutritionInfo(aiData),
         };
     } catch (error) {
-        console.error('Voice to food error:', error);
+        secureLogger.error('Voice to food error', { error: error instanceof Error ? error.message : String(error) });
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to process voice input',
@@ -364,15 +433,15 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
             if (!fastResult.errors && fastResult.data) {
                 const fastResponse = JSON.parse(fastResult.data);
                 if (fastResponse.success && fastResponse.items?.length > 0) {
-                    console.log(`Fast path: Found "${foodName}" in DB directly.`);
+                    secureLogger.debug(`Fast path: Found food in DB directly`);
                     return formatProcessedResult(fastResponse.items[0]);
                 }
             }
         } catch (fastErr) {
-            console.warn('Fast DB search failed, falling back to AI.', fastErr);
+            secureLogger.warning('Fast DB search failed, falling back to AI');
         }
 
-        console.log(`Slow path: "${foodName}" not found in DB, asking Bedrock...`);
+        secureLogger.debug(`Slow path: food not found in DB, asking Bedrock`);
 
         // Step 2: Ask Bedrock for ingredient breakdown + estimated nutrition
         const aiResult = await getClient().queries.aiEngine({
@@ -381,7 +450,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
         });
 
         if (aiResult.errors || !aiResult.data) {
-            console.error('Amplify GraphQL Errors:', aiResult.errors);
+            secureLogger.error('Amplify GraphQL Errors:', { errors: aiResult.errors });
             return { success: false, error: 'GraphQL error occurred' };
         }
 
@@ -398,7 +467,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
         });
 
         if (processResult.errors || !processResult.data) {
-            console.log('processNutrition failed, falling back to AI data');
+            secureLogger.debug('processNutrition failed, falling back to AI data');
             return {
                 success: true,
                 data: convertAiToNutritionInfo(aiData),
@@ -415,7 +484,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
 
         return formatProcessedResult(processedResponse.items[0]);
     } catch (error) {
-        console.error('Search food nutrition error:', error);
+        secureLogger.error('Search food nutrition error', { error: error instanceof Error ? error.message : String(error) });
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to search food',
@@ -496,7 +565,7 @@ export async function fixFood(currentFoodJson: any, correctionQuery: string): Pr
         });
 
         if (result.errors || !result.data) {
-            console.error('Amplify GraphQL Errors:', result.errors);
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
             return { success: false, error: 'GraphQL error occurred' };
         }
 
@@ -512,7 +581,7 @@ export async function fixFood(currentFoodJson: any, correctionQuery: string): Pr
 
         return { success: true, data: convertAiToNutritionInfo(rawData) };
     } catch (error) {
-        console.error('Fix food error:', error);
+        secureLogger.error('Fix food error', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Failed to fix food' };
     }
 }
@@ -539,7 +608,7 @@ export async function getOllieTip(context: string): Promise<OllieTipResponse> {
         const data = extractAndParseJSON(responseObj.text);
         return { success: true, data };
     } catch (error) {
-        console.error('Ollie tip error:', error);
+        secureLogger.error('Ollie tip error', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Failed to get tip' };
     }
 }
@@ -571,7 +640,7 @@ export async function generateRecipe(
         const data = extractAndParseJSON(responseObj.text);
         return { success: true, data };
     } catch (error) {
-        console.error('Generate recipe error:', error);
+        secureLogger.error('Generate recipe error', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Failed to generate recipes' };
     }
 }
@@ -598,7 +667,7 @@ export async function calculateMacros(userProfileJson: any): Promise<MacroRespon
         const data = extractAndParseJSON(responseObj.text);
         return { success: true, data };
     } catch (error) {
-        console.error('Calculate macros error:', error);
+        secureLogger.error('Calculate macros error', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Failed to calculate macros' };
     }
 }
@@ -634,7 +703,7 @@ export async function getChallengeSummary(params: {
         const data = extractAndParseJSON(responseObj.text);
         return { success: true, data };
     } catch (error) {
-        console.error('Challenge summary error:', error);
+        secureLogger.error('Challenge summary error', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Failed to get challenge summary' };
     }
 }
@@ -665,7 +734,7 @@ export async function getWeeklyInsight(
         const data = extractAndParseJSON(responseObj.text);
         return { success: true, data };
     } catch (error) {
-        console.error('Weekly insight error:', error);
+        secureLogger.error('Weekly insight error', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Failed to get weekly insight' };
     }
 }
@@ -685,7 +754,7 @@ export async function generateCoachResponse(
         });
 
         if (result.errors || !result.data) {
-            console.error('Amplify GraphQL Errors:', result.errors);
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
             return { success: false, error: 'GraphQL error occurred' };
         }
 
@@ -698,42 +767,55 @@ export async function generateCoachResponse(
 
         // Extract all FOOD_CARDs
         const foodSuggestions: FoodSuggestion[] = [];
-        const foodMatches = text.matchAll(/\[FOOD_CARD: (\{.*?\})\]/g);
+        const foodMatches = text.matchAll(/(?:\[FOOD_CARD:\s*(\{[\s\S]*?\})\s*\]|===FOOD_CARD_START===\s*([\s\S]*?)\s*===FOOD_CARD_END===)/g);
         for (const match of foodMatches) {
             try {
-                foodSuggestions.push(JSON.parse(match[1]));
+                const rawJson = match[1] || match[2];
+                if (!rawJson) continue;
+                const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+                foodSuggestions.push(JSON.parse(cleanJson));
             } catch (e) {
-                console.error('Failed to parse food card JSON', e);
+                secureLogger.error('Failed to parse food card JSON');
             }
         }
 
         // Extract all EXERCISE_CARDs
         const exerciseSuggestions: ExerciseSuggestion[] = [];
-        const exerciseMatches = text.matchAll(/\[EXERCISE_CARD: (\{.*?\})\]/g);
+        const exerciseMatches = text.matchAll(/(?:\[EXERCISE_CARD:\s*(\{[\s\S]*?\})\s*\]|===EXERCISE_CARD_START===\s*([\s\S]*?)\s*===EXERCISE_CARD_END===)/g);
         for (const match of exerciseMatches) {
             try {
-                exerciseSuggestions.push(JSON.parse(match[1]));
+                const rawJson = match[1] || match[2];
+                if (!rawJson) continue;
+                const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+                exerciseSuggestions.push(JSON.parse(cleanJson));
             } catch (e) {
-                console.error('Failed to parse exercise card JSON', e);
+                secureLogger.error('Failed to parse exercise card JSON');
             }
         }
 
         // Extract STATS_CARD (only one per response)
         let statsCard: StatsCard | undefined;
-        const statsMatch = text.match(/\[STATS_CARD: (\{.*?\})\]/);
+        const statsMatch = text.match(/(?:\[STATS_CARD:\s*(\{[\s\S]*?\})\s*\]|===STATS_CARD_START===\s*([\s\S]*?)\s*===STATS_CARD_END===)/);
         if (statsMatch) {
             try {
-                statsCard = JSON.parse(statsMatch[1]);
+                const rawJson = statsMatch[1] || statsMatch[2];
+                if (rawJson) {
+                    const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+                    statsCard = JSON.parse(cleanJson);
+                }
             } catch (e) {
-                console.error('Failed to parse stats card JSON', e);
+                secureLogger.error('Failed to parse stats card JSON');
             }
         }
 
         // Clean text (remove all card tags)
         const cleanedText = text
-            .replace(/\[FOOD_CARD: \{.*?\}\]/g, '')
-            .replace(/\[EXERCISE_CARD: \{.*?\}\]/g, '')
-            .replace(/\[STATS_CARD: \{.*?\}\]/g, '')
+            .replace(/\[FOOD_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
+            .replace(/===FOOD_CARD_START===[\s\S]*?===FOOD_CARD_END===/g, '')
+            .replace(/\[EXERCISE_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
+            .replace(/===EXERCISE_CARD_START===[\s\S]*?===EXERCISE_CARD_END===/g, '')
+            .replace(/\[STATS_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
+            .replace(/===STATS_CARD_START===[\s\S]*?===STATS_CARD_END===/g, '')
             .trim();
 
         return {
@@ -745,7 +827,7 @@ export async function generateCoachResponse(
             foodSuggestion: foodSuggestions[0], // backward compat
         };
     } catch (error) {
-        console.error('Bedrock coach error:', error);
+        secureLogger.error('Bedrock coach error', { error: error instanceof Error ? error.message : String(error) });
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to get coach response',

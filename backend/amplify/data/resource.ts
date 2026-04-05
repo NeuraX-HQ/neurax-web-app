@@ -177,6 +177,10 @@ const schema = a.schema({
       expiry_date: a.string(),
       category: a.enum(['meat', 'vegetable', 'fruit', 'dairy', 'pantry', 'other']),
       emoji: a.string(),
+      calories: a.float(),
+      protein_g: a.float(),
+      carbs_g: a.float(),
+      fat_g: a.float(),
     })
     .authorization((allow) => [
       allow.owner(),

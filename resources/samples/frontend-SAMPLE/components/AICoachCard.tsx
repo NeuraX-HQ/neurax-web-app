@@ -27,7 +27,7 @@ const AICoachCard = memo(function AICoachCard({
             case 'encouragement':
                 return 'Keep going!';
             default:
-                return 'AI Coach Bảo';
+                return 'AI Coach Olly';
         }
     };
 
@@ -72,7 +72,7 @@ const AICoachCard = memo(function AICoachCard({
                     style={styles.actionButton}
                     onPress={onAskBao}
                 >
-                    <Text style={styles.actionButtonText}>Ask Bảo</Text>
+                    <Text style={styles.actionButtonText}>Ask Olly</Text>
                 </Pressable>
                 <Pressable
                     style={[styles.actionButton, styles.actionButtonSecondary]}

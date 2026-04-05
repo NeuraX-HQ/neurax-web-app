@@ -1,20 +1,25 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback, Animated, RefreshControl } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TouchableWithoutFeedback, Animated, RefreshControl, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Shadows } from '../../src/constants/colors';
 import { recipes } from '../../src/data/recipes';
 import { useFridgeStore, FridgeItem } from '../../src/store/fridgeStore';
-import { useMealStore } from '../../src/store/mealStore';
+import { useMealStore, getTodayDate } from '../../src/store/mealStore';
+import { useRecipeStore } from '../../src/store/recipeStore';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
+import { Recipe } from '../../src/data/recipes';
 
 export default function KitchenScreen() {
     const router = useRouter();
     const { t } = useAppLanguage();
     const [tab, setTab] = useState<'fridge' | 'recipes'>('fridge');
+    const [recipeSubTab, setRecipeSubTab] = useState<'system' | 'personal'>('system');
     const [search, setSearch] = useState('');
+    const [recipeSearch, setRecipeSearch] = useState('');
     const { items, loadItems, removeItem, isLoading, syncWithCloud, syncPendingItems } = useFridgeStore();
+    const { personalRecipes, loadRecipes } = useRecipeStore();
     const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
@@ -22,6 +27,7 @@ export default function KitchenScreen() {
             syncPendingItems();
             syncWithCloud();
         });
+        loadRecipes();
     }, []);
 
     const onRefresh = useCallback(async () => {
@@ -51,6 +57,48 @@ export default function KitchenScreen() {
 
     const openRecipeFlow = (recipeId: string) => {
         router.push({ pathname: '/recipe-ingredients', params: { recipeId } });
+    };
+
+    const handleUseNow = (item: FridgeItem) => {
+        const onConfirm = async () => {
+            try {
+                await useMealStore.getState().addMeal({
+                    name: item.name,
+                    type: 'SNACK',
+                    calories: item.calories || 0,
+                    protein: item.protein || 0,
+                    carbs: item.carbs || 0,
+                    fat: item.fat || 0,
+                    servingSize: item.amount,
+                    image: item.emoji || '🍽️',
+                    date: getTodayDate()
+                });
+                await removeItem(item.id);
+            } catch (error) {
+                console.error('Lỗi khi dùng ngay món ăn:', error);
+                if (Platform.OS === 'web') {
+                    window.alert(t('kitchen.useNowError'));
+                } else {
+                    Alert.alert(t('common.error'), t('kitchen.useNowError'));
+                }
+            }
+        };
+
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm(`${t('kitchen.useNowConfirmTitle')}\n\n${t('kitchen.useNowConfirmDesc')} (${item.name})`);
+            if (confirmed) {
+                onConfirm();
+            }
+        } else {
+            Alert.alert(
+                t('kitchen.useNowConfirmTitle'),
+                `${t('kitchen.useNowConfirmDesc')} (${item.name})`,
+                [
+                    { text: t('common.cancel'), style: 'cancel' },
+                    { text: t('kitchen.useNow'), style: 'default', onPress: onConfirm }
+                ]
+            );
+        }
     };
 
     const EmptyHint = ({ text }: { text: string }) => (
@@ -125,7 +173,7 @@ export default function KitchenScreen() {
                                 {useSoon.length === 0
                                     ? <EmptyHint text={t('kitchen.empty.useSoon')} />
                                     : useSoon.map((item) => (
-                                        <UseSoonCard key={item.id} item={item} onRemove={removeItem} t={t} />
+                                        <UseSoonCard key={item.id} item={item} onRemove={removeItem} onUseNow={handleUseNow} t={t} />
                                     ))
                                 }
 
@@ -136,7 +184,7 @@ export default function KitchenScreen() {
                                 {thisWeek.length === 0
                                     ? <EmptyHint text={t('kitchen.empty.thisWeek')} />
                                     : thisWeek.map((item) => (
-                                        <ThisWeekCard key={item.id} item={item} t={t} />
+                                        <ThisWeekCard key={item.id} item={item} onUseNow={handleUseNow} t={t} />
                                     ))
                                 }
 
@@ -159,46 +207,52 @@ export default function KitchenScreen() {
                     </View>
                 ) : (
                     <View style={styles.content}>
-                        <TextInput style={styles.search} placeholder={t('kitchen.searchRecipe')} placeholderTextColor={Colors.textLight} />
+                        <View style={styles.recipeSubTabs}>
+                            <TouchableOpacity style={[styles.subTab, recipeSubTab === 'system' && styles.subTabActive]} onPress={() => setRecipeSubTab('system')}>
+                                <Text style={[styles.subTabText, recipeSubTab === 'system' && styles.subTabTextActive]}>{t('kitchen.tab.system')}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.subTab, recipeSubTab === 'personal' && styles.subTabActive]} onPress={() => setRecipeSubTab('personal')}>
+                                <Text style={[styles.subTabText, recipeSubTab === 'personal' && styles.subTabTextActive]}>{t('kitchen.tab.personal')}</Text>
+                            </TouchableOpacity>
+                        </View>
 
-                        {/* Featured Recipe */}
-                        <Text style={styles.sectionTitle}>{t('kitchen.basedOnFridge')}</Text>
-                        <TouchableOpacity
-                            style={[styles.featuredRecipe, Shadows.medium]}
-                            activeOpacity={0.9}
-                            onPress={() => openRecipeFlow(recipes[0].id)}
-                        >
-                            <Text style={styles.featuredEmoji}>{recipes[0].emoji}</Text>
-                            <View style={styles.featuredOverlay}>
-                                <View style={styles.matchBadge}>
-                                    <Text style={styles.matchText}>{t('kitchen.matchPercent', { percent: recipes[0].match })}</Text>
-                                </View>
-                                <Text style={styles.featuredName}>{recipes[0].name}</Text>
-                                <Text style={styles.featuredDesc}>{recipes[0].description}</Text>
-                                <View style={styles.featuredMeta}>
-                                    <Text style={styles.metaItem}>🔥 {recipes[0].calories} kcal</Text>
-                                    <Text style={styles.metaItem}>💪 {recipes[0].protein}</Text>
-                                    <Text style={styles.metaItem}>⏱ {recipes[0].time}</Text>
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-
-                        {/* Quick & Easy */}
-                        <Text style={styles.sectionTitle}>{t('kitchen.quickEasy')}</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.recipesScroll}>
-                            {recipes.map((recipe) => (
-                                <TouchableOpacity
-                                    key={recipe.id}
-                                    style={[styles.recipeCard, Shadows.small]}
-                                    activeOpacity={0.85}
-                                    onPress={() => openRecipeFlow(recipe.id)}
-                                >
-                                    <Text style={styles.recipeEmoji}>{recipe.emoji}</Text>
-                                    <Text style={styles.recipeName}>{recipe.name}</Text>
-                                    <Text style={styles.recipeMeta}>🔥 {recipe.calories} kcal • ⏱ {recipe.time}</Text>
+                        <View style={styles.searchRow}>
+                            <Text style={styles.searchIcon}>🔍</Text>
+                            <TextInput
+                                style={styles.search}
+                                placeholder={t('kitchen.searchRecipe')}
+                                placeholderTextColor={Colors.textLight}
+                                value={recipeSearch}
+                                onChangeText={setRecipeSearch}
+                            />
+                            {recipeSearch.length > 0 && (
+                                <TouchableOpacity onPress={() => setRecipeSearch('')} style={styles.clearBtn}>
+                                    <Text style={styles.clearBtnText}>✕</Text>
                                 </TouchableOpacity>
-                            ))}
-                        </ScrollView>
+                            )}
+                        </View>
+
+                        {recipeSubTab === 'system' ? (
+                            <View style={styles.recipeList}>
+                                {recipes
+                                    .filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase()))
+                                    .map((recipe) => (
+                                        <RecipeCardHorizontal key={recipe.id} recipe={recipe} onPress={() => openRecipeFlow(recipe.id)} t={t} />
+                                ))}
+                            </View>
+                        ) : (
+                            <View style={styles.recipeList}>
+                                {personalRecipes.length === 0 ? (
+                                    <EmptyHint text={t('kitchen.emptyPersonal')} />
+                                ) : (
+                                    personalRecipes
+                                        .filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase()))
+                                        .map((recipe) => (
+                                            <RecipeCardHorizontal key={recipe.id} recipe={recipe} onPress={() => openRecipeFlow(recipe.id)} t={t} />
+                                        ))
+                                )}
+                            </View>
+                        )}
                     </View>
                 )}
 
@@ -214,10 +268,12 @@ export default function KitchenScreen() {
 function UseSoonCard({
     item,
     onRemove,
+    onUseNow,
     t,
 }: {
     item: FridgeItem;
     onRemove: (id: string) => Promise<void>;
+    onUseNow: (item: FridgeItem) => void;
     t: (key: string, params?: Record<string, string | number>) => string;
 }) {
     return (
@@ -238,7 +294,7 @@ function UseSoonCard({
                     <Text style={styles.fridgeName}>{item.name}</Text>
                     <Text style={styles.fridgeDetail}>{item.amount} • {item.location}</Text>
                     <View style={styles.actionRow}>
-                        <TouchableOpacity style={styles.btnUseNow}>
+                        <TouchableOpacity style={styles.btnUseNow} onPress={() => onUseNow(item)}>
                             <Text style={styles.btnUseNowText}>{t('kitchen.useNow')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.btnRemove} onPress={() => onRemove(item.id)}>
@@ -253,13 +309,15 @@ function UseSoonCard({
 
 function ThisWeekCard({
     item,
+    onUseNow,
     t,
 }: {
     item: FridgeItem;
+    onUseNow: (item: FridgeItem) => void;
     t: (key: string, params?: Record<string, string | number>) => string;
 }) {
     return (
-        <View style={[styles.thisWeekCard, Shadows.small]}>
+        <TouchableOpacity style={[styles.thisWeekCard, Shadows.small]} activeOpacity={0.8} onPress={() => onUseNow(item)}>
             <View style={styles.thisWeekThumb}>
                 <Text style={{ fontSize: 26 }}>{item.emoji}</Text>
             </View>
@@ -270,7 +328,7 @@ function ThisWeekCard({
             <View style={[styles.expiryBadge, { backgroundColor: Colors.accentLight }]}>
                 <Text style={[styles.expiryText, { color: Colors.accent }]}>{item.daysLeft}d</Text>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 }
 
@@ -284,6 +342,25 @@ function LongTermCard({ item }: { item: FridgeItem }) {
         </View>
     );
 }
+
+function RecipeCardHorizontal({ recipe, onPress, t }: { recipe: Recipe, onPress: () => void, t: (key: string, params?: any) => string }) {
+    return (
+        <TouchableOpacity style={[styles.recipeCardHorizontal, Shadows.small]} activeOpacity={0.8} onPress={onPress}>
+            <View style={styles.recipeCardHThumb}>
+                <Text style={{ fontSize: 36 }}>{recipe.emoji || '🍽️'}</Text>
+            </View>
+            <View style={styles.recipeCardHInfo}>
+                <Text style={styles.recipeCardHName} numberOfLines={1}>{recipe.name}</Text>
+                <Text style={styles.recipeCardHDesc} numberOfLines={2}>{recipe.description}</Text>
+                <View style={styles.recipeCardHMetaDetails}>
+                    <Text style={styles.recipeCardHLabel}>🥘 {recipe.ingredients?.length || 0} {t('kitchen.recipeIngredients')}</Text>
+                    <Text style={styles.recipeCardHLabel}>👨‍🍳 {recipe.steps?.length || 0} {t('kitchen.recipeSteps')} • ⏱ {recipe.time || '15 min'}</Text>
+                </View>
+            </View>
+        </TouchableOpacity>
+    );
+}
+
 const styles = StyleSheet.create({
     /* ── Layout ── */
     container: { flex: 1, backgroundColor: Colors.background },
@@ -516,39 +593,77 @@ const styles = StyleSheet.create({
     longTermName: { fontSize: 12, fontWeight: '600', color: Colors.text, textAlign: 'center' },
 
     /* ── Recipes tab ── */
-    featuredRecipe: {
-        backgroundColor: Colors.primary,
-        borderRadius: 20,
-        padding: 24,
+    recipeSubTabs: {
+        flexDirection: 'row',
         marginBottom: 16,
-        marginTop: 8,
-        overflow: 'hidden',
+        gap: 12,
     },
-    featuredEmoji: { fontSize: 64, alignSelf: 'center', marginBottom: 16 },
-    featuredOverlay: {},
-    matchBadge: {
-        alignSelf: 'flex-start',
-        backgroundColor: 'rgba(46, 204, 113, 0.25)',
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        marginBottom: 8,
+    subTab: {
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        backgroundColor: '#F0F0F0',
     },
-    matchText: { color: Colors.accent, fontSize: 13, fontWeight: '700' },
-    featuredName: { fontSize: 22, fontWeight: '800', color: '#FFFFFF', marginBottom: 6 },
-    featuredDesc: { fontSize: 14, color: 'rgba(255,255,255,0.8)', lineHeight: 20, marginBottom: 12 },
-    featuredMeta: { flexDirection: 'row', gap: 16 },
-    metaItem: { fontSize: 13, color: 'rgba(255,255,255,0.9)', fontWeight: '500' },
-    recipesScroll: { marginBottom: 20 },
-    recipeCard: {
+    subTabActive: {
+        backgroundColor: Colors.primary,
+    },
+    subTabText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: Colors.textSecondary,
+    },
+    subTabTextActive: {
+        color: '#FFFFFF',
+    },
+    recipeList: {
+        paddingBottom: 20,
+    },
+    recipeCardHorizontal: {
+        flexDirection: 'row',
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
-        padding: 16,
-        width: 170,
-        marginRight: 12,
+        padding: 12,
+        marginBottom: 12,
+        alignItems: 'center',
+        gap: 12,
+    },
+    recipeCardHThumb: {
+        width: 70,
+        height: 70,
+        borderRadius: 14,
+        backgroundColor: '#F7F8FA',
+        justifyContent: 'center',
         alignItems: 'center',
     },
-    recipeEmoji: { fontSize: 48, marginBottom: 10 },
-    recipeName: { fontSize: 14, fontWeight: '600', color: Colors.text, textAlign: 'center', marginBottom: 6 },
-    recipeMeta: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center' },
+    recipeCardHInfo: {
+        flex: 1,
+    },
+    recipeCardHName: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: Colors.text,
+        marginBottom: 4,
+    },
+    recipeCardHDesc: {
+        fontSize: 13,
+        color: Colors.textSecondary,
+        marginBottom: 8,
+        lineHeight: 18,
+    },
+    recipeCardHMetaDetails: {
+        flexDirection: 'row',
+        columnGap: 12,
+        rowGap: 4,
+        flexWrap: 'wrap',
+    },
+    recipeCardHLabel: {
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontWeight: '600',
+        backgroundColor: Colors.primaryLight,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
 });

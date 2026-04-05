@@ -10,7 +10,7 @@ Dưới đây là 5 Module cơ sở dữ liệu (Bảng) được triển khai:
 ## 🏛 Cấu Trúc Bảng Dữ Liệu (5 Databases)
 
 ### 1. UserData (`/UserData`) - Lõi Hệ Thống 🌟
-- **Chức Năng:** Hồ sơ người dùng, thông tin bảo mật, trạng thái Gamification, mục tiêu vĩnh viễn, tiểu sử ăn uống cá nhân hoá (dị ứng).
+- **Chức Năng:** Hồ sơ người dùng, thông tin Olly mật, trạng thái Gamification, mục tiêu vĩnh viễn, tiểu sử ăn uống cá nhân hoá (dị ứng).
 - **Thiết Kế:** DynamoDB Document - Tập trung mọi context vào 1 Document cho tốc độ Load (Read) siêu việt khi App khởi động.
 
 ### 2. FoodDatabase (`/FoodData`) - Bách Khoa Thực Phẩm

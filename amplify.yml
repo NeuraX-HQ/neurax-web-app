@@ -2,7 +2,7 @@ version: 1
 backend:
   phases:
     build:
-     commands:
+      commands:
         - cd backend
         - npm install --legacy-peer-deps --include=dev
 
@@ -40,37 +40,8 @@ frontend:
     paths:
       - frontend/node_modules/**/*
       - frontend/.expo/**/*
-  customRules:
-    - source: </^[^.]+$|\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json|webp)$)([^.]+$)/>
-      target: /index.html
-      status: '200'
-  customHeaders:
-    # HTML: luôn fresh
-    - pattern: '**/*.html'
-      headers:
-        - key: Cache-Control
-          value: no-cache
-
-    # JS: cache mạnh (QUAN TRỌNG NHẤT)
-    - pattern: '**/*.js'
-      headers:
-        - key: Cache-Control
-          value: public, max-age=31536000, immutable
-
-    # CSS
-    - pattern: '**/*.css'
-      headers:
-        - key: Cache-Control
-          value: public, max-age=31536000, immutable
-
-    # Images
-    - pattern: '**/*.(png|jpg|jpeg|svg|webp)'
-      headers:
-        - key: Cache-Control
-          value: public, max-age=31536000, immutable
-
-    # Fonts
-    - pattern: '**/*.(woff|woff2|ttf)'
-      headers:
-        - key: Cache-Control
-          value: public, max-age=31536000, immutable
+      - backend/node_modules/**/*
+      - backend/amplify/ai-engine/node_modules/**/*
+      - backend/amplify/process-nutrition/node_modules/**/*
+      - backend/amplify/friend-request/node_modules/**/*
+      - backend/amplify/resize-image/node_modules/**/*

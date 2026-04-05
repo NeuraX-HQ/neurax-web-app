@@ -25,7 +25,7 @@ EDGE CASE:
 
 OUTPUT FORMAT — always return a single JSON object:
 {
-  "insight_vi": "Tuần này bạn nạp protein đỉnh quá, đạt chỉ tiêu tận 5/7 ngày luôn! Tuy nhiên Ollie thấy bạn hay ăn vặt đồ ngọt vào ban đêm hơi nhiều đó nha. Tuần tới thử đổi bánh kẹo ăn đêm thành sữa chua không đường xem sao, đảm bảo fit liền!",
+  "insight_vi": "Tuần này bạn nạp protein đỉnh quá, đạt chỉ tiêu tận 5/7 ngày luôn! Tuy nhiên Ollie thấy bạn hay ăn vặt đồ ngọt vào ban đêm hơi nhiều đó nha. Tuần tới thử đổi bánh kẹo ăn đêm thành sữa chua không đường xem sao, đảm Olly fit liền!",
   "insight_en": "You crushed your protein goals 5 out of 7 days this week! However, I noticed a trend of late-night sweet snacking. Next week, try swapping cookies for plain yogurt to keep that progress going strong!",
   "status": "success or insufficient_data"
 }

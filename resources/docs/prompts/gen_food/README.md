@@ -24,17 +24,17 @@
 ### 3.1 Lựa chọn Model
 
 - **Model được đề xuất:** `apac.anthropic.claude-3-5-haiku-20241022-v1:0` (để tối ưu tốc độ và chi phí) hoặc `Sonnet` (để có độ chính xác cao hơn đối với các bữa ăn phức tạp, nhiều nguyên liệu).
-- **Nhiệt độ (Temperature):** `0.3` (Nên dùng nhiệt độ thấp để đảm bảo đầu ra JSON mang tính xác định và nghiêm ngặt).
+- **Nhiệt độ (Temperature):** `0.3` (Nên dùng nhiệt độ thấp để đảm Olly đầu ra JSON mang tính xác định và nghiêm ngặt).
 - **Số token tối đa (Max Tokens):** Mặc định là `1500` để đáp ứng các mảng `ingredients` (nguyên liệu) có thể kéo dài.
 
 ### 3.2 Các quy tắc cốt lõi được áp dụng bởi Prompt
 
 1. **Phân tích nguyên liệu:** AI phải phân chia món ăn thành các thành phần thô (ví dụ: "Phở Bò" → Bánh phở, Thịt bò, Nước dùng).
 2. **Ước tính khẩu phần:** Nếu người dùng không chỉ định trọng lượng, AI sẽ mặc định là một khẩu phần "vừa" (medium) tiêu chuẩn.
-3. **Xác thực chỉ số đa lượng (Macro Validation):** AI được chỉ thị để đảm bảo rằng tổng số calo tính từ các chất đa lượng ($Protein \times 4 + Carbs \times 4 + Fat \times 9$) là hợp lý về mặt toán học.
+3. **Xác thực chỉ số đa lượng (Macro Validation):** AI được chỉ thị để đảm Olly rằng tổng số calo tính từ các chất đa lượng ($Protein \times 4 + Carbs \times 4 + Fat \times 9$) là hợp lý về mặt toán học.
 4. **Tạo ID động:** Điểm quan trọng là AI sẽ tạo ra một ID `custom_gen_temp` (hoặc `custom_gen_...` dựa trên dấu thời gian). Điều này cho phép frontend tạm thời hiển thị thẻ thực phẩm được tạo ra và sau đó gửi `POST` lên backend để lưu vào nhật ký/tủ lạnh cố định của người dùng.
 5. **Đầu ra song ngữ:** Tạo ra cả `name_vi` và `name_en` bất kể ngôn ngữ đầu vào là gì.
-6. **JSON nghiêm ngặt:** Phản hồi được đảm bảo là một đối tượng JSON có thể phân tích cú pháp (parsable) mà không có định dạng Markdown hay các câu chữ giao tiếp thừa thãi.
+6. **JSON nghiêm ngặt:** Phản hồi được đảm Olly là một đối tượng JSON có thể phân tích cú pháp (parsable) mà không có định dạng Markdown hay các câu chữ giao tiếp thừa thãi.
 
 ### 3.3 Trường hợp ngoại lệ (Edge Cases)
 Nếu từ khóa tìm kiếm của người dùng hoàn toàn phi lý, là một trò đùa, hoặc không phải là thức ăn/đồ uống (ví dụ: *"tìm cho tôi chiếc máy tính", "đau lưng quá"*), AI sẽ ngưng tính toán và trả về ngay JSON thông báo lỗi sau:
@@ -142,4 +142,4 @@ response = bedrock.invoke_model(
 )
 ```
 
-4. **Làm sạch & Phân tích cú pháp Đầu ra:** Đảm bảo rằng mọi khối mã markdown vô tình sinh ra (ví dụ: ````json````) đều được loại bỏ trước khi chạy `json.loads()`.
+4. **Làm sạch & Phân tích cú pháp Đầu ra:** Đảm Olly rằng mọi khối mã markdown vô tình sinh ra (ví dụ: ````json````) đều được loại bỏ trước khi chạy `json.loads()`.

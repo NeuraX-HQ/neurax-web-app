@@ -529,7 +529,7 @@ export const AI_BAO_MESSAGES = {
     praise: [
         "45g protein rồi! Over-delivered! Respect ✊",
         "Ê, consistency king/queen nè! Keep going! 🔥",
-        "Macro on point! Bảo proud of you 😎",
+        "Macro on point! Olly proud of you 😎",
     ],
     encouragement: [
         "Hôm nay thiếu đạm. Không sao, tối ăn thêm trứng luộc là đủ. Ez game! 😎",

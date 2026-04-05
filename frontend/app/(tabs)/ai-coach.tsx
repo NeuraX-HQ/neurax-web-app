@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from 'react-native';
+import Markdown from 'react-native-markdown-display';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Shadows } from '../../src/constants/colors';
 import { useMealStore } from '../../src/store/mealStore';
@@ -8,18 +9,9 @@ import { getUserData, UserData } from '../../src/store/userStore';
 import { generateCoachResponse } from '../../src/services/aiService';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
-interface Message {
-    id: string;
-    sender: 'user' | 'ai';
-    text: string;
-    time: string;
-    foodCard?: {
-        name: string;
-        description: string;
-        calories: number;
-        emoji: string;
-    };
-}
+import { useChatStore, ChatMessage } from '../../src/store/chatStore';
+import { useRecipeStore } from '../../src/store/recipeStore';
+import { Alert } from 'react-native';
 
 export default function AiCoachScreen() {
     const { t, language } = useAppLanguage();
@@ -31,15 +23,8 @@ export default function AiCoachScreen() {
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
 
-    const [messages, setMessages] = useState<Message[]>([
-        {
-            id: 'welcome',
-            sender: 'ai',
-            text: t('aiCoach.welcome'),
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        }
-    ]);
-    const [isLoading, setIsLoading] = useState(false);
+    const { messages, setMessages, isLoading, setIsLoading } = useChatStore();
+
     const [userData, setUserData] = useState<UserData | null>(null);
     const scrollViewRef = useRef<ScrollView>(null);
 
@@ -55,6 +40,7 @@ export default function AiCoachScreen() {
         fetchUser();
     }, []);
 
+    // Initialize or update welcome language if first message is welcome
     useEffect(() => {
         setMessages(prev => {
             const withoutWelcome = prev.filter(msg => msg.id !== 'welcome');
@@ -86,21 +72,21 @@ export default function AiCoachScreen() {
     ${fridge || t('aiCoach.context.empty')}`;
     };
 
-    const handleSend = async () => {
-        if (!input.trim() || isLoading) return;
+    const handleSend = async (overrideInput?: string) => {
+        const textToSend = typeof overrideInput === 'string' ? overrideInput : input;
+        if (!textToSend.trim() || isLoading) return;
 
-        const userMsg: Message = {
+        const userMsg: ChatMessage = {
             id: Date.now().toString(),
             sender: 'user',
-            text: input,
+            text: textToSend,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         };
 
         setMessages(prev => [...prev, userMsg]);
-        setInput('');
+        if (typeof overrideInput !== 'string') setInput('');
         setIsLoading(true);
 
-        // Filter out the hardcoded welcome message from chat history.
         const chatHistory = messages
             .filter(msg => msg.id !== 'welcome')
             .map(msg => ({
@@ -109,20 +95,19 @@ export default function AiCoachScreen() {
             }));
 
         const context = constructContext();
-        const result = await generateCoachResponse(input, chatHistory, context);
+        const result = await generateCoachResponse(textToSend, chatHistory, context);
 
         if (result.success) {
-            const aiMsg: Message = {
+            const aiMsg: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 sender: 'ai',
                 text: result.text || '',
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                foodCard: result.foodSuggestion,
+                foodCards: result.foodSuggestions,
             };
             setMessages(prev => [...prev, aiMsg]);
         } else {
-            // Error case
-            const errMsg: Message = {
+            const errMsg: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 sender: 'ai',
                 text: t('aiCoach.errorReply'),
@@ -173,7 +158,7 @@ export default function AiCoachScreen() {
                                         <Image source={require('../../assets/images/coachAI.jpeg')} style={styles.aiBubbleAvatarImage} />
                                     </View>
                                     <View style={styles.aiBubble}>
-                                        <Text style={styles.aiText}>{msg.text}</Text>
+                                        <Markdown style={mdStyles}>{msg.text}</Markdown>
                                         <Text style={styles.msgTime}>{msg.time}</Text>
                                     </View>
                                 </View>
@@ -186,24 +171,56 @@ export default function AiCoachScreen() {
                                 </View>
                             )}
 
-                            {/* Food suggestion card */}
-                            {msg.foodCard && (
-                                <View style={[styles.foodCard, Shadows.small]}>
-                                    <Text style={styles.foodEmoji}>{msg.foodCard.emoji}</Text>
+                            {/* Food suggestion array */}
+                            {msg.foodCards && msg.foodCards.map((foodCard: any, index: number) => (
+                                <View key={'fc_' + index} style={[styles.foodCard, Shadows.small, { marginTop: 10 }]}>
+                                    <Text style={styles.foodEmoji}>{foodCard.emoji || '🍲'}</Text>
                                     <View style={styles.foodInfo}>
-                                        <Text style={styles.foodName}>{msg.foodCard.name}</Text>
-                                        <Text style={styles.foodDesc} numberOfLines={2}>{msg.foodCard.description}</Text>
+                                        <Text style={styles.foodName}>{foodCard.name}</Text>
+                                        <Text style={styles.foodDesc} numberOfLines={2}>{foodCard.description}</Text>
                                         <View style={styles.foodMeta}>
-                                            <Text style={styles.foodCalories}>🔥 {msg.foodCard.calories} kcal</Text>
-                                            <TouchableOpacity style={styles.addLogBtn}>
+                                            <Text style={styles.foodCalories}>🔥 {foodCard.calories} kcal</Text>
+                                            <TouchableOpacity 
+                                                style={styles.addLogBtn}
+                                                onPress={() => {
+                                                    const newRecipe: any = {
+                                                        id: 'AI_' + Date.now() + '_' + index,
+                                                        name: foodCard.name,
+                                                        description: foodCard.description,
+                                                        calories: foodCard.calories,
+                                                        protein: foodCard.protein_g ? `${foodCard.protein_g}g` : '0g',
+                                                        time: foodCard.time || '15 min',
+                                                        match: 100,
+                                                        emoji: foodCard.emoji || '🍲',
+                                                        image: '',
+                                                        shortMeta: foodCard.time || '15 phút',
+                                                        ingredients: foodCard.ingredients?.map((ing: any) => ({ id: 'ing_' + Math.random(), name: ing.name, amount: ing.amount })) || [],
+                                                        steps: foodCard.steps?.map((step: any, idx: number) => ({ id: 'step_' + idx, title: step.title, instruction: step.instruction, durationSec: 300, image: '' })) || [],
+                                                    };
+                                                    useRecipeStore.getState().addRecipe(newRecipe);
+                                                    Alert.alert('Thành công', 'Công thức đã được lưu vào Của tôi (Recipe)');
+                                                }}
+                                            >
                                                 <Text style={styles.addLogText}>{t('aiCoach.addFood')}</Text>
                                             </TouchableOpacity>
                                         </View>
                                     </View>
                                 </View>
-                            )}
+                            ))}
                         </View>
                     ))}
+                    
+                    {messages.length <= 1 && (
+                        <View style={styles.quickReplyContainer}>
+                            <TouchableOpacity style={styles.quickReplyChip} onPress={() => handleSend(t('aiCoach.quickReply.logFood') || 'Log food')}>
+                                <Text style={styles.quickReplyText}>{t('aiCoach.quickReply.logFood') || 'Log food'}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.quickReplyChip} onPress={() => handleSend(t('aiCoach.quickReply.suggestRecipe') || 'Suggest recipe')}>
+                                <Text style={styles.quickReplyText}>{t('aiCoach.quickReply.suggestRecipe') || 'Suggest recipe'}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
                     <View style={{ height: 20 }} />
                 </ScrollView>
 
@@ -216,7 +233,7 @@ export default function AiCoachScreen() {
                         value={input}
                         onChangeText={setInput}
                         editable={!isLoading}
-                        onSubmitEditing={handleSend}
+                        onSubmitEditing={() => handleSend()}
                     />
                     {isLoading ? (
                         <ActivityIndicator color={Colors.primary} style={{ marginHorizontal: 10, alignSelf: 'center' }} />
@@ -226,7 +243,7 @@ export default function AiCoachScreen() {
                                 styles.sendBtn,
                                 (!input.trim() || isLoading) && { backgroundColor: Colors.border }
                             ]}
-                            onPress={handleSend}
+                            onPress={() => handleSend()}
                             disabled={!input.trim() || isLoading}
                         >
                             <Text style={[styles.sendIcon, (!input.trim() || isLoading) && { color: Colors.textSecondary }]}>➤</Text>
@@ -239,6 +256,23 @@ export default function AiCoachScreen() {
         </SafeAreaView>
     );
 }
+
+const mdStyles = StyleSheet.create({
+    body: { fontSize: 15, color: Colors.text, lineHeight: 22 },
+    heading1: { fontSize: 20, fontWeight: '700' as const, color: Colors.text, marginBottom: 6 },
+    heading2: { fontSize: 18, fontWeight: '700' as const, color: Colors.text, marginBottom: 4 },
+    heading3: { fontSize: 16, fontWeight: '600' as const, color: Colors.text, marginBottom: 4 },
+    strong: { fontWeight: '700' as const },
+    em: { fontStyle: 'italic' as const },
+    bullet_list: { marginVertical: 4 },
+    ordered_list: { marginVertical: 4 },
+    list_item: { marginVertical: 2 },
+    paragraph: { marginVertical: 4 },
+    code_inline: { backgroundColor: '#F0F0F0', borderRadius: 4, paddingHorizontal: 4, fontSize: 13, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+    fence: { backgroundColor: '#F0F0F0', borderRadius: 8, padding: 10, marginVertical: 6, fontSize: 13, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
+    blockquote: { backgroundColor: '#F5F6F8', borderLeftWidth: 3, borderLeftColor: Colors.primary, paddingLeft: 10, marginVertical: 6 },
+    link: { color: Colors.blue, textDecorationLine: 'underline' as const },
+});
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFFFFF' },
@@ -348,4 +382,24 @@ const styles = StyleSheet.create({
         alignSelf: 'flex-end',
     },
     sendIcon: { fontSize: 20, color: '#FFFFFF', transform: [{ rotate: '0deg' }] },
+    quickReplyContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+        marginTop: 10,
+        justifyContent: 'flex-start',
+    },
+    quickReplyChip: {
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: Colors.primary,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 20,
+    },
+    quickReplyText: {
+        color: Colors.primary,
+        fontSize: 14,
+        fontWeight: '600',
+    },
 });
