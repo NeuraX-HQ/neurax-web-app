@@ -10,6 +10,14 @@ const s3Client = new S3Client({ region: REGION });
 
 const QWEN_MODEL_ID = process.env.QWEN_MODEL_ID || "qwen.qwen3-vl-235b-a22b";
 const STORAGE_BUCKET = process.env.STORAGE_BUCKET_NAME || "";
+const IS_DEBUG = process.env.DEBUG === "true" || process.env.NODE_ENV === "development";
+
+// Simple debug logger - respects DEBUG env var
+const debug = (message: string, data?: any) => {
+  if (IS_DEBUG) {
+    console.log(`[ai-engine] ${message}`, data || "");
+  }
+};
 
 // ═══════════════════════════════════════════════════════════════
 // PROMPTS (from docs/prompts)
@@ -282,7 +290,7 @@ async function callQwen(messages: any[], maxTokens = 1000): Promise<string> {
         || responseBody.content?.[0]?.text
         || '';
     if (!text) {
-        console.warn('Empty Qwen response. Raw body:', JSON.stringify(responseBody).slice(0, 500));
+        debug('Empty Qwen response. Raw body:', JSON.stringify(responseBody).slice(0, 500));
     }
     return text;
 }
@@ -403,7 +411,7 @@ export const handler = async (event: any) => {
             //     await transcribeClient.send(new DeleteTranscriptionJobCommand({ TranscriptionJobName: jobName }));
             // } catch (e) { /* non-critical */ }
 
-            console.log(`[voiceToFood] jobName=${jobName}, transcript="${transcript}", s3Key=${s3Key}`);
+            debug(`[voiceToFood] jobName=${jobName}, transcriptLength=${transcript?.length || 0}, s3Key=${s3Key}`);
 
             if (!transcript) {
                 return JSON.stringify({ success: false, error: 'Empty transcription' });
@@ -487,7 +495,7 @@ export const handler = async (event: any) => {
         return JSON.stringify({ success: false, error: `Unknown action: ${action}` });
 
     } catch (error: any) {
-        console.error('Bedrock Lambda Error:', error);
+        debug('Bedrock Lambda Error:', error.message);
         return JSON.stringify({ success: false, error: error.message });
     }
 };

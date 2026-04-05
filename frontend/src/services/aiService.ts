@@ -3,6 +3,7 @@ import { uploadData } from 'aws-amplify/storage';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { Platform } from 'react-native';
 import type { Schema } from '../../../backend/amplify/data/resource';
+import { secureLogger } from '../security/SecureLogger';
 
 // Upload a food image to S3 incoming/ path, return resolved s3Key.
 // Native: pass file URI (file://) — read via fetch() (works on iOS + Android).
@@ -248,6 +249,8 @@ export interface WeeklyInsightResponse {
         insight_vi: string;
         insight_en: string;
         status: 'success' | 'insufficient_data';
+        summary?: string;
+        insight?: string;
     };
     error?: string;
 }
@@ -264,7 +267,7 @@ export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResul
         });
 
         if (result.errors || !result.data) {
-            console.error('Amplify GraphQL Errors:', result.errors);
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
             return { success: false, error: 'GraphQL error occurred' };
         }
 
@@ -280,7 +283,7 @@ export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResul
             data: convertAiToNutritionInfo(rawData),
         };
     } catch (error) {
-        console.error('Bedrock image analysis error:', error);
+        secureLogger.error('Bedrock image analysis error', { error: error instanceof Error ? error.message : String(error) });
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to analyze image',
@@ -365,7 +368,7 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
         });
 
         if (result.errors || !result.data) {
-            console.error('Amplify GraphQL Errors:', result.errors);
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
             return { success: false, error: 'GraphQL error occurred' };
         }
 
@@ -407,7 +410,7 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
             data: convertAiToNutritionInfo(aiData),
         };
     } catch (error) {
-        console.error('Voice to food error:', error);
+        secureLogger.error('Voice to food error', { error: error instanceof Error ? error.message : String(error) });
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to process voice input',
@@ -430,15 +433,15 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
             if (!fastResult.errors && fastResult.data) {
                 const fastResponse = JSON.parse(fastResult.data);
                 if (fastResponse.success && fastResponse.items?.length > 0) {
-                    console.log(`Fast path: Found "${foodName}" in DB directly.`);
+                    secureLogger.debug(`Fast path: Found food in DB directly`);
                     return formatProcessedResult(fastResponse.items[0]);
                 }
             }
         } catch (fastErr) {
-            console.warn('Fast DB search failed, falling back to AI.', fastErr);
+            secureLogger.warning('Fast DB search failed, falling back to AI');
         }
 
-        console.log(`Slow path: "${foodName}" not found in DB, asking Bedrock...`);
+        secureLogger.debug(`Slow path: food not found in DB, asking Bedrock`);
 
         // Step 2: Ask Bedrock for ingredient breakdown + estimated nutrition
         const aiResult = await getClient().queries.aiEngine({
@@ -447,7 +450,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
         });
 
         if (aiResult.errors || !aiResult.data) {
-            console.error('Amplify GraphQL Errors:', aiResult.errors);
+            secureLogger.error('Amplify GraphQL Errors:', { errors: aiResult.errors });
             return { success: false, error: 'GraphQL error occurred' };
         }
 
@@ -464,7 +467,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
         });
 
         if (processResult.errors || !processResult.data) {
-            console.log('processNutrition failed, falling back to AI data');
+            secureLogger.debug('processNutrition failed, falling back to AI data');
             return {
                 success: true,
                 data: convertAiToNutritionInfo(aiData),
@@ -481,7 +484,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
 
         return formatProcessedResult(processedResponse.items[0]);
     } catch (error) {
-        console.error('Search food nutrition error:', error);
+        secureLogger.error('Search food nutrition error', { error: error instanceof Error ? error.message : String(error) });
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to search food',
@@ -562,7 +565,7 @@ export async function fixFood(currentFoodJson: any, correctionQuery: string): Pr
         });
 
         if (result.errors || !result.data) {
-            console.error('Amplify GraphQL Errors:', result.errors);
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
             return { success: false, error: 'GraphQL error occurred' };
         }
 
@@ -578,7 +581,7 @@ export async function fixFood(currentFoodJson: any, correctionQuery: string): Pr
 
         return { success: true, data: convertAiToNutritionInfo(rawData) };
     } catch (error) {
-        console.error('Fix food error:', error);
+        secureLogger.error('Fix food error', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Failed to fix food' };
     }
 }
@@ -605,7 +608,7 @@ export async function getOllieTip(context: string): Promise<OllieTipResponse> {
         const data = extractAndParseJSON(responseObj.text);
         return { success: true, data };
     } catch (error) {
-        console.error('Ollie tip error:', error);
+        secureLogger.error('Ollie tip error', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Failed to get tip' };
     }
 }
@@ -637,7 +640,7 @@ export async function generateRecipe(
         const data = extractAndParseJSON(responseObj.text);
         return { success: true, data };
     } catch (error) {
-        console.error('Generate recipe error:', error);
+        secureLogger.error('Generate recipe error', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Failed to generate recipes' };
     }
 }
@@ -664,7 +667,7 @@ export async function calculateMacros(userProfileJson: any): Promise<MacroRespon
         const data = extractAndParseJSON(responseObj.text);
         return { success: true, data };
     } catch (error) {
-        console.error('Calculate macros error:', error);
+        secureLogger.error('Calculate macros error', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Failed to calculate macros' };
     }
 }
@@ -700,7 +703,7 @@ export async function getChallengeSummary(params: {
         const data = extractAndParseJSON(responseObj.text);
         return { success: true, data };
     } catch (error) {
-        console.error('Challenge summary error:', error);
+        secureLogger.error('Challenge summary error', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Failed to get challenge summary' };
     }
 }
@@ -731,7 +734,7 @@ export async function getWeeklyInsight(
         const data = extractAndParseJSON(responseObj.text);
         return { success: true, data };
     } catch (error) {
-        console.error('Weekly insight error:', error);
+        secureLogger.error('Weekly insight error', { error: error instanceof Error ? error.message : String(error) });
         return { success: false, error: error instanceof Error ? error.message : 'Failed to get weekly insight' };
     }
 }
@@ -751,7 +754,7 @@ export async function generateCoachResponse(
         });
 
         if (result.errors || !result.data) {
-            console.error('Amplify GraphQL Errors:', result.errors);
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
             return { success: false, error: 'GraphQL error occurred' };
         }
 
@@ -772,7 +775,7 @@ export async function generateCoachResponse(
                 const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
                 foodSuggestions.push(JSON.parse(cleanJson));
             } catch (e) {
-                console.error('Failed to parse food card JSON', match[0], e);
+                secureLogger.error('Failed to parse food card JSON');
             }
         }
 
@@ -786,7 +789,7 @@ export async function generateCoachResponse(
                 const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
                 exerciseSuggestions.push(JSON.parse(cleanJson));
             } catch (e) {
-                console.error('Failed to parse exercise card JSON', match[0], e);
+                secureLogger.error('Failed to parse exercise card JSON');
             }
         }
 
@@ -801,7 +804,7 @@ export async function generateCoachResponse(
                     statsCard = JSON.parse(cleanJson);
                 }
             } catch (e) {
-                console.error('Failed to parse stats card JSON', statsMatch[0], e);
+                secureLogger.error('Failed to parse stats card JSON');
             }
         }
 
@@ -824,7 +827,7 @@ export async function generateCoachResponse(
             foodSuggestion: foodSuggestions[0], // backward compat
         };
     } catch (error) {
-        console.error('Bedrock coach error:', error);
+        secureLogger.error('Bedrock coach error', { error: error instanceof Error ? error.message : String(error) });
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Failed to get coach response',

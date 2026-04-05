@@ -4,9 +4,17 @@ import { DynamoDBDocumentClient, ScanCommand, GetCommand } from '@aws-sdk/lib-dy
 import type { Schema } from '../data/resource';
 
 const REGION = process.env.AWS_REGION || 'ap-southeast-2';
+const IS_DEBUG = process.env.DEBUG === "true" || process.env.NODE_ENV === "development";
 
 const client = new DynamoDBClient({ region: REGION });
 const docClient = DynamoDBDocumentClient.from(client);
+
+// Simple debug logger - respects DEBUG env var
+const debug = (message: string, data?: any) => {
+  if (IS_DEBUG) {
+    console.log(`[process-nutrition] ${message}`, data || "");
+  }
+};
 
 // Cache tên bảng để tránh list tables nhiều lần
 let cachedTableName: string | null = null;
@@ -28,7 +36,7 @@ async function discoverTableName(): Promise<string> {
   if (!foodTable) throw new Error('Food table not found in DynamoDB');
 
   cachedTableName = foodTable;
-  console.log(`Discovered Food table: ${cachedTableName}`);
+  debug(`Discovered Food table: ${cachedTableName}`);
   return cachedTableName as string;
 }
 
@@ -55,7 +63,7 @@ async function loadAllFoods(): Promise<any[]> {
   } while (lastKey);
 
   cachedFoods = allItems;
-  console.log(`Loaded ${allItems.length} foods from DB`);
+  debug(`Loaded ${allItems.length} foods from DB`);
   return allItems;
 }
 
@@ -276,7 +284,7 @@ export const handler: Schema['processNutrition']['functionHandler'] = async (eve
     });
 
   } catch (error) {
-    console.error('ProcessNutrition Error:', error);
+    debug('ProcessNutrition Error:', error instanceof Error ? error.message : String(error));
     return JSON.stringify({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

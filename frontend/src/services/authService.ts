@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { signOut as amplifySignOut } from 'aws-amplify/auth';
+import { secureLogger } from '../security/SecureLogger';
 
 const AUTH_TOKEN_KEY = 'auth_token';
 const BIOMETRIC_ENABLED_KEY = 'biometric_enabled';
@@ -21,7 +22,7 @@ export const isBiometricSupported = async (): Promise<boolean> => {
         const compatible = await LocalAuthentication.hasHardwareAsync();
         return compatible;
     } catch (error) {
-        console.error('Error checking biometric support:', error);
+        secureLogger.error('Error checking biometric support', { error: error instanceof Error ? error.message : String(error) });
         return false;
     }
 };
@@ -32,7 +33,7 @@ export const isBiometricEnrolled = async (): Promise<boolean> => {
         const enrolled = await LocalAuthentication.isEnrolledAsync();
         return enrolled;
     } catch (error) {
-        console.error('Error checking biometric enrollment:', error);
+        secureLogger.error('Error checking biometric enrollment', { error: error instanceof Error ? error.message : String(error) });
         return false;
     }
 };
@@ -42,7 +43,7 @@ export const getBiometricTypes = async (): Promise<LocalAuthentication.Authentic
     try {
         return await LocalAuthentication.supportedAuthenticationTypesAsync();
     } catch (error) {
-        console.error('Error getting biometric types:', error);
+        secureLogger.error('Error getting biometric types', { error: error instanceof Error ? error.message : String(error) });
         return [];
     }
 };
@@ -59,7 +60,7 @@ export const authenticateWithBiometric = async (
         });
         return result.success;
     } catch (error) {
-        console.error('Biometric authentication error:', error);
+        secureLogger.error('Biometric authentication error', { error: error instanceof Error ? error.message : String(error) });
         return false;
     }
 };
@@ -73,7 +74,7 @@ export const saveAuthToken = async (token: string): Promise<void> => {
             await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
         }
     } catch (error) {
-        console.error('Error saving auth token:', error);
+        secureLogger.error('Error saving auth token', { error: error instanceof Error ? error.message : String(error) });
     }
 };
 
@@ -85,7 +86,7 @@ export const getAuthToken = async (): Promise<string | null> => {
         }
         return await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
     } catch (error) {
-        console.error('Error getting auth token:', error);
+        secureLogger.error('Error getting auth token', { error: error instanceof Error ? error.message : String(error) });
         return null;
     }
 };
@@ -99,7 +100,7 @@ export const deleteAuthToken = async (): Promise<void> => {
             await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
         }
     } catch (error) {
-        console.error('Error deleting auth token:', error);
+        secureLogger.error('Error deleting auth token', { error: error instanceof Error ? error.message : String(error) });
     }
 };
 
@@ -109,7 +110,7 @@ export const saveSession = async (session: AuthSession): Promise<void> => {
         await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(session));
         await saveAuthToken(session.token);
     } catch (error) {
-        console.error('Error saving session:', error);
+        secureLogger.error('Error saving session', { error: error instanceof Error ? error.message : String(error) });
     }
 };
 
@@ -119,7 +120,7 @@ export const getSession = async (): Promise<AuthSession | null> => {
         const sessionData = await AsyncStorage.getItem(SESSION_KEY);
         return sessionData ? JSON.parse(sessionData) : null;
     } catch (error) {
-        console.error('Error getting session:', error);
+        secureLogger.error('Error getting session', { error: error instanceof Error ? error.message : String(error) });
         return null;
     }
 };
@@ -138,7 +139,7 @@ export const clearSession = async (): Promise<void> => {
         await AsyncStorage.removeItem(SESSION_KEY);
         await deleteAuthToken();
     } catch (error) {
-        console.error('Error clearing session:', error);
+        secureLogger.error('Error clearing session', { error: error instanceof Error ? error.message : String(error) });
     }
 };
 
@@ -153,7 +154,7 @@ export const setBiometricEnabled = async (enabled: boolean): Promise<void> => {
     try {
         await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, JSON.stringify(enabled));
     } catch (error) {
-        console.error('Error setting biometric enabled:', error);
+        secureLogger.error('Error setting biometric enabled', { error: error instanceof Error ? error.message : String(error) });
     }
 };
 
@@ -162,7 +163,7 @@ export const isBiometricEnabled = async (): Promise<boolean> => {
         const value = await AsyncStorage.getItem(BIOMETRIC_ENABLED_KEY);
         return value ? JSON.parse(value) : false;
     } catch (error) {
-        console.error('Error getting biometric enabled:', error);
+        secureLogger.error('Error getting biometric enabled', { error: error instanceof Error ? error.message : String(error) });
         return false;
     }
 };
