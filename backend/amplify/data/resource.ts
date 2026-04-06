@@ -56,6 +56,10 @@ const schema = a.schema({
       source: a.string(),
     })
     .identifier(['food_id'])
+    .secondaryIndexes((index) => [
+      index('name_vi'),
+      index('name_en'),
+    ])
     .authorization((allow) => [
       allow.guest().to(['read']),
       allow.authenticated().to(['read'])

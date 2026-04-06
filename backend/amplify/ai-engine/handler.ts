@@ -1,12 +1,16 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 import { TranscribeClient, StartTranscriptionJobCommand, GetTranscriptionJobCommand, DeleteTranscriptionJobCommand } from "@aws-sdk/client-transcribe";
 import { S3Client, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { DynamoDBClient, ListTablesCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, QueryCommand, ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { randomUUID } from "crypto";
 
 const REGION = "ap-southeast-2";
 const bedrockClient = new BedrockRuntimeClient({ region: REGION });
 const transcribeClient = new TranscribeClient({ region: REGION });
 const s3Client = new S3Client({ region: REGION });
+const dbClient = new DynamoDBClient({ region: REGION });
+const docClient = DynamoDBDocumentClient.from(dbClient);
 
 const QWEN_MODEL_ID = process.env.QWEN_MODEL_ID || "qwen.qwen3-vl-235b-a22b";
 const STORAGE_BUCKET = process.env.STORAGE_BUCKET_NAME || "";
@@ -422,14 +426,127 @@ export const handler = async (event: any) => {
                 { role: "user", content: `User said: "${transcript}"\n\nAnalyze and return JSON following the output format.` },
             ]);
 
-            // DEBUG: Skip S3 cleanup
-            // try {
-            //     await s3Client.send(new DeleteObjectCommand({ Bucket: STORAGE_BUCKET, Key: s3Key }));
-            // } catch (e) {
-            //     console.warn('Failed to cleanup voice file:', e);
-            // }
+            // ==========================================
+            // RECALCULATE with DB Data (Phase 1)
+            // ==========================================
+            try {
+                const aiResponse = JSON.parse(qwenResult);
+                if (aiResponse.action === 'log' && aiResponse.food_data) {
+                    const foodData = aiResponse.food_data;
+                    const ingredients = foodData.ingredients || [];
+                    const tableName = await discoverTableName();
+                    
+                    let totalCalories = 0, totalProtein = 0, totalCarbs = 0, totalFat = 0;
+                    const processedIngredients = [];
+
+                    for (const ing of ingredients) {
+                        const dbMatch = await findFoodInDB(ing.name, tableName);
+                        if (dbMatch) {
+                            const nutrition = calculateNutrition(dbMatch, ing.weight_g || 100);
+                            processedIngredients.push({
+                                ...ing,
+                                food_id: dbMatch.food_id,
+                                name_vi_db: dbMatch.name_vi,
+                                matched: true,
+                                source: 'database',
+                                ...nutrition
+                            });
+                            totalCalories += nutrition.calories;
+                            totalProtein += nutrition.protein_g;
+                            totalCarbs += nutrition.carbs_g;
+                            totalFat += nutrition.fat_g;
+                        } else {
+                            processedIngredients.push({
+                                ...ing,
+                                matched: false,
+                                source: 'ai_estimated'
+                            });
+                            // Keep AI estimated values
+                            totalCalories += (ing.calories || 0);
+                            totalProtein += (ing.protein_g || 0);
+                            totalCarbs += (ing.carbs_g || 0);
+                            totalFat += (ing.fat_g || 0);
+                        }
+                    }
+
+                    // Update the response with recalculated data
+                    aiResponse.food_data.macros = {
+                        ...aiResponse.food_data.macros,
+                        calories: Math.round(totalCalories * 10) / 10,
+                        protein_g: Math.round(totalProtein * 10) / 10,
+                        carbs_g: Math.round(totalCarbs * 10) / 10,
+                        fat_g: Math.round(totalFat * 10) / 10
+                    };
+                    aiResponse.food_data.ingredients = processedIngredients;
+                    aiResponse.db_verified = processedIngredients.some(i => i.matched);
+                    
+                    return JSON.stringify({ 
+                        success: true, 
+                        transcript, 
+                        text: JSON.stringify(aiResponse) 
+                    });
+                }
+            } catch (calcError) {
+                console.error('Recalculation error:', calcError);
+            }
 
             return JSON.stringify({ success: true, transcript, text: qwenResult });
+        }
+
+        // ── Helper functions for DB Lookup ──
+        async function discoverTableName(): Promise<string> {
+            const result = await dbClient.send(new ListTablesCommand({}));
+            return result.TableNames?.find((name: string) => name.startsWith('Food-')) || "";
+        }
+
+        function normalize(text: string): string {
+            if (!text) return "";
+            return text.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+        }
+
+        async function findFoodInDB(query: string, tableName: string): Promise<any | null> {
+            if (!tableName || !query) return null;
+            const q = query.toLowerCase().trim();
+
+            // 1. Exact match GSI (Diacritic-sensitive)
+            const qVi = await docClient.send(new QueryCommand({
+                TableName: tableName, IndexName: 'name_vi',
+                KeyConditionExpression: 'name_vi = :name',
+                ExpressionAttributeValues: { ':name': query }
+            }));
+            if (qVi.Items?.length) return qVi.Items[0];
+
+            // 2. Partial match (Diacritic-sensitive) - e.g., "bò" matches "Thịt bò"
+            const scanVi = await docClient.send(new ScanCommand({
+                TableName: tableName,
+                FilterExpression: 'contains(name_vi, :q)',
+                ExpressionAttributeValues: { ':q': query }
+            }));
+            if (scanVi.Items?.length) {
+                // Return shortest name match first
+                return scanVi.Items.sort((a, b) => a.name_vi.length - b.name_vi.length)[0];
+            }
+            
+            // 3. Aliases (Diacritic-sensitive)
+            const scanAlias = await docClient.send(new ScanCommand({
+                TableName: tableName,
+                FilterExpression: 'contains(aliases_vi, :q)',
+                ExpressionAttributeValues: { ':q': query }
+            }));
+            if (scanAlias.Items?.length) return scanAlias.Items[0];
+
+            return null;
+        }
+
+        function calculateNutrition(dbFood: any, weightG: number) {
+            const m = dbFood.macros || {};
+            const r = weightG / 100;
+            return {
+                calories: Math.round((m.calories || 0) * r * 10) / 10,
+                protein_g: Math.round((m.protein_g || 0) * r * 10) / 10,
+                carbs_g: Math.round((m.carbs_g || 0) * r * 10) / 10,
+                fat_g: Math.round((m.fat_g || 0) * r * 10) / 10
+            };
         }
 
         // ── Fix Food (Correction) ──
