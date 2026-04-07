@@ -165,14 +165,13 @@ export const handler = async (event: any) => {
 
     // Stream body to buffer
     const chunks: Uint8Array[] = [];
-    const reader = s3Response.Body?.getReader();
-    if (!reader) {
+    const stream = s3Response.Body;
+    if (!stream) {
       throw new Error("Failed to read S3 object");
     }
 
-    let chunk;
-    while (!(chunk = await reader.read()).done) {
-      chunks.push(chunk.value);
+    for await (const chunk of stream as any) {
+      chunks.push(chunk instanceof Buffer ? chunk : Buffer.from(chunk));
     }
 
     const imageBuffer = Buffer.concat(chunks);
