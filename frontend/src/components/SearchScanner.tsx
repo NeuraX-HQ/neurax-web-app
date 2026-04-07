@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, Shadows } from '../constants/colors';
-import { searchFoodNutrition, NutritionInfo } from '../services/aiService';
+import { generateFood, NutritionInfo } from '../services/aiService';
 import { useAppLanguage } from '../i18n/LanguageProvider';
 import { recipes } from '../data/recipes';
 
@@ -61,7 +61,7 @@ export function SearchScanner({ visible, onClose }: SearchScannerProps) {
 
         setSearching(true);
         try {
-            const result = await searchFoodNutrition(foodName.trim());
+            const result = await generateFood(foodName.trim());
 
             if (result.success && result.data) {
                 // Thêm vào lịch sử tìm kiếm (Dạng NutritionInfo)

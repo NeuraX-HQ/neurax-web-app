@@ -1,5 +1,6 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 import { aiEngine } from '../ai-engine/resource';
+import { scanImage } from '../scan-image/resource';
 import { processNutrition } from '../process-nutrition/resource';
 import { friendRequest } from '../friend-request/resource';
 
@@ -277,6 +278,19 @@ const schema = a.schema({
     })
     .returns(a.string())
     .handler(a.handler.function(aiEngine))
+    .authorization((allow) => [allow.authenticated()]),
+
+  //========================================
+  // Scan Image (proxy to ECS for photo analysis)
+  //========================================
+  scanImage: a
+    .query()
+    .arguments({
+      action: a.string().required(),
+      payload: a.string(),
+    })
+    .returns(a.string())
+    .handler(a.handler.function(scanImage))
     .authorization((allow) => [allow.authenticated()]),
 
   //========================================

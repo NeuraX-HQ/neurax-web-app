@@ -261,7 +261,7 @@ export interface WeeklyInsightResponse {
  */
 export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResult> {
     try {
-        const result = await getClient().queries.aiEngine({
+        const result = await getClient().queries.scanImage({
             action: 'analyzeFoodImage',
             payload: JSON.stringify({ s3Key })
         });
@@ -422,7 +422,7 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
  * Search for food and get enriched nutrition info through AI + DB verification
  * Fast Path: query Food DB first, fallback to Bedrock AI.
  */
-export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysisResult> {
+export async function generateFood(foodName: string): Promise<FoodAnalysisResult> {
     try {
         // Step 1: FAST PATH - Search DB directly
         try {
@@ -445,7 +445,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
 
         // Step 2: Ask Bedrock for ingredient breakdown + estimated nutrition
         const aiResult = await getClient().queries.aiEngine({
-            action: 'searchFoodNutrition',
+            action: 'generateFood',
             payload: JSON.stringify({ foodName })
         });
 
