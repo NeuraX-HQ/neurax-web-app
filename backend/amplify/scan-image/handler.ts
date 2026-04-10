@@ -57,7 +57,7 @@ async function pollJob(
   authHeader: string,
   signal: AbortSignal,
   pollIntervalMs = 3000,
-  maxWaitMs = 120_000
+  maxWaitMs = 270_000
 ): Promise<any> {
   const pollUrl = `${ECS_BASE_URL}/jobs/${jobId}`;
   const start = Date.now();
@@ -359,8 +359,8 @@ export const handler = async (event: any) => {
     debug("Calling ECS", { ecsUrl });
 
     const controller = new AbortController();
-    // 140s total: ~3s init + up to 120s polling + buffer
-    const timeout = setTimeout(() => controller.abort(), 140_000);
+    // 290s total: ~3s init + up to 270s polling + buffer
+    const timeout = setTimeout(() => controller.abort(), 290_000);
 
     let jobId: string;
     try {

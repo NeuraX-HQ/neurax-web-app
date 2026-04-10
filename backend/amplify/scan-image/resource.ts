@@ -5,5 +5,5 @@ export const scanImage = defineFunction({
   entry: './handler.ts',
   runtime: 22,
   memoryMB: 1024,
-  timeoutSeconds: 150,
+  timeoutSeconds: 300,
 });
