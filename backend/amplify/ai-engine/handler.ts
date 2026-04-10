@@ -362,7 +362,7 @@ export const handler = async (event: any) => {
         }
 
         // ── Food Search / Generation (DB miss → AI) ──
-        if (action === 'searchFoodNutrition') {
+        if (action === 'generateFood') {
             const { foodName } = data;
             const text = await callQwen([
                 { role: "system", content: GEN_FOOD_SYSTEM_PROMPT },
@@ -549,15 +549,6 @@ export const handler = async (event: any) => {
             };
         }
 
-        // ── Fix Food (Correction) ──
-        if (action === 'fixFood') {
-            const { currentFoodJson, correctionQuery } = data;
-            const text = await callQwen([
-                { role: "system", content: FIX_FOOD_SYSTEM_PROMPT },
-                { role: "user", content: `Current data: ${JSON.stringify(currentFoodJson)}\n\nUser request: "${correctionQuery}"\n\nPlease correct the data and return ONLY the new JSON.` },
-            ]);
-            return JSON.stringify({ success: true, text });
-        }
 
         // ── Ollie Coach Tip (quick nudge) ──
         if (action === 'ollieCoachTip') {

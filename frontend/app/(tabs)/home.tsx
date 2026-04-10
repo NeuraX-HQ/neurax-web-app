@@ -48,6 +48,71 @@ const addDaysToIso = (iso: string, days: number) => {
 
 const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
 
+type WeekItemProps = {
+    week: { iso: string; weekdayIndex: number; day: number }[];
+    selectedDateStr: string;
+    todayIso: string;
+    earliestLogDate: string;
+    caloriesByDate: Record<string, number>;
+    dailyCalorieTarget: number;
+    weekdayLabels: string[];
+    windowWidth: number;
+    onSelectDate: (iso: string) => void;
+};
+
+const WeekItem = React.memo(function WeekItem({
+    week, selectedDateStr, todayIso, earliestLogDate,
+    caloriesByDate, dailyCalorieTarget, weekdayLabels, windowWidth, onSelectDate,
+}: WeekItemProps) {
+    return (
+        <View style={[styles.weekContainer, { width: windowWidth }]}>
+            {week.map(item => {
+                const isSelected = item.iso === selectedDateStr;
+                const isPast = item.iso < todayIso;
+                const isToday = item.iso === todayIso;
+                const isFuture = item.iso > todayIso;
+                const isAfterOrOnStart = item.iso >= earliestLogDate;
+
+                let ringStyle = {};
+                if (isPast && isAfterOrOnStart) {
+                    const eaten = caloriesByDate[item.iso];
+                    if (eaten === undefined) {
+                        ringStyle = styles.dayRingDashed;
+                    } else {
+                        const excess = eaten - dailyCalorieTarget;
+                        if (excess <= 100) ringStyle = styles.dayRingGreen;
+                        else if (excess <= 200) ringStyle = styles.dayRingYellow;
+                        else ringStyle = styles.dayRingRed;
+                    }
+                }
+
+                return (
+                    <View key={item.iso} style={styles.dayContainer}>
+                        <View style={[styles.dayRingWrapper, ringStyle]}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.dayItem,
+                                    isSelected && styles.dayItemSelected,
+                                    !isSelected && isToday && styles.dayItemToday,
+                                    isFuture && !isSelected && styles.dayItemFuture,
+                                ]}
+                                onPress={() => onSelectDate(item.iso)}
+                            >
+                                <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
+                                    {weekdayLabels[item.weekdayIndex]}
+                                </Text>
+                                <Text style={[styles.dayDate, isSelected && styles.dayDateSelected]}>
+                                    {item.day}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                );
+            })}
+        </View>
+    );
+});
+
 export default function HomeScreen() {
     const router = useRouter();
     const { width: windowWidth } = useWindowDimensions();
@@ -206,6 +271,11 @@ export default function HomeScreen() {
     const withAutoClose = useCallback((action: () => void) => () => {
         if (closeOpenRow()) return;
         action();
+    }, []);
+
+    const handleSelectDate = useCallback((iso: string) => {
+        if (closeOpenRow()) return;
+        setSelectedDateStr(iso);
     }, []);
 
     const stats = useMemo(() => displayedMeals.reduce(
@@ -731,57 +801,19 @@ export default function HomeScreen() {
                         contentContainerStyle={{ paddingVertical: 8 }}
                         initialScrollIndex={500}
                         getItemLayout={(_, index) => ({ length: windowWidth, offset: windowWidth * index, index })}
-                        renderItem={({ item: week }: { item: { iso: string; weekdayIndex: number; day: number }[] }) => (
-                            <View style={[styles.weekContainer, { width: windowWidth }]}>
-                                {week.map(item => {
-                                    const isSelected = item.iso === selectedDateStr;
-                                    const isPast = item.iso < todayIso;
-                                    const isToday = item.iso === todayIso;
-                                    const isFuture = item.iso > todayIso;
-                                    const isAfterOrOnStart = item.iso >= earliestLogDate;
-
-                                    let ringStyle = {};
-                                    if (isPast && isAfterOrOnStart) {
-                                        const eaten = caloriesByDate[item.iso];
-                                        if (eaten === undefined) {
-                                            ringStyle = styles.dayRingDashed;
-                                        } else {
-                                            const excess = eaten - dailyCalorieTarget;
-                                            if (excess <= 100) {
-                                                ringStyle = styles.dayRingGreen;
-                                            } else if (excess <= 200) {
-                                                ringStyle = styles.dayRingYellow;
-                                            } else {
-                                                ringStyle = styles.dayRingRed;
-                                            }
-                                        }
-                                    }
-
-                                    return (
-                                        <View key={item.iso} style={styles.dayContainer}>
-                                            <View style={[styles.dayRingWrapper, ringStyle]}>
-                                                <TouchableOpacity
-                                                    style={[
-                                                        styles.dayItem,
-                                                        isSelected && styles.dayItemSelected,
-                                                        !isSelected && isToday && styles.dayItemToday,
-                                                        isFuture && !isSelected && styles.dayItemFuture,
-                                                    ]}
-                                                    onPress={withAutoClose(() => setSelectedDateStr(item.iso))}
-                                                >
-                                                    <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
-                                                        {weekdayLabels[item.weekdayIndex]}
-                                                    </Text>
-                                                    <Text style={[styles.dayDate, isSelected && styles.dayDateSelected]}>
-                                                        {item.day}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            </View>
-                                        </View>
-                                    );
-                                })}
-                            </View>
-                        )}
+                        renderItem={useCallback(({ item: week }: { item: { iso: string; weekdayIndex: number; day: number }[] }) => (
+                            <WeekItem
+                                week={week}
+                                selectedDateStr={selectedDateStr}
+                                todayIso={todayIso}
+                                earliestLogDate={earliestLogDate}
+                                caloriesByDate={caloriesByDate}
+                                dailyCalorieTarget={dailyCalorieTarget}
+                                weekdayLabels={weekdayLabels}
+                                windowWidth={windowWidth}
+                                onSelectDate={handleSelectDate}
+                            />
+                        ), [selectedDateStr, todayIso, earliestLogDate, caloriesByDate, dailyCalorieTarget, weekdayLabels, windowWidth, handleSelectDate])}
                     />
 
                     {/* Calorie Card */}

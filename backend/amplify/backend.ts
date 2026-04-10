@@ -2,6 +2,7 @@ import { defineBackend } from '@aws-amplify/backend';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
 import { aiEngine } from './ai-engine/resource';
+import { scanImage } from './scan-image/resource';
 import { processNutrition } from './process-nutrition/resource';
 import { friendRequest } from './friend-request/resource';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -18,6 +19,7 @@ const backend = defineBackend({
   auth,
   data,
   aiEngine,
+  scanImage,
   processNutrition,
   friendRequest,
   storage,
@@ -112,6 +114,25 @@ s3Bucket.addToResourcePolicy(new iam.PolicyStatement({
 // Pass S3 bucket name to aiEngine Lambda via escape hatch
 const cfnAiEngineFn = aiEngineLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;
 cfnAiEngineFn.addPropertyOverride('Environment.Variables.STORAGE_BUCKET_NAME', s3Bucket.bucketName);
+
+// Grant scanImage Lambda read access to S3
+const scanImageLambda = backend.scanImage.resources.lambda;
+s3Bucket.grantRead(scanImageLambda);
+
+// Grant scanImage Lambda permission to read ECS API key from Secrets Manager
+scanImageLambda.addToRolePolicy(new iam.PolicyStatement({
+  effect: iam.Effect.ALLOW,
+  actions: ['secretsmanager:GetSecretValue'],
+  resources: ['arn:aws:secretsmanager:ap-southeast-2:*:secret:nutritrack/prod/api-keys*'],
+}));
+
+// Pass S3 bucket name and ECS URL to scanImage Lambda via escape hatch
+const cfnScanImageFn = scanImageLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;
+cfnScanImageFn.addPropertyOverride('Environment.Variables.STORAGE_BUCKET_NAME', s3Bucket.bucketName);
+cfnScanImageFn.addPropertyOverride(
+  'Environment.Variables.ECS_BASE_URL',
+  'http://nutritrack-api-vpc-alb-1060755902.ap-southeast-2.elb.amazonaws.com'
+);
 
 // Grant friendRequest Lambda permissions to read/write user + Friendship tables
 const friendRequestLambda = backend.friendRequest.resources.lambda;

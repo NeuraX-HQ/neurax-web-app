@@ -261,7 +261,7 @@ export interface WeeklyInsightResponse {
  */
 export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResult> {
     try {
-        const result = await getClient().queries.aiEngine({
+        const result = await getClient().queries.scanImage({
             action: 'analyzeFoodImage',
             payload: JSON.stringify({ s3Key })
         });
@@ -288,6 +288,56 @@ export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResul
             success: false,
             error: error instanceof Error ? error.message : 'Failed to analyze image',
         };
+    }
+}
+
+export async function analyzeFoodLabel(s3Key: string): Promise<FoodAnalysisResult> {
+    try {
+        const result = await getClient().queries.scanImage({
+            action: 'analyzeFoodLabel',
+            payload: JSON.stringify({ s3Key })
+        });
+
+        if (result.errors || !result.data) {
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const rawData = extractAndParseJSON(responseObj.text);
+        return { success: true, data: convertAiToNutritionInfo(rawData) };
+    } catch (error) {
+        secureLogger.error('Food label analysis error', { error: error instanceof Error ? error.message : String(error) });
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to analyze label' };
+    }
+}
+
+export async function scanBarcode(s3Key: string): Promise<FoodAnalysisResult> {
+    try {
+        const result = await getClient().queries.scanImage({
+            action: 'scanBarcode',
+            payload: JSON.stringify({ s3Key })
+        });
+
+        if (result.errors || !result.data) {
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const rawData = extractAndParseJSON(responseObj.text);
+        return { success: true, data: convertAiToNutritionInfo(rawData) };
+    } catch (error) {
+        secureLogger.error('Barcode scan error', { error: error instanceof Error ? error.message : String(error) });
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to scan barcode' };
     }
 }
 
@@ -422,7 +472,7 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
  * Search for food and get enriched nutrition info through AI + DB verification
  * Fast Path: query Food DB first, fallback to Bedrock AI.
  */
-export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysisResult> {
+export async function generateFood(foodName: string): Promise<FoodAnalysisResult> {
     try {
         // Step 1: FAST PATH - Search DB directly
         try {
@@ -445,7 +495,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
 
         // Step 2: Ask Bedrock for ingredient breakdown + estimated nutrition
         const aiResult = await getClient().queries.aiEngine({
-            action: 'searchFoodNutrition',
+            action: 'generateFood',
             payload: JSON.stringify({ foodName })
         });
 
