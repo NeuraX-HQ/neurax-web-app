@@ -291,6 +291,56 @@ export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResul
     }
 }
 
+export async function analyzeFoodLabel(s3Key: string): Promise<FoodAnalysisResult> {
+    try {
+        const result = await getClient().queries.scanImage({
+            action: 'analyzeFoodLabel',
+            payload: JSON.stringify({ s3Key })
+        });
+
+        if (result.errors || !result.data) {
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const rawData = extractAndParseJSON(responseObj.text);
+        return { success: true, data: convertAiToNutritionInfo(rawData) };
+    } catch (error) {
+        secureLogger.error('Food label analysis error', { error: error instanceof Error ? error.message : String(error) });
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to analyze label' };
+    }
+}
+
+export async function scanBarcode(s3Key: string): Promise<FoodAnalysisResult> {
+    try {
+        const result = await getClient().queries.scanImage({
+            action: 'scanBarcode',
+            payload: JSON.stringify({ s3Key })
+        });
+
+        if (result.errors || !result.data) {
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const rawData = extractAndParseJSON(responseObj.text);
+        return { success: true, data: convertAiToNutritionInfo(rawData) };
+    } catch (error) {
+        secureLogger.error('Barcode scan error', { error: error instanceof Error ? error.message : String(error) });
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to scan barcode' };
+    }
+}
+
 /** Convert webm base64 → wav base64 using Web Audio API (for Transcribe compatibility) */
 async function convertWebmToWav(base64Webm: string): Promise<string> {
     const bin = atob(base64Webm);

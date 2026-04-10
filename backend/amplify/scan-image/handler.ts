@@ -1,7 +1,10 @@
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
+import { createHmac } from "crypto";
 
 const REGION = "ap-southeast-2";
 const s3Client = new S3Client({ region: REGION });
+const secretsClient = new SecretsManagerClient({ region: REGION });
 
 const STORAGE_BUCKET = process.env.STORAGE_BUCKET_NAME || "";
 const ECS_BASE_URL = process.env.ECS_BASE_URL || "http://nutritrack-api-vpc-alb-1060755902.ap-southeast-2.elb.amazonaws.com";
@@ -13,11 +16,88 @@ const debug = (message: string, data?: any) => {
   }
 };
 
+// Cache API key across warm Lambda invocations
+let cachedApiKey: string | null = null;
+
+async function getApiKey(): Promise<string> {
+  if (cachedApiKey) return cachedApiKey;
+
+  const resp = await secretsClient.send(
+    new GetSecretValueCommand({ SecretId: "nutritrack/prod/api-keys" })
+  );
+  const secret = JSON.parse(resp.SecretString || "{}");
+  cachedApiKey = secret.NUTRITRACK_API_KEY || "";
+  return cachedApiKey as string;
+}
+
+// Generate HS256 JWT using Node.js built-in crypto (no external JWT library needed)
+function generateJWT(secret: string): string {
+  const b64url = (buf: Buffer) =>
+    buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+
+  const header = b64url(Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })));
+  const now = Math.floor(Date.now() / 1000);
+  const payload = b64url(
+    Buffer.from(JSON.stringify({ service: "backend", iat: now, exp: now + 300 }))
+  );
+  const data = `${header}.${payload}`;
+  const sig = b64url(createHmac("sha256", secret).update(data).digest());
+  return `${data}.${sig}`;
+}
+
 const ACTION_TO_ENDPOINT: Record<string, string> = {
   analyzeFoodImage: "/analyze-food?method=tools",
   analyzeFoodLabel: "/analyze-label",
   scanBarcode: "/scan-barcode",
 };
+
+// Poll /jobs/{jobId} until completed or failed
+async function pollJob(
+  jobId: string,
+  authHeader: string,
+  signal: AbortSignal,
+  pollIntervalMs = 3000,
+  maxWaitMs = 120_000
+): Promise<any> {
+  const pollUrl = `${ECS_BASE_URL}/jobs/${jobId}`;
+  const start = Date.now();
+
+  while (true) {
+    if (Date.now() - start > maxWaitMs) {
+      throw new Error("Job polling timeout — analysis took too long");
+    }
+
+    // Wait before polling
+    await new Promise<void>((resolve) => {
+      const t = setTimeout(resolve, pollIntervalMs);
+      signal.addEventListener("abort", () => { clearTimeout(t); resolve(); }, { once: true });
+    });
+
+    if (signal.aborted) throw new Error("AbortError");
+
+    const resp = await fetch(pollUrl, {
+      headers: { Authorization: authHeader },
+      signal,
+    });
+
+    if (!resp.ok) {
+      const body = await resp.text();
+      throw new Error(`Job poll failed (${resp.status}): ${body}`);
+    }
+
+    const job = await resp.json();
+    debug("Poll result", { status: job.status });
+
+    if (job.status === "completed") {
+      return job.result;
+    }
+
+    if (job.status === "failed") {
+      throw new Error(job.error || "ECS job failed");
+    }
+    // status === "processing" → keep polling
+  }
+}
 
 interface GENFOODMacros {
   calories: number;
@@ -65,38 +145,30 @@ interface GENFOOD {
   source: string;
 }
 
-// Normalize ECS response to GEN_FOOD schema
-function normalizeToGENFOOD(ecsBody: any): GENFOOD {
-  const dish = ecsBody?.data?.dishes?.[0];
-  if (!dish) {
-    throw new Error("No food detected in image");
-  }
+const EMPTY_MACROS = {
+  saturated_fat_g: 0, polyunsaturated_fat_g: 0, monounsaturated_fat_g: 0,
+  fiber_g: 0, sugar_g: 0, sodium_mg: 0, cholesterol_mg: 0, potassium_mg: 0,
+};
+const EMPTY_MICRONUTRIENTS = { calcium_mg: 0, iron_mg: 0, vitamin_a_ug: 0, vitamin_c_mg: 0 };
+
+// Food photo: job.result.data.dishes[0]
+function normalizeFoodToGENFOOD(ecsResult: any): GENFOOD {
+  const dish = ecsResult?.data?.dishes?.[0];
+  if (!dish) throw new Error("No food detected in image");
 
   const n = dish.nutritions || {};
   return {
     food_id: "custom_gen_temp",
-    name_vi: dish.name || "Unknown Food",
+    name_vi: dish.vi_name || dish.name || "Unknown Food",
     name_en: dish.name || "Unknown Food",
     macros: {
       calories: Number(n.calories) || 0,
       protein_g: Number(n.protein) || 0,
       carbs_g: Number(n.carbs) || 0,
       fat_g: Number(n.fat) || 0,
-      saturated_fat_g: 0,
-      polyunsaturated_fat_g: 0,
-      monounsaturated_fat_g: 0,
-      fiber_g: 0,
-      sugar_g: 0,
-      sodium_mg: 0,
-      cholesterol_mg: 0,
-      potassium_mg: 0,
+      ...EMPTY_MACROS,
     },
-    micronutrients: {
-      calcium_mg: 0,
-      iron_mg: 0,
-      vitamin_a_ug: 0,
-      vitamin_c_mg: 0,
-    },
+    micronutrients: EMPTY_MICRONUTRIENTS,
     serving: {
       default_g: Number(dish.weight || dish.serving_value) || 0,
       unit: dish.serving_unit || "serving",
@@ -110,6 +182,91 @@ function normalizeToGENFOOD(ecsBody: any): GENFOOD {
     verified: false,
     source: "ECS Scan",
   };
+}
+
+// Nutrition label: job.result.data.labels[0]
+// label.nutrition = [{ nutrient: "Chất đạm", value: 6.9, unit: "g" }, ...]
+function normalizeLabelToGENFOOD(ecsResult: any): GENFOOD {
+  const label = ecsResult?.data?.labels?.[0];
+  if (!label) throw new Error("No nutrition label detected in image");
+
+  const nutrition: { nutrient: string; value: number }[] = label.nutrition || [];
+  const findNutrient = (...keywords: string[]) => {
+    const item = nutrition.find((it) =>
+      keywords.some((k) => it.nutrient.toLowerCase().includes(k))
+    );
+    return Number(item?.value) || 0;
+  };
+
+  return {
+    food_id: "custom_label_temp",
+    name_vi: label.name || "Sản phẩm",
+    name_en: label.name || "Product",
+    macros: {
+      calories: findNutrient("năng lượng", "energy", "calori", "kcal"),
+      protein_g: findNutrient("đạm", "protein"),
+      carbs_g: findNutrient("carbohydrate", "glucid", "tinh bột", "đường bột"),
+      fat_g: findNutrient("béo", "fat", "lipid"),
+      ...EMPTY_MACROS,
+    },
+    micronutrients: EMPTY_MICRONUTRIENTS,
+    serving: {
+      default_g: Number(label.serving_value) || 0,
+      unit: label.serving_unit || "g",
+      portions: { small: 0.7, medium: 1.0, large: 1.3 },
+    },
+    ingredients: (label.ingredients || []).map((name: string) => ({
+      name_vi: name,
+      name_en: name,
+      weight_g: 0,
+    })),
+    verified: false,
+    source: "ECS Label Scan",
+  };
+}
+
+// Barcode: job.result.data = { found: bool, food: { product_name, nutritions: { calories, protein, fat, carbs } } }
+function normalizeBarcodeToGENFOOD(ecsResult: any): GENFOOD {
+  const data = ecsResult?.data;
+  if (!data?.found) throw new Error("Barcode not found or product not in database");
+
+  const food = data.food;
+  if (!food) throw new Error("No product data for barcode");
+
+  const n = food.nutritions || {};
+  return {
+    food_id: `barcode_${food.barcode || "unknown"}`,
+    name_vi: food.product_name || food.name || "Sản phẩm",
+    name_en: food.product_name || food.name || "Product",
+    macros: {
+      calories: Number(n.calories) || 0,
+      protein_g: Number(n.protein) || 0,
+      carbs_g: Number(n.carbs) || 0,
+      fat_g: Number(n.fat) || 0,
+      fiber_g: Number(n.fiber) || 0,
+      sugar_g: Number(n.sugar) || 0,
+      sodium_mg: Number(n.sodium) ? Number(n.sodium) * 1000 : 0,
+      saturated_fat_g: 0, polyunsaturated_fat_g: 0, monounsaturated_fat_g: 0,
+      cholesterol_mg: 0, potassium_mg: 0,
+    },
+    micronutrients: EMPTY_MICRONUTRIENTS,
+    serving: {
+      default_g: 100,
+      unit: "g",
+      portions: { small: 0.7, medium: 1.0, large: 1.3 },
+    },
+    ingredients: [],
+    verified: true,
+    source: `Barcode (${data.source || "database"})`,
+  };
+}
+
+function normalizeEcsResult(action: string, ecsResult: any): GENFOOD {
+  switch (action) {
+    case "analyzeFoodLabel": return normalizeLabelToGENFOOD(ecsResult);
+    case "scanBarcode":      return normalizeBarcodeToGENFOOD(ecsResult);
+    default:                 return normalizeFoodToGENFOOD(ecsResult);
+  }
 }
 
 export const handler = async (event: any) => {
@@ -177,57 +334,85 @@ export const handler = async (event: any) => {
     const imageBuffer = Buffer.concat(chunks);
     const contentType = s3Response.ContentType || "image/jpeg";
 
-    debug("Image downloaded", {
-      size: imageBuffer.length,
-      contentType,
-    });
+    debug("Image downloaded", { size: imageBuffer.length, contentType });
+
+    // Get API key + generate JWT for ECS auth
+    const apiKey = await getApiKey();
+    if (!apiKey) {
+      return JSON.stringify({
+        success: false,
+        error: "ECS API key not configured",
+      });
+    }
+    const token = generateJWT(apiKey);
+    const authHeader = `Bearer ${token}`;
 
     // Build FormData with Blob
     const blob = new Blob([imageBuffer], { type: contentType });
     const form = new FormData();
     form.append("file", blob, "upload.jpg");
 
-    // Call ECS
+    // Call ECS — POST to get job_id (async response, HTTP 202)
     const endpoint = ACTION_TO_ENDPOINT[action];
     const ecsUrl = `${ECS_BASE_URL}${endpoint}`;
 
     debug("Calling ECS", { ecsUrl });
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 140_000); // 140s timeout
+    // 140s total: ~3s init + up to 120s polling + buffer
+    const timeout = setTimeout(() => controller.abort(), 140_000);
 
-    let ecsResponse: Response;
+    let jobId: string;
     try {
-      ecsResponse = await fetch(ecsUrl, {
+      const initResponse = await fetch(ecsUrl, {
         method: "POST",
         body: form,
+        headers: { Authorization: authHeader },
         signal: controller.signal,
       });
+
+      if (!initResponse.ok) {
+        const errorBody = await initResponse.text();
+        let errorDetail = "Analysis failed";
+        try {
+          const errorJson = JSON.parse(errorBody);
+          errorDetail = errorJson.detail || errorDetail;
+        } catch {
+          // Ignore parse errors
+        }
+        return JSON.stringify({
+          success: false,
+          error: `ECS error: ${errorDetail}`,
+        });
+      }
+
+      const initBody = await initResponse.json();
+      jobId = initBody.job_id;
+
+      if (!jobId) {
+        return JSON.stringify({
+          success: false,
+          error: "ECS did not return a job_id",
+        });
+      }
+
+      debug("Job accepted", { jobId, status: initBody.status });
+    } finally {
+      // Don't clear timeout yet — still need it for polling
+    }
+
+    // Poll for result
+    let ecsResult: any;
+    try {
+      ecsResult = await pollJob(jobId, authHeader, controller.signal);
     } finally {
       clearTimeout(timeout);
     }
 
-    if (!ecsResponse.ok) {
-      const errorBody = await ecsResponse.text();
-      let errorDetail = "Analysis failed";
-      try {
-        const errorJson = JSON.parse(errorBody);
-        errorDetail = errorJson.detail || errorDetail;
-      } catch {
-        // Ignore parse errors, use generic message
-      }
-      return JSON.stringify({
-        success: false,
-        error: `ECS error: ${errorDetail}`,
-      });
-    }
+    debug("Job completed", { jobId });
 
-    const ecsBody = await ecsResponse.json();
-
-    debug("ECS response received", { success: ecsBody.success });
-
-    // Normalize response
-    const genfood = normalizeToGENFOOD(ecsBody);
+    // Normalize response based on action type
+    const genfood = normalizeEcsResult(action, ecsResult);
 
     return JSON.stringify({
       success: true,

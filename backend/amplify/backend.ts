@@ -119,6 +119,13 @@ cfnAiEngineFn.addPropertyOverride('Environment.Variables.STORAGE_BUCKET_NAME', s
 const scanImageLambda = backend.scanImage.resources.lambda;
 s3Bucket.grantRead(scanImageLambda);
 
+// Grant scanImage Lambda permission to read ECS API key from Secrets Manager
+scanImageLambda.addToRolePolicy(new iam.PolicyStatement({
+  effect: iam.Effect.ALLOW,
+  actions: ['secretsmanager:GetSecretValue'],
+  resources: ['arn:aws:secretsmanager:ap-southeast-2:*:secret:nutritrack/prod/api-keys*'],
+}));
+
 // Pass S3 bucket name and ECS URL to scanImage Lambda via escape hatch
 const cfnScanImageFn = scanImageLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;
 cfnScanImageFn.addPropertyOverride('Environment.Variables.STORAGE_BUCKET_NAME', s3Bucket.bucketName);
