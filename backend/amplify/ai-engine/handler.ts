@@ -103,7 +103,7 @@ OUTPUT SCHEMA:
       "macros": { "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "saturated_fat_g": 0, "polyunsaturated_fat_g": 0, "monounsaturated_fat_g": 0, "fiber_g": 0, "sugar_g": 0, "sodium_mg": 0, "cholesterol_mg": 0, "potassium_mg": 0 },
       "micronutrients": { "calcium_mg": 0, "iron_mg": 0, "vitamin_a_ug": 0, "vitamin_c_mg": 0 },
       "serving": { "default_g": 0, "unit": "bowl | plate | piece", "portions": {"small": 0.7, "medium": 1.0, "large": 1.3} },
-      "ingredients": [ {"name": "ingredient name", "weight_g": 0} ],
+      "ingredients": [ {"name": "ingredient name", "weight_g": 0, "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0} ],
   }
 }`;
 
@@ -469,14 +469,18 @@ export const handler = async (event: any) => {
                         }
                     }
 
-                    // Update the response with recalculated data
-                    aiResponse.food_data.macros = {
-                        ...aiResponse.food_data.macros,
-                        calories: Math.round(totalCalories * 10) / 10,
-                        protein_g: Math.round(totalProtein * 10) / 10,
-                        carbs_g: Math.round(totalCarbs * 10) / 10,
-                        fat_g: Math.round(totalFat * 10) / 10
-                    };
+                    // Only overwrite macros if recalculated total is meaningful (>0),
+                    // otherwise keep Qwen's original food_data.macros estimates
+                    const hasRecalculatedData = totalCalories > 0 || totalProtein > 0 || totalCarbs > 0 || totalFat > 0;
+                    if (hasRecalculatedData) {
+                        aiResponse.food_data.macros = {
+                            ...aiResponse.food_data.macros,
+                            calories: Math.round(totalCalories * 10) / 10,
+                            protein_g: Math.round(totalProtein * 10) / 10,
+                            carbs_g: Math.round(totalCarbs * 10) / 10,
+                            fat_g: Math.round(totalFat * 10) / 10
+                        };
+                    }
                     aiResponse.food_data.ingredients = processedIngredients;
                     aiResponse.db_verified = processedIngredients.some(i => i.matched);
                     
