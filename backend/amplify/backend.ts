@@ -43,19 +43,35 @@ s3Bucket.grantDelete(resizeLambda);
 // Add Lifecycle Rule to cleanup 'incoming/' after 1 day (Escape Hatch)
 const cfnBucket = s3Bucket.node.defaultChild as s3.CfnBucket;
 cfnBucket.lifecycleConfiguration = {
-  rules: [{
-    id: 'CleanupIncomingLandingZone',
-    status: 'Enabled',
-    prefix: 'incoming/',
-    expirationInDays: 1
-  }]
+  rules: [
+    {
+      id: 'CleanupIncomingLandingZone',
+      status: 'Enabled',
+      prefix: 'incoming/',
+      expirationInDays: 1
+    },
+    {
+      // Safety net: voice files Lambda failed to delete (Lambda xóa ngay sau khi xử lý)
+      id: 'CleanupVoiceRecordings',
+      status: 'Enabled',
+      prefix: 'voice/',
+      expirationInDays: 1
+    }
+  ]
 };
 
 // Cấp quyền cho Lambda processNutrition đọc bảng Food trên DynamoDB
 // KHÔNG dùng backend.data.resources.tables để tránh circular dependency
 const processNutritionLambda = backend.processNutrition.resources.lambda;
 
-// Quyền ListTables để Lambda tự tìm tên bảng Food
+// Pass exact Food table name to avoid discoverTableName() picking wrong table
+const cfnProcessNutritionFn = processNutritionLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;
+cfnProcessNutritionFn.addPropertyOverride(
+  'Environment.Variables.FOOD_TABLE_NAME',
+  backend.data.resources.tables['Food'].tableName
+);
+
+// Quyền ListTables để Lambda tự tìm tên bảng Food (fallback)
 processNutritionLambda.addToRolePolicy(new iam.PolicyStatement({
   effect: iam.Effect.ALLOW,
   actions: ['dynamodb:ListTables'],
@@ -111,9 +127,25 @@ s3Bucket.addToResourcePolicy(new iam.PolicyStatement({
   resources: [`${s3Bucket.bucketArn}/voice/*`],
 }));
 
-// Pass S3 bucket name to aiEngine Lambda via escape hatch
+// Grant aiEngine access to Food table (for DB lookup in voiceToFood)
+aiEngineLambda.addToRolePolicy(new iam.PolicyStatement({
+  effect: iam.Effect.ALLOW,
+  actions: ['dynamodb:ListTables'],
+  resources: ['*'],
+}));
+aiEngineLambda.addToRolePolicy(new iam.PolicyStatement({
+  effect: iam.Effect.ALLOW,
+  actions: ['dynamodb:Scan', 'dynamodb:Query', 'dynamodb:GetItem'],
+  resources: ['arn:aws:dynamodb:*:*:table/Food-*', 'arn:aws:dynamodb:*:*:table/Food-*/index/*'],
+}));
+
+// Pass S3 bucket name + Food table name to aiEngine Lambda via escape hatch
 const cfnAiEngineFn = aiEngineLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;
 cfnAiEngineFn.addPropertyOverride('Environment.Variables.STORAGE_BUCKET_NAME', s3Bucket.bucketName);
+cfnAiEngineFn.addPropertyOverride(
+  'Environment.Variables.FOOD_TABLE_NAME',
+  backend.data.resources.tables['Food'].tableName
+);
 
 // Grant scanImage Lambda read access to S3
 const scanImageLambda = backend.scanImage.resources.lambda;

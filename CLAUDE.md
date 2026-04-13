@@ -119,7 +119,7 @@ There are 3 active backend environments, each with its own DynamoDB tables:
 
 | Environment | Lambda prefix | Table suffix | Notes |
 |-------------|---------------|--------------|-------|
-| **Sandbox** (local dev) | `amplify-nutritrack-tdtp2--` | `tynb5fej6jeppdrgxizfiv4l3m` | Run via `npx ampx sandbox` from `backend/` |
+| **Sandbox** (local dev) | `amplify-nutritrackbackend-tdtp2--` | `tynb5fej6jeppdrgxizfiv4l3m` | Run via `npx ampx sandbox` from `backend/`; stack: `amplify-nutritrackbackend-tdtp2-sandbox-390e5e2cb5` |
 | **Branch: feat/phase3** | `amplify-d1glc6vvop0xlb-fe-` | `vic4ri35gbfpvnw5nw3lkyapki` | Deploy via Amplify CI on push |
 | **Branch: main** | `amplify-d1glc6vvop0xlb-ma-` | `2c73cq2usbfgvp7eaihsupyjwe` | Deploy via Amplify CI on push |
 

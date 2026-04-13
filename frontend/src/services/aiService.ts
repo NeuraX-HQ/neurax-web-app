@@ -233,16 +233,6 @@ export interface MacroResponse {
     error?: string;
 }
 
-export interface ChallengeSummaryResponse {
-    success: boolean;
-    data?: {
-        summary: string;
-        leader: string | null;
-        mood: 'celebrate' | 'encourage' | 'neutral';
-    };
-    error?: string;
-}
-
 export interface WeeklyInsightResponse {
     success: boolean;
     data?: {
@@ -723,42 +713,6 @@ export async function calculateMacros(userProfileJson: any): Promise<MacroRespon
 }
 
 /**
- * Summarize group challenge progress
- */
-export async function getChallengeSummary(params: {
-    title: string;
-    challengeType: string;
-    targetValue: number;
-    unit: string;
-    daysLeft: number;
-    language: 'vi' | 'en';
-    leaderboard: string;
-    userDisplayName: string;
-}): Promise<ChallengeSummaryResponse> {
-    try {
-        const result = await getClient().queries.aiEngine({
-            action: 'challengeSummary',
-            payload: JSON.stringify(params),
-        });
-
-        if (result.errors || !result.data) {
-            return { success: false, error: 'GraphQL error occurred' };
-        }
-
-        const responseObj = JSON.parse(result.data);
-        if (!responseObj.success) {
-            return { success: false, error: responseObj.error };
-        }
-
-        const data = extractAndParseJSON(responseObj.text);
-        return { success: true, data };
-    } catch (error) {
-        secureLogger.error('Challenge summary error', { error: error instanceof Error ? error.message : String(error) });
-        return { success: false, error: error instanceof Error ? error.message : 'Failed to get challenge summary' };
-    }
-}
-
-/**
  * Generate weekly nutrition insight
  */
 export async function getWeeklyInsight(
@@ -858,7 +812,7 @@ export async function generateCoachResponse(
             }
         }
 
-        // Clean text (remove all card tags)
+        // Clean text (remove all card tags + stray JSON/markdown artifacts)
         const cleanedText = text
             .replace(/\[FOOD_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
             .replace(/===FOOD_CARD_START===[\s\S]*?===FOOD_CARD_END===/g, '')
@@ -866,6 +820,10 @@ export async function generateCoachResponse(
             .replace(/===EXERCISE_CARD_START===[\s\S]*?===EXERCISE_CARD_END===/g, '')
             .replace(/\[STATS_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
             .replace(/===STATS_CARD_START===[\s\S]*?===STATS_CARD_END===/g, '')
+            // Strip markdown code fences (```json ... ``` or ``` ... ```)
+            .replace(/```(?:json|javascript|js)?\s*\n?([\s\S]*?)```/g, '')
+            // Strip standalone JSON objects that Qwen sometimes outputs raw
+            .replace(/^\s*\{[\s\S]*\}\s*$/gm, '')
             .trim();
 
         return {

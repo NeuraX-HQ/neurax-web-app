@@ -191,42 +191,7 @@ const schema = a.schema({
       allow.owner(),
     ]),
 
-  //========================================
-  // Challenges
-  //========================================
-  Challenge: a
-    .model({
-      creator_id: a.string().required(),
-      challenge_type: a.enum(['calories', 'protein', 'steps', 'streak', 'custom']),
-      title: a.string().required(),
-      description: a.string(),
-      target_value: a.float(),
-      status: a.enum(['pending', 'active', 'completed', 'expired']),
-      start_date: a.string().required(),
-      end_date: a.string().required(),
-      participants: a.hasMany('ChallengeParticipant', 'challengeId'),
-    })
-    .authorization((allow) => [
-      allow.authenticated(),
-    ]),
-
-  ChallengeParticipant: a
-    .model({
-      challengeId: a.id().required(),
-      challenge: a.belongsTo('Challenge', 'challengeId'),
-      user_id: a.string().required(),
-      display_name: a.string(),
-      progress: a.float(),
-      joined_at: a.datetime(),
-    })
-    .secondaryIndexes((index) => [
-      index('user_id'),
-    ])
-    .authorization((allow) => [
-      allow.authenticated(),
-    ]),
-
-  //========================================
+//========================================
   // Friendships
   //========================================
   Friendship: a
