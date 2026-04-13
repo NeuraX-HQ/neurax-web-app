@@ -459,10 +459,14 @@ export default function TabsLayout() {
                     <>
                         {/* AI Bubble pushed up */}
                         <Animated.View style={[styles.aiBubbleRow, getItemStyle(itemAnims[3])]}>
-                            <View style={styles.aiBubbleContainer}>
+                            <TouchableOpacity
+                                style={styles.aiBubbleContainer}
+                                activeOpacity={0.8}
+                                onPress={() => { closeMenu(); setTimeout(() => router.push('/(tabs)/ai-coach'), 300); }}
+                            >
                                 <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
                                 <Ionicons name="chatbubble-ellipses-outline" size={24} color="#6366F1" />
-                            </View>
+                            </TouchableOpacity>
                         </Animated.View>
 
                         {/* Scan options: reversed so voice is highest */}

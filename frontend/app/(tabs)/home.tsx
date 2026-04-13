@@ -12,6 +12,7 @@ import { drinkTypes } from '../../src/data/constants';
 import { CalorieGauge } from '../../src/components/CalorieGauge';
 import { useMealStore, Meal } from '../../src/store/mealStore';
 import { getOnboardingData, getUserData, saveUserData } from '../../src/store/userStore';
+import { updateWeightInDB } from '../../src/services/userService';
 import { useAuthStore } from '../../src/store/authStore';
 import { useNotificationStore } from '../../src/store/notificationStore';
 import { getUrl } from 'aws-amplify/storage';
@@ -156,7 +157,7 @@ export default function HomeScreen() {
 
     // Meal store
     const {
-        meals, activities, loadMeals, getMealsByDate, removeMeal,
+        meals, activities, loadMeals, syncWithCloud, getMealsByDate, removeMeal,
         selectedDateStr: storeSelectedDateStr,
         setSelectedDateStr,
         setSelectedMealType,
@@ -263,10 +264,11 @@ export default function HomeScreen() {
         setRefreshing(true);
         try {
             await loadMeals();
+            await syncWithCloud();
         } finally {
             setRefreshing(false);
         }
-    }, [loadMeals]);
+    }, [loadMeals, syncWithCloud]);
 
     const withAutoClose = useCallback((action: () => void) => () => {
         if (closeOpenRow()) return;
@@ -405,7 +407,7 @@ export default function HomeScreen() {
             if (now - lastDataLoadedRef.current < 30_000) return;
             lastDataLoadedRef.current = now;
 
-            loadMeals();
+            loadMeals().then(() => syncWithCloud());
             const fetchUserData = async () => {
                 const savedWater = await AsyncStorage.getItem(WATER_KEY);
                 if (savedWater) setWaterByDate(JSON.parse(savedWater));
@@ -436,7 +438,7 @@ export default function HomeScreen() {
                 }
             };
             fetchUserData();
-        }, [loadMeals])
+        }, [loadMeals, syncWithCloud])
     );
 
     // Smart Notification Modal trigger logic
@@ -534,6 +536,13 @@ export default function HomeScreen() {
                 setNewCalories(recalculated);
                 // Small delay so the weight modal closes first
                 setTimeout(() => setShowAiModal(true), 400);
+            } else {
+                // Small diff — still persist the recalculated value
+                setDailyCalorieTarget(recalculated);
+                await saveUserData({ dailyCalories: recalculated });
+                // Sync to DynamoDB (fire-and-forget)
+                const userId = require('../../src/store/authStore').useAuthStore.getState().userId;
+                if (userId) updateWeightInDB(userId, newWeight, recalculated);
             }
         }
     };
@@ -543,6 +552,9 @@ export default function HomeScreen() {
         setDailyCalorieTarget(newCalories);
         await saveUserData({ dailyCalories: newCalories });
         setShowAiModal(false);
+        // Sync to DynamoDB (fire-and-forget)
+        const userId = require('../../src/store/authStore').useAuthStore.getState().userId;
+        if (userId) updateWeightInDB(userId, userWeight, newCalories);
     };
 
     // Hydration modal state

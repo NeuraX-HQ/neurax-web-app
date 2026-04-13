@@ -103,7 +103,7 @@ OUTPUT SCHEMA:
       "macros": { "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "saturated_fat_g": 0, "polyunsaturated_fat_g": 0, "monounsaturated_fat_g": 0, "fiber_g": 0, "sugar_g": 0, "sodium_mg": 0, "cholesterol_mg": 0, "potassium_mg": 0 },
       "micronutrients": { "calcium_mg": 0, "iron_mg": 0, "vitamin_a_ug": 0, "vitamin_c_mg": 0 },
       "serving": { "default_g": 0, "unit": "bowl | plate | piece", "portions": {"small": 0.7, "medium": 1.0, "large": 1.3} },
-      "ingredients": [ {"name": "ingredient name", "weight_g": 0} ],
+      "ingredients": [ {"name": "ingredient name", "weight_g": 0, "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0} ],
   }
 }`;
 
@@ -188,26 +188,6 @@ OUTPUT SCHEMA:
   "reasoning_en": "Calculation reasoning (energetic)"
 }`;
 
-const CHALLENGE_SYSTEM_PROMPT = `You are Ollie, an expert AI nutritionist for NutriTrack.
-Summarize group challenge progress with an enthusiastic, Gen-Z tone.
-
-RULES:
-1. MAX 3 short sentences.
-2. TONE: Energetic, casual Vietnamese (ê, nhé, nha, nè, hố hố).
-3. HIGHLIGHT: Who is leading, who needs to push harder.
-4. END with a call to action.
-5. Output STRICT JSON format only. NO markdown blocks (\`\`\`json).
-
-EDGE CASE:
-- If Leaderboard is empty: invite user to be the first!
-
-OUTPUT SCHEMA:
-{
-  "summary": "Lời nhắn cực sung của Ollie",
-  "leader": "user_id or null",
-  "mood": "celebrate | encourage | neutral"
-}`;
-
 const WEEKLY_INSIGHT_SYSTEM_PROMPT = `You are Ollie, an expert AI nutritionist and Gen-Z coach for NutriTrack.
 Analyze user food logs and biometrics to provide a "Weekly Insight".
 
@@ -236,8 +216,9 @@ RULES:
 1. TONE: Vietnamese casual (ê, nhé, nha, nè). Friendly and motivating.
 2. MEAL SUGGESTION: Suggest 1-3 meals. Prioritize expiring items from fridge.
 3. CARDS: Use specific delimiters (===FOOD_CARD_START=== etc.) placed at the end.
-4. Output STRICT JSON format only where applicable, but this prompt produces conversational text with tags.
-5. NO markdown blocks (\`\`\`json).
+4. Reply in natural conversational text. NEVER output raw JSON objects in the message body.
+5. NEVER use markdown code fences (\`\`\`json, \`\`\`, etc.). Write plain text only.
+6. NEVER expose internal data structures, field names, or API responses to the user.
 
 CARD TEMPLATES (Place at the END of response):
 
@@ -410,10 +391,11 @@ export const handler = async (event: any) => {
 
             const transcript = await waitForTranscription(jobName);
 
-            // DEBUG: Skip cleanup to inspect Transcribe job status on console
-            // try {
-            //     await transcribeClient.send(new DeleteTranscriptionJobCommand({ TranscriptionJobName: jobName }));
-            // } catch (e) { /* non-critical */ }
+            // Cleanup: xóa Transcribe job và voice file khỏi S3 (ephemeral)
+            await Promise.allSettled([
+                transcribeClient.send(new DeleteTranscriptionJobCommand({ TranscriptionJobName: jobName })),
+                s3Client.send(new DeleteObjectCommand({ Bucket: STORAGE_BUCKET, Key: s3Key })),
+            ]);
 
             debug(`[voiceToFood] jobName=${jobName}, transcriptLength=${transcript?.length || 0}, s3Key=${s3Key}`);
 
@@ -469,14 +451,18 @@ export const handler = async (event: any) => {
                         }
                     }
 
-                    // Update the response with recalculated data
-                    aiResponse.food_data.macros = {
-                        ...aiResponse.food_data.macros,
-                        calories: Math.round(totalCalories * 10) / 10,
-                        protein_g: Math.round(totalProtein * 10) / 10,
-                        carbs_g: Math.round(totalCarbs * 10) / 10,
-                        fat_g: Math.round(totalFat * 10) / 10
-                    };
+                    // Only overwrite macros if recalculated total is meaningful (>0),
+                    // otherwise keep Qwen's original food_data.macros estimates
+                    const hasRecalculatedData = totalCalories > 0 || totalProtein > 0 || totalCarbs > 0 || totalFat > 0;
+                    if (hasRecalculatedData) {
+                        aiResponse.food_data.macros = {
+                            ...aiResponse.food_data.macros,
+                            calories: Math.round(totalCalories * 10) / 10,
+                            protein_g: Math.round(totalProtein * 10) / 10,
+                            carbs_g: Math.round(totalCarbs * 10) / 10,
+                            fat_g: Math.round(totalFat * 10) / 10
+                        };
+                    }
                     aiResponse.food_data.ingredients = processedIngredients;
                     aiResponse.db_verified = processedIngredients.some(i => i.matched);
                     
@@ -580,17 +566,7 @@ export const handler = async (event: any) => {
             return JSON.stringify({ success: true, text });
         }
 
-        // ── Challenge Summary ──
-        if (action === 'challengeSummary') {
-            const { title, challengeType, targetValue, unit, daysLeft, language, leaderboard, userDisplayName } = data;
-            const text = await callQwen([
-                { role: "system", content: CHALLENGE_SYSTEM_PROMPT },
-                { role: "user", content: `Thử thách: ${title}\nLoại: ${challengeType} | Mục tiêu: ${targetValue} ${unit}\nThời gian còn lại: ${daysLeft} ngày\nNgôn ngữ hiển thị (Language): ${language}\n\nBảng xếp hạng:\n${leaderboard}\n\nNgười dùng đang xem: ${userDisplayName}\n\nTạo tóm tắt tiến độ ngắn gọn.` },
-            ]);
-            return JSON.stringify({ success: true, text });
-        }
-
-        // ── Weekly Insight ──
+// ── Weekly Insight ──
         if (action === 'weeklyInsight') {
             const { userProfileJson, weeklySummaryJson, notablePatterns } = data;
             const text = await callQwen([

@@ -105,7 +105,15 @@ export const useFridgeStore = create<FridgeState>((set, get) => ({
             set({ isLoading: true, error: null });
             const stored = await AsyncStorage.getItem(STORAGE_KEY);
             if (stored) {
-                set({ items: JSON.parse(stored) });
+                const items: FridgeItem[] = JSON.parse(stored);
+                // Recalculate daysLeft based on current date
+                const now = Date.now();
+                for (const item of items) {
+                    if (item.expiryDate) {
+                        item.daysLeft = Math.ceil((new Date(item.expiryDate).getTime() - now) / (1000 * 60 * 60 * 24));
+                    }
+                }
+                set({ items });
             }
             set({ isLoading: false });
         } catch (error) {

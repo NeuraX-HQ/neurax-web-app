@@ -76,6 +76,22 @@ export const fetchUserProfile = async (userId: string) => {
     }
 };
 
+/**
+ * Update weight + dailyCalories in DynamoDB after weekly weight check-in
+ */
+export const updateWeightInDB = async (userId: string, weight: number, dailyCalories: number) => {
+    try {
+        await client.models.user.update({
+            user_id: userId,
+            biometric: { weight_kg: weight },
+            goal: { daily_calories: dailyCalories },
+            updated_at: new Date().toISOString(),
+        });
+    } catch (error) {
+        console.error('updateWeightInDB error:', error);
+    }
+};
+
 export const syncOnboardingWithDB = async (userId: string, email: string) => {
     try {
         const localData = await getOnboardingData();
