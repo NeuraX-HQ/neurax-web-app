@@ -8,6 +8,8 @@ import { uploadData, getUrl } from 'aws-amplify/storage';
 import { useAuthStore } from '../src/store/authStore';
 import { getOnboardingData, getUserData, saveUserData, UserData } from '../src/store/userStore';
 import { useFriendStore } from '../src/store/friendStore';
+import { useMealStore, getTodayDate } from '../src/store/mealStore';
+import { getCurrentStreak } from '../src/utils/streak';
 import { updateMyPublicStats } from '../src/services/friendService';
 import { Colors, Shadows } from '../src/constants/colors';
 import { ProfileIcon } from '../src/components/TabIcons';
@@ -91,6 +93,11 @@ export default function ProfileScreen() {
     const { t } = useAppLanguage();
     const { logout, email, userId } = useAuthStore();
     const { myFriendCode, loadMyFriendCode, friends, loadFriends } = useFriendStore();
+    const meals = useMealStore(s => s.meals);
+    const streak = React.useMemo(() => {
+        const mealDateSet = new Set(meals.map(m => m.date));
+        return getCurrentStreak(mealDateSet, getTodayDate());
+    }, [meals]);
     const [codeCopied, setCodeCopied] = React.useState(false);
     const [gender, setGender] = React.useState<string>('');
     const [userData, setUserData] = React.useState<UserData>({
@@ -269,7 +276,7 @@ export default function ProfileScreen() {
     const stats = [
         { label: t('profile.weight'), value: String(userData.weight), unit: 'kg' },
         { label: t('profile.goal'), value: String(userData.goalWeight), unit: 'kg' },
-        { label: t('profile.streak'), value: String(userData.streak), unit: '🔥' },
+        { label: t('profile.streak'), value: String(streak), unit: '🔥' },
     ];
 
     const accountItems = [
