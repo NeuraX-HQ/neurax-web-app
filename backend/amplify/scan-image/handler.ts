@@ -7,7 +7,7 @@ const s3Client = new S3Client({ region: REGION });
 const secretsClient = new SecretsManagerClient({ region: REGION });
 
 const STORAGE_BUCKET = process.env.STORAGE_BUCKET_NAME || "";
-const ECS_BASE_URL = process.env.ECS_BASE_URL || "http://nutritrack-api-vpc-alb-1060755902.ap-southeast-2.elb.amazonaws.com";
+const ECS_BASE_URL = process.env.ECS_BASE_URL || "";
 const IS_DEBUG = process.env.DEBUG === "true" || process.env.NODE_ENV === "development";
 
 const debug = (message: string, data?: any) => {
