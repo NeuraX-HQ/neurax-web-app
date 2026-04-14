@@ -1,6 +1,24 @@
 import { generateClient } from 'aws-amplify/api';
 import { type Schema } from '../../../backend/amplify/data/resource';
-import { getOnboardingData, OnboardingData, saveOnboardingData } from '../store/userStore';
+import { getOnboardingData, OnboardingData, saveOnboardingData, saveUserData } from '../store/userStore';
+
+/** Tính calo mục tiêu từ dữ liệu onboarding (same formula as step9.tsx & home.tsx). */
+function computeDailyCalories(data: OnboardingData): number {
+    const age = data.age || 25;
+    let bmr = (10 * data.currentWeight) + (6.25 * data.height) - (5 * age);
+    bmr += data.gender === 'male' ? 5 : -161;
+    const activityMap: Record<string, number> = {
+        sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, extreme: 1.9,
+    };
+    const tdee = bmr * (activityMap[data.activityLevel] || 1.2);
+    let target = tdee;
+    if (data.goal === 'lose') {
+        target = Math.max(1200, tdee - (data.weightChangeSpeed * 1100));
+    } else if (data.goal === 'gain') {
+        target = tdee + (data.weightChangeSpeed * 1100);
+    }
+    return Math.round(target);
+}
 
 const client = generateClient<Schema>();
 
@@ -35,8 +53,7 @@ export const createUserProfile = async (userId: string, email: string, onboardin
             };
             input.goal = {
                 target_weight_kg: onboardingData.targetWeight,
-                // Placeholder cho calo, có thể tính toán chính xác hơn sau
-                daily_calories: 2000, 
+                daily_calories: computeDailyCalories(onboardingData),
             };
             input.dietary_profile = {
                 allergies: onboardingData.dietaryRestrictions,
@@ -128,7 +145,7 @@ export const syncOnboardingWithDB = async (userId: string, email: string) => {
                     },
                     goal: {
                         target_weight_kg: localData.targetWeight,
-                        daily_calories: 2000,
+                        daily_calories: computeDailyCalories(localData),
                     },
                     dietary_profile: {
                         allergies: localData.dietaryRestrictions,
@@ -151,6 +168,11 @@ export const syncOnboardingWithDB = async (userId: string, email: string) => {
                     dietaryRestrictions: diet?.allergies || [],
                     completed: existingUser.onboarding_status ?? false,
                 });
+                // Restore dailyCalories to USER_KEY so home.tsx reads the right value
+                const restoredCalories = Number(goal?.daily_calories) || 0;
+                if (restoredCalories > 0) {
+                    await saveUserData({ dailyCalories: restoredCalories });
+                }
                 return existingUser;
             }
         } else {

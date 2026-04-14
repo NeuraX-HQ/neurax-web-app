@@ -48,10 +48,9 @@ function normalize(text: string): string {
 async function findFoodInDB(query: string, tableName: string): Promise<any | null> {
   if (!query) return null;
   const q = query.toLowerCase().trim();
-  debug(`Searching for: "${q}" (diacritic-sensitive)`);
+  debug(`Searching for: "${q}"`);
 
-  // 1. TÌM CHÍNH XÁC (Có dấu) - Ưu tiên GSI
-  // Chúng ta sẽ thử tìm chính xác với query gốc (có thể có dấu)
+  // 1. Exact match (name_vi or name_en) - GSI
   const queryVi = await docClient.send(new QueryCommand({
     TableName: tableName,
     IndexName: 'name_vi',
@@ -60,35 +59,24 @@ async function findFoodInDB(query: string, tableName: string): Promise<any | nul
   }));
   if (queryVi.Items?.length) return queryVi.Items[0];
 
-  // 2. TÌM CHỮ CHỨA CỤM TỪ (Có dấu)
-  // Ví dụ: tìm "bò" sẽ ra "Thịt bò", nhưng không ra "Bơ"
-  const scanVi = await docClient.send(new ScanCommand({
+  const queryEn = await docClient.send(new QueryCommand({
     TableName: tableName,
-    FilterExpression: 'contains(name_vi, :q) OR contains(name_en, :q)',
+    IndexName: 'name_en',
+    KeyConditionExpression: 'name_en = :name',
+    ExpressionAttributeValues: { ':name': query }
+  }));
+  if (queryEn.Items?.length) return queryEn.Items[0];
+
+  // 2. Partial match (contains) - Broad search
+  const scanAny = await docClient.send(new ScanCommand({
+    TableName: tableName,
+    FilterExpression: 'contains(name_vi, :q) OR contains(name_en, :q) OR contains(aliases_vi, :q) OR contains(aliases_en, :q)',
     ExpressionAttributeValues: { ':q': query }
   }));
 
-  if (scanVi.Items?.length) {
-    // Nếu có nhiều kết quả, ưu tiên món có tên ngắn nhất (gần với query nhất)
-    // Điều này giúp "Bò" ưu tiên chọn "Thịt bò" thay vì "Bò kho" nếu query là "Bò"
-    return scanVi.Items.sort((a, b) => a.name_vi.length - b.name_vi.length)[0];
-  }
-
-  // 3. TÌM TRONG ALIASES (Có dấu)
-  const scanAlias = await docClient.send(new ScanCommand({
-    TableName: tableName,
-    FilterExpression: 'contains(aliases_vi, :q)',
-    ExpressionAttributeValues: { ':q': query }
-  }));
-  if (scanAlias.Items?.length) return scanAlias.Items[0];
-
-  // 4. PHƯƠNG ÁN CUỐI: Tìm không dấu (Chỉ khi query gốc không ra kết quả)
-  // Chỉ dùng khi input của user có thể không có dấu
-  const normalizedQuery = normalize(query);
-  if (normalizedQuery !== q) { // Nếu query gốc có dấu, chúng ta đã thử ở trên rồi
-      // Thực hiện scan mờ nếu thực sự cần thiết, nhưng nên hạn chế để tránh "bò" nhầm "bơ"
-      debug(`Fallback to normalized search for: ${normalizedQuery}`);
-      // Ở đây ta có thể implement thêm nếu muốn hỗ trợ tìm không dấu hoàn toàn
+  if (scanAny.Items?.length) {
+    // Return shortest name match first (most likely to be the core item)
+    return scanAny.Items.sort((a, b) => a.name_vi.length - b.name_vi.length)[0];
   }
 
   return null;

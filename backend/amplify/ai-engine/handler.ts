@@ -69,23 +69,22 @@ EDGE CASE:
 
 OUTPUT SCHEMA: Same as GEN_FOOD (with "source": "AI Fixed").`;
 
-const VOICE_SYSTEM_PROMPT = `You are Ollie, a cool AI nutrition assistant for NutriTrack.
+const VOICE_SYSTEM_PROMPT = `You are Ollie, an expert AI nutrition assistant for NutriTrack.
 You understand both Vietnamese (casual) and English.
 
 YOUR TASK:
-When the user describes a meal via voice/text transcription, analyze and log it.
+When the user describes a meal, a specific dish, or just raw ingredients via voice or text, analyze the components and log it. Even if the user is vague, you MUST estimate the nutritional profile.
 
 RULES:
 1. DETECT language (vi or en).
-2. IDENTIFY food items, ingredients, and estimated weight in grams.
-3. PORTION: small | medium | large. Default: "medium".
-4. RESPONSE: If user speaks Vietnamese → respond/clarify in casual Vietnamese (nha, nhé, nè).
-5. DATABASE: If food matches NutriTrack DB → set "in_database": true.
-6. CLARIFICATION: Ask ONE short question if ambiguous (e.g. "Phở bò hay phở gà nè?").
-7. Output STRICT JSON format only. NO markdown blocks (\`\`\`json).
+2. IDENTIFY items: Can be a complete dish (e.g., "Phở bò") or raw ingredients (e.g., "200g thịt bò").
+3. ESTIMATION: You MUST estimate standard portions if not provided and provide nutritional breakdown (macros) for the entire input and each ingredient/item. Never return 0 for macros unless the item has no calories.
+4. PORTION: small | medium | large. Default: "medium".
+5. RESPONSE: If user speaks Vietnamese → respond/clarify in casual Vietnamese (nha, nhé, nè, á).
+6. Output STRICT JSON format only. NO markdown blocks (\`\`\`json).
 
 ERROR HANDLING:
-- Unintelligible or Non-food input: return action="clarify". NEVER log non-food.
+- Unintelligible or Non-food input: return action="clarify". NEVER log non-food items.
 - Example: "Cho tớ cái máy bay" -> action="clarify", clarification_question_vi="Máy bay hông ăn được nha! Log món khác đi nè."
 
 OUTPUT SCHEMA:
@@ -93,17 +92,15 @@ OUTPUT SCHEMA:
   "action": "log" | "clarify",
   "detected_language": "vi" | "en",
   "meal_type": "breakfast | lunch | dinner | snack",
-  "in_database": true/false,
   "confidence": 0.0 to 1.0,
   "clarification_question_vi": "Câu hỏi tiếng Việt hoặc null",
   "clarification_question_en": "English question or null",
   "food_data": {
-      "food_id": "ID or custom_gen_temp",
-      "name_vi": "Tên món", "name_en": "English Name",
-      "macros": { "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "saturated_fat_g": 0, "polyunsaturated_fat_g": 0, "monounsaturated_fat_g": 0, "fiber_g": 0, "sugar_g": 0, "sodium_mg": 0, "cholesterol_mg": 0, "potassium_mg": 0 },
-      "micronutrients": { "calcium_mg": 0, "iron_mg": 0, "vitamin_a_ug": 0, "vitamin_c_mg": 0 },
-      "serving": { "default_g": 0, "unit": "bowl | plate | piece", "portions": {"small": 0.7, "medium": 1.0, "large": 1.3} },
-      "ingredients": [ {"name": "ingredient name", "weight_g": 0, "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0} ],
+      "food_id": "custom_gen_temp",
+      "name_vi": "Tên món/nguyên liệu", "name_en": "Dish/Ingredient Name",
+      "macros": { "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "saturated_fat_g": 0, "fiber_g": 0, "sugar_g": 0, "sodium_mg": 0 },
+      "serving": { "default_g": 0, "unit": "bowl | plate | piece | g | ml", "portions": {"small": 0.7, "medium": 1.0, "large": 1.3} },
+      "ingredients": [ {"name_vi": "tên nguyên liệu", "name_en": "ingredient name", "weight_g": 0, "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0} ]
   }
 }`;
 
@@ -422,21 +419,23 @@ export const handler = async (event: any) => {
                     const processedIngredients = [];
 
                     for (const ing of ingredients) {
-                        const dbMatch = await findFoodInDB(ing.name, tableName);
+                        const searchName = ing.name_vi || ing.name_en || ing.name;
+                        const dbMatch = await findFoodInDB(searchName, tableName);
                         if (dbMatch) {
                             const nutrition = calculateNutrition(dbMatch, ing.weight_g || 100);
                             processedIngredients.push({
                                 ...ing,
                                 food_id: dbMatch.food_id,
                                 name_vi_db: dbMatch.name_vi,
+                                name_en_db: dbMatch.name_en,
                                 matched: true,
                                 source: 'database',
                                 ...nutrition
                             });
-                            totalCalories += nutrition.calories;
-                            totalProtein += nutrition.protein_g;
-                            totalCarbs += nutrition.carbs_g;
-                            totalFat += nutrition.fat_g;
+                            totalCalories += (nutrition.calories || 0);
+                            totalProtein += (nutrition.protein_g || 0);
+                            totalCarbs += (nutrition.carbs_g || 0);
+                            totalFat += (nutrition.fat_g || 0);
                         } else {
                             processedIngredients.push({
                                 ...ing,
@@ -494,7 +493,7 @@ export const handler = async (event: any) => {
             if (!tableName || !query) return null;
             const q = query.toLowerCase().trim();
 
-            // 1. Exact match GSI (Diacritic-sensitive)
+            // 1. Exact match (name_vi or name_en) - GSI
             const qVi = await docClient.send(new QueryCommand({
                 TableName: tableName, IndexName: 'name_vi',
                 KeyConditionExpression: 'name_vi = :name',
@@ -502,24 +501,23 @@ export const handler = async (event: any) => {
             }));
             if (qVi.Items?.length) return qVi.Items[0];
 
-            // 2. Partial match (Diacritic-sensitive) - e.g., "bò" matches "Thịt bò"
-            const scanVi = await docClient.send(new ScanCommand({
+            const qEn = await docClient.send(new QueryCommand({
+                TableName: tableName, IndexName: 'name_en',
+                KeyConditionExpression: 'name_en = :name',
+                ExpressionAttributeValues: { ':name': query }
+            }));
+            if (qEn.Items?.length) return qEn.Items[0];
+
+            // 2. Partial match (contains) - Broad search
+            const scanAny = await docClient.send(new ScanCommand({
                 TableName: tableName,
-                FilterExpression: 'contains(name_vi, :q)',
+                FilterExpression: 'contains(name_vi, :q) OR contains(name_en, :q) OR contains(aliases_vi, :q) OR contains(aliases_en, :q)',
                 ExpressionAttributeValues: { ':q': query }
             }));
-            if (scanVi.Items?.length) {
-                // Return shortest name match first
-                return scanVi.Items.sort((a, b) => a.name_vi.length - b.name_vi.length)[0];
+            if (scanAny.Items?.length) {
+                // Return shortest name match first (most likely to be the core item)
+                return scanAny.Items.sort((a, b) => a.name_vi.length - b.name_vi.length)[0];
             }
-            
-            // 3. Aliases (Diacritic-sensitive)
-            const scanAlias = await docClient.send(new ScanCommand({
-                TableName: tableName,
-                FilterExpression: 'contains(aliases_vi, :q)',
-                ExpressionAttributeValues: { ':q': query }
-            }));
-            if (scanAlias.Items?.length) return scanAlias.Items[0];
 
             return null;
         }
