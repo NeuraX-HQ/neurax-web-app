@@ -7,6 +7,7 @@ import { processNutrition } from './process-nutrition/resource';
 import { friendRequest } from './friend-request/resource';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { storage } from './storage/resource';
 import { resizeImage } from './resize-image/resource';
 import { LambdaDestination } from 'aws-cdk-lib/aws-s3-notifications';

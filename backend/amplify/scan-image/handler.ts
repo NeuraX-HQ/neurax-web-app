@@ -60,6 +60,7 @@ async function pollJob(
   authHeader: string,
   internalToken: string,
   signal: AbortSignal,
+  stickyCookie?: string,
   pollIntervalMs = 3000,
   maxWaitMs = 270_000
 ): Promise<any> {
@@ -79,8 +80,14 @@ async function pollJob(
 
     if (signal.aborted) throw new Error("AbortError");
 
+    const pollHeaders: Record<string, string> = {
+      Authorization: authHeader,
+      "X-Nutri-Internal-Token": internalToken,
+    };
+    if (stickyCookie) pollHeaders["Cookie"] = stickyCookie;
+
     const resp = await fetch(pollUrl, {
-      headers: { Authorization: authHeader, "X-Nutri-Internal-Token": internalToken },
+      headers: pollHeaders,
       signal,
     });
 
@@ -368,6 +375,7 @@ export const handler = async (event: any) => {
     const timeout = setTimeout(() => controller.abort(), 290_000);
 
     let jobId: string;
+    let stickyCookie: string | undefined;
     try {
       const initResponse = await fetch(ecsUrl, {
         method: "POST",
@@ -401,6 +409,10 @@ export const handler = async (event: any) => {
         });
       }
 
+      // Read ALB sticky cookie to ensure polls go to same ECS task
+      const setCookie = initResponse.headers.get("set-cookie");
+      stickyCookie = setCookie ? setCookie.split(";")[0] : undefined;
+
       debug("Job accepted", { jobId, status: initBody.status });
     } finally {
       // Don't clear timeout yet — still need it for polling
@@ -409,7 +421,7 @@ export const handler = async (event: any) => {
     // Poll for result
     let ecsResult: any;
     try {
-      ecsResult = await pollJob(jobId, authHeader, internalToken, controller.signal);
+      ecsResult = await pollJob(jobId, authHeader, internalToken, controller.signal, stickyCookie);
     } finally {
       clearTimeout(timeout);
     }
