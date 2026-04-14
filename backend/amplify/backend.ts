@@ -2,6 +2,7 @@ import { defineBackend } from '@aws-amplify/backend';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
 import { aiEngine } from './ai-engine/resource';
+import { scanImage } from './scan-image/resource';
 import { processNutrition } from './process-nutrition/resource';
 import { friendRequest } from './friend-request/resource';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -18,6 +19,7 @@ const backend = defineBackend({
   auth,
   data,
   aiEngine,
+  scanImage,
   processNutrition,
   friendRequest,
   storage,
@@ -41,19 +43,35 @@ s3Bucket.grantDelete(resizeLambda);
 // Add Lifecycle Rule to cleanup 'incoming/' after 1 day (Escape Hatch)
 const cfnBucket = s3Bucket.node.defaultChild as s3.CfnBucket;
 cfnBucket.lifecycleConfiguration = {
-  rules: [{
-    id: 'CleanupIncomingLandingZone',
-    status: 'Enabled',
-    prefix: 'incoming/',
-    expirationInDays: 1
-  }]
+  rules: [
+    {
+      id: 'CleanupIncomingLandingZone',
+      status: 'Enabled',
+      prefix: 'incoming/',
+      expirationInDays: 1
+    },
+    {
+      // Safety net: voice files Lambda failed to delete (Lambda xóa ngay sau khi xử lý)
+      id: 'CleanupVoiceRecordings',
+      status: 'Enabled',
+      prefix: 'voice/',
+      expirationInDays: 1
+    }
+  ]
 };
 
 // Cấp quyền cho Lambda processNutrition đọc bảng Food trên DynamoDB
 // KHÔNG dùng backend.data.resources.tables để tránh circular dependency
 const processNutritionLambda = backend.processNutrition.resources.lambda;
 
-// Quyền ListTables để Lambda tự tìm tên bảng Food
+// Pass exact Food table name to avoid discoverTableName() picking wrong table
+const cfnProcessNutritionFn = processNutritionLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;
+cfnProcessNutritionFn.addPropertyOverride(
+  'Environment.Variables.FOOD_TABLE_NAME',
+  backend.data.resources.tables['Food'].tableName
+);
+
+// Quyền ListTables để Lambda tự tìm tên bảng Food (fallback)
 processNutritionLambda.addToRolePolicy(new iam.PolicyStatement({
   effect: iam.Effect.ALLOW,
   actions: ['dynamodb:ListTables'],
@@ -109,9 +127,60 @@ s3Bucket.addToResourcePolicy(new iam.PolicyStatement({
   resources: [`${s3Bucket.bucketArn}/voice/*`],
 }));
 
-// Pass S3 bucket name to aiEngine Lambda via escape hatch
+// Grant aiEngine access to Food table (for DB lookup in voiceToFood)
+aiEngineLambda.addToRolePolicy(new iam.PolicyStatement({
+  effect: iam.Effect.ALLOW,
+  actions: ['dynamodb:ListTables'],
+  resources: ['*'],
+}));
+aiEngineLambda.addToRolePolicy(new iam.PolicyStatement({
+  effect: iam.Effect.ALLOW,
+  actions: ['dynamodb:Scan', 'dynamodb:Query', 'dynamodb:GetItem'],
+  resources: ['arn:aws:dynamodb:*:*:table/Food-*', 'arn:aws:dynamodb:*:*:table/Food-*/index/*'],
+}));
+
+// Pass S3 bucket name + Food table name to aiEngine Lambda via escape hatch
 const cfnAiEngineFn = aiEngineLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;
 cfnAiEngineFn.addPropertyOverride('Environment.Variables.STORAGE_BUCKET_NAME', s3Bucket.bucketName);
+cfnAiEngineFn.addPropertyOverride(
+  'Environment.Variables.FOOD_TABLE_NAME',
+  backend.data.resources.tables['Food'].tableName
+);
+
+// Grant scanImage Lambda read access to S3
+const scanImageLambda = backend.scanImage.resources.lambda;
+s3Bucket.grantRead(scanImageLambda);
+
+// Grant scanImage Lambda permission to read ECS API key from Secrets Manager
+scanImageLambda.addToRolePolicy(new iam.PolicyStatement({
+  effect: iam.Effect.ALLOW,
+  actions: ['secretsmanager:GetSecretValue'],
+  resources: ['arn:aws:secretsmanager:ap-southeast-2:*:secret:nutritrack/prod/api-keys*'],
+}));
+
+// Pass S3 bucket name and ECS URL to scanImage Lambda via escape hatch
+const cfnScanImageFn = scanImageLambda.node.defaultChild as cdk.aws_lambda.CfnFunction;
+cfnScanImageFn.addPropertyOverride('Environment.Variables.STORAGE_BUCKET_NAME', s3Bucket.bucketName);
+
+// Kéo toàn bộ thông số thực từ Hệ thống VPC Parameter Store
+const albUrl = cdk.aws_ssm.StringParameter.valueForStringParameter(scanImageLambda.stack, '/nutritrack/ecs/alb_url');
+const lambdaSg = cdk.aws_ssm.StringParameter.valueForStringParameter(scanImageLambda.stack, '/nutritrack/ecs/lambda_sg_id');
+const subnet1 = cdk.aws_ssm.StringParameter.valueForStringParameter(scanImageLambda.stack, '/nutritrack/ecs/private_subnet_1');
+const subnet2 = cdk.aws_ssm.StringParameter.valueForStringParameter(scanImageLambda.stack, '/nutritrack/ecs/private_subnet_2');
+
+cfnScanImageFn.addPropertyOverride('Environment.Variables.ECS_BASE_URL', albUrl);
+
+// Nhúng tự động Lambda con sâu vào kén lõi của VPC
+cfnScanImageFn.vpcConfig = {
+  subnetIds: [subnet1, subnet2],
+  securityGroupIds: [lambdaSg]
+};
+
+// BẮT BUỘC: khi dùng escape hatch cho vpcConfig, CDK không tự thêm quyền ENI
+// Thiếu policy này Lambda sẽ không tạo được Network Interface và fail khi invoke
+scanImageLambda.role?.addManagedPolicy(
+  iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
+);
 
 // Grant friendRequest Lambda permissions to read/write user + Friendship tables
 const friendRequestLambda = backend.friendRequest.resources.lambda;

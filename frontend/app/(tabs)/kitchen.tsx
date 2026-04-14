@@ -45,7 +45,8 @@ export default function KitchenScreen() {
         search.trim() === '' || i.name.toLowerCase().includes(search.toLowerCase())
     );
 
-    const useSoon   = filtered.filter(i => i.daysLeft <= 3);
+    const expired   = filtered.filter(i => i.daysLeft <= 0);
+    const useSoon   = filtered.filter(i => i.daysLeft > 0 && i.daysLeft <= 3);
     const thisWeek  = filtered.filter(i => i.daysLeft > 3 && i.daysLeft <= 7);
     const longTerm  = filtered.filter(i => i.daysLeft > 7);
 
@@ -165,8 +166,21 @@ export default function KitchenScreen() {
                             </View>
                         ) : (
                             <>
+                                {/* ── Group 0: Expired (đã hết hạn) ── */}
+                                {expired.length > 0 && (
+                                    <>
+                                        <View style={styles.sectionHeader}>
+                                            <View style={[styles.urgentDot, { backgroundColor: '#DC2626' }]} />
+                                            <Text style={[styles.sectionTitle, { color: '#DC2626' }]}>{t('kitchen.section.expired')}</Text>
+                                        </View>
+                                        {expired.map((item) => (
+                                            <ExpiredCard key={item.id} item={item} onRemove={removeItem} t={t} />
+                                        ))}
+                                    </>
+                                )}
+
                                 {/* ── Group 1: Use Soon (≤3 ngày) ── */}
-                                <View style={styles.sectionHeader}>
+                                <View style={[styles.sectionHeader, expired.length > 0 ? { marginTop: 20 } : undefined]}>
                                     <View style={styles.urgentDot} />
                                     <Text style={styles.sectionTitle}>{t('kitchen.section.useSoon')}</Text>
                                 </View>
@@ -264,6 +278,41 @@ export default function KitchenScreen() {
 }
 
 /* ─── Sub-components ─── */
+
+function ExpiredCard({
+    item,
+    onRemove,
+    t,
+}: {
+    item: FridgeItem;
+    onRemove: (id: string) => Promise<void>;
+    t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+    const overdueDays = Math.abs(item.daysLeft);
+    return (
+        <View style={[styles.useSoonCard, { borderColor: '#DC2626', opacity: 0.85 }]}>
+            <View style={[styles.expiryRibbon, { backgroundColor: '#DC2626' }]}>
+                <Text style={styles.expiryRibbonText}>
+                    {overdueDays === 0 ? t('kitchen.expiredToday') : t('kitchen.expiredDaysAgo', { days: overdueDays })}
+                </Text>
+            </View>
+            <View style={styles.useSoonRow}>
+                <View style={[styles.useSoonThumb, { backgroundColor: '#FEE2E2' }]}>
+                    <Text style={{ fontSize: 32 }}>{item.emoji}</Text>
+                </View>
+                <View style={styles.useSoonInfo}>
+                    <Text style={[styles.fridgeName, { textDecorationLine: 'line-through', color: Colors.textSecondary }]}>{item.name}</Text>
+                    <Text style={styles.fridgeDetail}>{item.amount} • {item.location}</Text>
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity style={[styles.btnRemove, { backgroundColor: '#FEE2E2' }]} onPress={() => onRemove(item.id)}>
+                            <Text style={[styles.btnRemoveText, { color: '#DC2626' }]}>{t('kitchen.remove')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        </View>
+    );
+}
 
 function UseSoonCard({
     item,

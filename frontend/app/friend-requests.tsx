@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity, FlatList, Alert,
+    View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -22,8 +22,8 @@ type Tab = 'received' | 'sent' | 'friends';
 export default function FriendRequestsScreen() {
     const { t } = useAppLanguage();
     const {
-        pendingRequests, sentRequests, friends, acceptingId, decliningId, removingId,
-        loadPendingRequests, loadFriends, acceptRequest, declineRequest, removeFriend,
+        pendingRequests, sentRequests, friends, acceptingId, decliningId, removingId, error,
+        loadPendingRequests, loadFriends, acceptRequest, declineRequest, removeFriend, clearError,
     } = useFriendStore();
     const [tab, setTab] = useState<Tab>('received');
 
@@ -41,14 +41,19 @@ export default function FriendRequestsScreen() {
     };
 
     const handleRemove = (id: string, name: string) => {
-        Alert.alert(
-            t('friend.removeFriend'),
-            name,
-            [
-                { text: t('friend.decline'), style: 'cancel' },
-                { text: t('friend.removeFriend'), style: 'destructive', onPress: () => removeFriend(id) },
-            ],
-        );
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm(`${t('friend.removeFriend')}\n\n${name}`);
+            if (confirmed) removeFriend(id);
+        } else {
+            Alert.alert(
+                t('friend.removeFriend'),
+                name,
+                [
+                    { text: t('friend.decline'), style: 'cancel' },
+                    { text: t('friend.removeFriend'), style: 'destructive', onPress: () => removeFriend(id) },
+                ],
+            );
+        }
     };
 
     const renderReceivedItem = ({ item }: any) => (
@@ -167,6 +172,13 @@ export default function FriendRequestsScreen() {
                 })}
             </View>
 
+            {/* Error banner */}
+            {error && (
+                <TouchableOpacity style={styles.errorBanner} onPress={clearError}>
+                    <Text style={styles.errorText}>{error}</Text>
+                </TouchableOpacity>
+            )}
+
             {/* List */}
             <FlatList
                 data={getListData()}
@@ -233,4 +245,9 @@ const styles = StyleSheet.create({
     emptyState: { alignItems: 'center', paddingTop: 60 },
     emptyEmoji: { fontSize: 48, marginBottom: 12 },
     emptyText: { fontSize: 15, color: Colors.textSecondary, fontWeight: '500' },
+    errorBanner: {
+        backgroundColor: '#FEE2E2', marginHorizontal: 16, marginBottom: 8,
+        padding: 12, borderRadius: 10,
+    },
+    errorText: { color: '#DC2626', fontSize: 13, fontWeight: '600', textAlign: 'center' },
 });

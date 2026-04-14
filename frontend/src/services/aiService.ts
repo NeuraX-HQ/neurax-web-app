@@ -233,16 +233,6 @@ export interface MacroResponse {
     error?: string;
 }
 
-export interface ChallengeSummaryResponse {
-    success: boolean;
-    data?: {
-        summary: string;
-        leader: string | null;
-        mood: 'celebrate' | 'encourage' | 'neutral';
-    };
-    error?: string;
-}
-
 export interface WeeklyInsightResponse {
     success: boolean;
     data?: {
@@ -261,7 +251,7 @@ export interface WeeklyInsightResponse {
  */
 export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResult> {
     try {
-        const result = await getClient().queries.aiEngine({
+        const result = await getClient().queries.scanImage({
             action: 'analyzeFoodImage',
             payload: JSON.stringify({ s3Key })
         });
@@ -288,6 +278,56 @@ export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResul
             success: false,
             error: error instanceof Error ? error.message : 'Failed to analyze image',
         };
+    }
+}
+
+export async function analyzeFoodLabel(s3Key: string): Promise<FoodAnalysisResult> {
+    try {
+        const result = await getClient().queries.scanImage({
+            action: 'analyzeFoodLabel',
+            payload: JSON.stringify({ s3Key })
+        });
+
+        if (result.errors || !result.data) {
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const rawData = extractAndParseJSON(responseObj.text);
+        return { success: true, data: convertAiToNutritionInfo(rawData) };
+    } catch (error) {
+        secureLogger.error('Food label analysis error', { error: error instanceof Error ? error.message : String(error) });
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to analyze label' };
+    }
+}
+
+export async function scanBarcode(s3Key: string): Promise<FoodAnalysisResult> {
+    try {
+        const result = await getClient().queries.scanImage({
+            action: 'scanBarcode',
+            payload: JSON.stringify({ s3Key })
+        });
+
+        if (result.errors || !result.data) {
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const rawData = extractAndParseJSON(responseObj.text);
+        return { success: true, data: convertAiToNutritionInfo(rawData) };
+    } catch (error) {
+        secureLogger.error('Barcode scan error', { error: error instanceof Error ? error.message : String(error) });
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to scan barcode' };
     }
 }
 
@@ -422,7 +462,7 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
  * Search for food and get enriched nutrition info through AI + DB verification
  * Fast Path: query Food DB first, fallback to Bedrock AI.
  */
-export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysisResult> {
+export async function generateFood(foodName: string): Promise<FoodAnalysisResult> {
     try {
         // Step 1: FAST PATH - Search DB directly
         try {
@@ -445,7 +485,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
 
         // Step 2: Ask Bedrock for ingredient breakdown + estimated nutrition
         const aiResult = await getClient().queries.aiEngine({
-            action: 'searchFoodNutrition',
+            action: 'generateFood',
             payload: JSON.stringify({ foodName })
         });
 
@@ -673,42 +713,6 @@ export async function calculateMacros(userProfileJson: any): Promise<MacroRespon
 }
 
 /**
- * Summarize group challenge progress
- */
-export async function getChallengeSummary(params: {
-    title: string;
-    challengeType: string;
-    targetValue: number;
-    unit: string;
-    daysLeft: number;
-    language: 'vi' | 'en';
-    leaderboard: string;
-    userDisplayName: string;
-}): Promise<ChallengeSummaryResponse> {
-    try {
-        const result = await getClient().queries.aiEngine({
-            action: 'challengeSummary',
-            payload: JSON.stringify(params),
-        });
-
-        if (result.errors || !result.data) {
-            return { success: false, error: 'GraphQL error occurred' };
-        }
-
-        const responseObj = JSON.parse(result.data);
-        if (!responseObj.success) {
-            return { success: false, error: responseObj.error };
-        }
-
-        const data = extractAndParseJSON(responseObj.text);
-        return { success: true, data };
-    } catch (error) {
-        secureLogger.error('Challenge summary error', { error: error instanceof Error ? error.message : String(error) });
-        return { success: false, error: error instanceof Error ? error.message : 'Failed to get challenge summary' };
-    }
-}
-
-/**
  * Generate weekly nutrition insight
  */
 export async function getWeeklyInsight(
@@ -808,7 +812,7 @@ export async function generateCoachResponse(
             }
         }
 
-        // Clean text (remove all card tags)
+        // Clean text (remove all card tags + stray JSON/markdown artifacts)
         const cleanedText = text
             .replace(/\[FOOD_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
             .replace(/===FOOD_CARD_START===[\s\S]*?===FOOD_CARD_END===/g, '')
@@ -816,6 +820,10 @@ export async function generateCoachResponse(
             .replace(/===EXERCISE_CARD_START===[\s\S]*?===EXERCISE_CARD_END===/g, '')
             .replace(/\[STATS_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
             .replace(/===STATS_CARD_START===[\s\S]*?===STATS_CARD_END===/g, '')
+            // Strip markdown code fences (```json ... ``` or ``` ... ```)
+            .replace(/```(?:json|javascript|js)?\s*\n?([\s\S]*?)```/g, '')
+            // Strip standalone JSON objects that Qwen sometimes outputs raw
+            .replace(/^\s*\{[\s\S]*\}\s*$/gm, '')
             .trim();
 
         return {
