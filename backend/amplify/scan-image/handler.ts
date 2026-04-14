@@ -16,18 +16,21 @@ const debug = (message: string, data?: any) => {
   }
 };
 
-// Cache API key across warm Lambda invocations
-let cachedApiKey: string | null = null;
+// Cache secrets across warm Lambda invocations
+let cachedSecrets: { apiKey: string; internalToken: string } | null = null;
 
-async function getApiKey(): Promise<string> {
-  if (cachedApiKey) return cachedApiKey;
+async function getSecrets(): Promise<{ apiKey: string; internalToken: string }> {
+  if (cachedSecrets) return cachedSecrets;
 
   const resp = await secretsClient.send(
     new GetSecretValueCommand({ SecretId: "nutritrack/prod/api-keys" })
   );
   const secret = JSON.parse(resp.SecretString || "{}");
-  cachedApiKey = secret.NUTRITRACK_API_KEY || "";
-  return cachedApiKey as string;
+  cachedSecrets = {
+    apiKey: secret.NUTRITRACK_API_KEY || "",
+    internalToken: secret.NUTRITRACK_INTERNAL_TOKEN || "",
+  };
+  return cachedSecrets;
 }
 
 // Generate HS256 JWT using Node.js built-in crypto (no external JWT library needed)
@@ -55,6 +58,7 @@ const ACTION_TO_ENDPOINT: Record<string, string> = {
 async function pollJob(
   jobId: string,
   authHeader: string,
+  internalToken: string,
   signal: AbortSignal,
   pollIntervalMs = 3000,
   maxWaitMs = 270_000
@@ -76,7 +80,7 @@ async function pollJob(
     if (signal.aborted) throw new Error("AbortError");
 
     const resp = await fetch(pollUrl, {
-      headers: { Authorization: authHeader },
+      headers: { Authorization: authHeader, "X-Nutri-Internal-Token": internalToken },
       signal,
     });
 
@@ -337,15 +341,16 @@ export const handler = async (event: any) => {
     debug("Image downloaded", { size: imageBuffer.length, contentType });
 
     // Get API key + generate JWT for ECS auth
-    const apiKey = await getApiKey();
-    if (!apiKey) {
+    const secrets = await getSecrets();
+    if (!secrets.apiKey) {
       return JSON.stringify({
         success: false,
         error: "ECS API key not configured",
       });
     }
-    const token = generateJWT(apiKey);
+    const token = generateJWT(secrets.apiKey);
     const authHeader = `Bearer ${token}`;
+    const internalToken = secrets.internalToken;
 
     // Build FormData with Blob
     const blob = new Blob([imageBuffer], { type: contentType });
@@ -367,7 +372,7 @@ export const handler = async (event: any) => {
       const initResponse = await fetch(ecsUrl, {
         method: "POST",
         body: form,
-        headers: { Authorization: authHeader },
+        headers: { Authorization: authHeader, "X-Nutri-Internal-Token": internalToken },
         signal: controller.signal,
       });
 
@@ -404,7 +409,7 @@ export const handler = async (event: any) => {
     // Poll for result
     let ecsResult: any;
     try {
-      ecsResult = await pollJob(jobId, authHeader, controller.signal);
+      ecsResult = await pollJob(jobId, authHeader, internalToken, controller.signal);
     } finally {
       clearTimeout(timeout);
     }

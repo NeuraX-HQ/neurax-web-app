@@ -1,9 +1,0 @@
-fastapi
-uvicorn
-boto3
-mangum
-python-jose[cryptography]
-httpx
-python-dotenv
-python-multipart
-deep-translator
