@@ -1,9 +1,9 @@
 {
   "auth": {
-    "user_pool_id": "ap-southeast-2_mYLRJngTm",
+    "user_pool_id": "ap-southeast-2_Ynlw0CUrX",
     "aws_region": "ap-southeast-2",
-    "user_pool_client_id": "7blkrbha13mo1b6vajjap29qts",
-    "identity_pool_id": "ap-southeast-2:cb2d8b0c-1079-4c62-aa4d-948a41bbef14",
+    "user_pool_client_id": "7kejag3ragvct3ql6qagan9u8l",
+    "identity_pool_id": "ap-southeast-2:9f0072bb-0f1b-496a-8a6d-5beec50101fe",
     "mfa_methods": [],
     "standard_required_attributes": [
       "email"
@@ -47,12 +47,12 @@
         "profile",
         "aws.cognito.signin.user.admin"
       ],
-      "domain": "2f9584b84e6d0b510e2d.auth.ap-southeast-2.amazoncognito.com"
+      "domain": "6d4161436b606d38bbab.auth.ap-southeast-2.amazoncognito.com"
     },
     "unauthenticated_identities_enabled": true
   },
   "data": {
-    "url": "https://46wxzwls5ndd3fuxfpmrbapose.appsync-api.ap-southeast-2.amazonaws.com/graphql",
+    "url": "https://hh6tmynr2jditalrejqsp4mddi.appsync-api.ap-southeast-2.amazonaws.com/graphql",
     "aws_region": "ap-southeast-2",
     "default_authorization_type": "AMAZON_COGNITO_USER_POOLS",
     "authorization_types": [
@@ -449,7 +449,7 @@
               "name": "meal_type",
               "isArray": false,
               "type": {
-                "enum": "FoodLogMealType"
+                "enum": "FoodLogMeal_type"
               },
               "isRequired": false,
               "attributes": []
@@ -506,7 +506,7 @@
               "name": "input_method",
               "isArray": false,
               "type": {
-                "enum": "FoodLogInputMethod"
+                "enum": "FoodLogInput_method"
               },
               "isRequired": false,
               "attributes": []
@@ -979,8 +979,8 @@
         }
       },
       "enums": {
-        "FoodLogMealType": {
-          "name": "FoodLogMealType",
+        "FoodLogMeal_type": {
+          "name": "FoodLogMeal_type",
           "values": [
             "breakfast",
             "lunch",
@@ -988,8 +988,8 @@
             "snack"
           ]
         },
-        "FoodLogInputMethod": {
-          "name": "FoodLogInputMethod",
+        "FoodLogInput_method": {
+          "name": "FoodLogInput_method",
           "values": [
             "voice",
             "photo",
@@ -1503,11 +1503,11 @@
   },
   "storage": {
     "aws_region": "ap-southeast-2",
-    "bucket_name": "amplify-d1glc6vvop0xlb-fe-nutritrackmediabucketbuc-j7f6fhbcivgm",
+    "bucket_name": "amplify-nutritrackbackend-nutritrackmediabucketbuc-awekhsfwhw9v",
     "buckets": [
       {
         "name": "nutritrack_media_bucket",
-        "bucket_name": "amplify-d1glc6vvop0xlb-fe-nutritrackmediabucketbuc-j7f6fhbcivgm",
+        "bucket_name": "amplify-nutritrackbackend-nutritrackmediabucketbuc-awekhsfwhw9v",
         "aws_region": "ap-southeast-2",
         "paths": {
           "incoming/*": {
@@ -1551,5 +1551,5 @@
       }
     ]
   },
-  "version": "1.3"
+  "version": "1.4"
 }
