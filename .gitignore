@@ -71,5 +71,8 @@ suggested_features.md
 seed.js
 seed.ts
 
+# Lambda Layers build artifacts (local only)
+backend/sharp-layer/
+
 ECS/
 nutritrack-documentation/
