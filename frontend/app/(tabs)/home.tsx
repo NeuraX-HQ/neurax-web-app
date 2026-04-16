@@ -1272,7 +1272,12 @@ export default function HomeScreen() {
                 lastWeight={lastWeight}
                 lastUpdateDate={lastWeightUpdateDate}
                 onSave={handleWeightSave}
-                onDismiss={() => setShowWeightModal(false)}
+                onDismiss={async () => {
+                    // Mark as seen today so the modal does not reappear on the same day
+                    // after app restart (does not change the stored weight value)
+                    await saveUserData({ lastWeightUpdate: new Date().toISOString() });
+                    setShowWeightModal(false);
+                }}
             />
 
             <AiAdjustmentModal

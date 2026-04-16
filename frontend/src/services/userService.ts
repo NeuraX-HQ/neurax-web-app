@@ -98,14 +98,35 @@ export const fetchUserProfile = async (userId: string) => {
  */
 export const updateWeightInDB = async (userId: string, weight: number, dailyCalories: number) => {
     try {
+        const existing = await fetchUserProfile(userId);
+        const bio = (existing?.biometric as any) || {};
+        const goal = (existing?.goal as any) || {};
         await client.models.user.update({
             user_id: userId,
-            biometric: { weight_kg: weight },
-            goal: { daily_calories: dailyCalories },
+            biometric: { ...bio, weight_kg: weight },
+            goal: { ...goal, daily_calories: dailyCalories },
             updated_at: new Date().toISOString(),
         });
     } catch (error) {
         console.error('updateWeightInDB error:', error);
+    }
+};
+
+/**
+ * Update top-level user fields (avatar, display_name) in DynamoDB
+ */
+export const updateUserProfileInDB = async (userId: string, updates: {
+    display_name?: string;
+    avatar_url?: string;
+}) => {
+    try {
+        await client.models.user.update({
+            user_id: userId,
+            ...updates,
+            updated_at: new Date().toISOString(),
+        });
+    } catch (error) {
+        console.error('updateUserProfileInDB error:', error);
     }
 };
 
@@ -154,7 +175,7 @@ export const syncOnboardingWithDB = async (userId: string, email: string) => {
                 });
                 return updatedUser;
             } else {
-                // Local trống (mới login / đổi device) → restore từ cloud
+                // Local trống (mới login / đổi device) → restore đầy đủ từ cloud
                 const bio = existingUser.biometric as any;
                 const goal = existingUser.goal as any;
                 const diet = existingUser.dietary_profile as any;
@@ -168,11 +189,19 @@ export const syncOnboardingWithDB = async (userId: string, email: string) => {
                     dietaryRestrictions: diet?.allergies || [],
                     completed: existingUser.onboarding_status ?? false,
                 });
-                // Restore dailyCalories to USER_KEY so home.tsx reads the right value
+                // Restore tất cả fields vào USER_KEY
                 const restoredCalories = Number(goal?.daily_calories) || 0;
-                if (restoredCalories > 0) {
-                    await saveUserData({ dailyCalories: restoredCalories });
-                }
+                const restoredWeight = Number(bio?.weight_kg) || 0;
+                const restoredGoalWeight = Number(goal?.target_weight_kg) || 0;
+                const restoredAvatarUrl = existingUser.avatar_url || '';
+                const restoredName = existingUser.display_name || '';
+                await saveUserData({
+                    ...(restoredName && { name: restoredName }),
+                    ...(restoredCalories > 0 && { dailyCalories: restoredCalories }),
+                    ...(restoredWeight > 0 && { weight: restoredWeight }),
+                    ...(restoredGoalWeight > 0 && { goalWeight: restoredGoalWeight }),
+                    ...(restoredAvatarUrl && { avatar_url: restoredAvatarUrl }),
+                });
                 return existingUser;
             }
         } else {

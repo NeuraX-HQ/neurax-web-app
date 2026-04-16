@@ -165,23 +165,11 @@ cfnScanImageFn.addPropertyOverride('Environment.Variables.STORAGE_BUCKET_NAME', 
 
 // Kéo toàn bộ thông số thực từ Hệ thống VPC Parameter Store
 const albUrl = cdk.aws_ssm.StringParameter.valueForStringParameter(scanImageLambda.stack, '/nutritrack/ecs/alb_url');
-const lambdaSg = cdk.aws_ssm.StringParameter.valueForStringParameter(scanImageLambda.stack, '/nutritrack/ecs/lambda_sg_id');
-const subnet1 = cdk.aws_ssm.StringParameter.valueForStringParameter(scanImageLambda.stack, '/nutritrack/ecs/private_subnet_1');
-const subnet2 = cdk.aws_ssm.StringParameter.valueForStringParameter(scanImageLambda.stack, '/nutritrack/ecs/private_subnet_2');
 
 cfnScanImageFn.addPropertyOverride('Environment.Variables.ECS_BASE_URL', albUrl);
 
-// Nhúng tự động Lambda con sâu vào kén lõi của VPC
-cfnScanImageFn.vpcConfig = {
-  subnetIds: [subnet1, subnet2],
-  securityGroupIds: [lambdaSg]
-};
-
-// BẮT BUỘC: khi dùng escape hatch cho vpcConfig, CDK không tự thêm quyền ENI
-// Thiếu policy này Lambda sẽ không tạo được Network Interface và fail khi invoke
-scanImageLambda.role?.addManagedPolicy(
-  iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole')
-);
+// Đã đưa Lambda ra ngoài VPC để giảm chi phí NAT Gateway và giảm độ trễ.
+// Việc xác thực với ECS ALB giờ đây dựa trên Custom Header thay vì Security Group.
 
 // Grant friendRequest Lambda permissions to read/write user + Friendship tables
 const friendRequestLambda = backend.friendRequest.resources.lambda;

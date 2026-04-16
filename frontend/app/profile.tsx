@@ -11,6 +11,7 @@ import { useFriendStore } from '../src/store/friendStore';
 import { useMealStore, getTodayDate } from '../src/store/mealStore';
 import { getCurrentStreak } from '../src/utils/streak';
 import { updateMyPublicStats } from '../src/services/friendService';
+import { updateUserProfileInDB } from '../src/services/userService';
 import { Colors, Shadows } from '../src/constants/colors';
 import { ProfileIcon } from '../src/components/TabIcons';
 import Svg, { Path, Circle, Line, Polyline, Rect } from 'react-native-svg';
@@ -133,9 +134,15 @@ export default function ProfileScreen() {
                 }
 
                 if (storedUser) {
-                    setUserData(storedUser);
-                    if (storedUser.avatar_url && !localAvatarRef.current) {
-                        const raw = storedUser.avatar_url;
+                    // Use onboarding values as fallback only when USER_KEY fields are 0/missing
+                    const resolvedUser: UserData = {
+                        ...storedUser,
+                        weight: storedUser.weight > 0 ? storedUser.weight : (onboarding?.currentWeight || 0),
+                        goalWeight: storedUser.goalWeight > 0 ? storedUser.goalWeight : (onboarding?.targetWeight || 0),
+                    };
+                    setUserData(resolvedUser);
+                    if (resolvedUser.avatar_url && !localAvatarRef.current) {
+                        const raw = resolvedUser.avatar_url;
                         if (raw.startsWith('http') || raw.startsWith('file://')) {
                             setAvatarUri(raw);
                         } else {
@@ -217,6 +224,8 @@ export default function ProfileScreen() {
 
                 // Persist the S3 key (not presigned URL — keys don't expire)
                 await saveUserData({ avatar_url: avatarKey });
+                // Sync to DynamoDB user model + public stats (fire-and-forget)
+                updateUserProfileInDB(userId, { avatar_url: avatarKey }).catch(() => {});
                 await updateMyPublicStats({ user_id: userId, avatar_url: avatarKey });
             } catch (e) {
                 console.warn('[AVATAR] Upload failed:', e);
@@ -274,8 +283,8 @@ export default function ProfileScreen() {
     };
 
     const stats = [
-        { label: t('profile.weight'), value: String(userData.weight), unit: 'kg' },
-        { label: t('profile.goal'), value: String(userData.goalWeight), unit: 'kg' },
+        { label: t('profile.weight'), value: userData.weight > 0 ? String(userData.weight) : '--', unit: 'kg' },
+        { label: t('profile.goal'), value: userData.goalWeight > 0 ? String(userData.goalWeight) : '--', unit: 'kg' },
         { label: t('profile.streak'), value: String(streak), unit: '🔥' },
     ];
 

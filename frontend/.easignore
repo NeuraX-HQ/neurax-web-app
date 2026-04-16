@@ -1,0 +1,2 @@
+# un-ignore the critical config file for EAS Build
+!amplify_outputs.json

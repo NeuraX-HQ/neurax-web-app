@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ':*)",
+      "Bash(aws dynamodb:*)",
+      "Bash(python -c \"import sys,json; tables=json.load\\(sys.stdin\\)['TableNames']; [print\\(t\\) for t in tables if 'Food' in t or 'user-' in t or 'FoodLog' in t or 'FridgeItem' in t or 'Friendship' in t or 'UserPublicStats' in t or 'Challenge' in t]\")",
+      "Bash(aws cloudformation:*)",
+      "Bash(git add:*)",
+      "Bash(xargs -r aws ecs describe-tasks --cluster nutritrack-api-cluster --tasks --query \"tasks[*].{TaskId:taskArn,AZ:availabilityZone,LastStatus:lastStatus,ContainerInstanceArn:containerInstanceArn}\" --output table)",
+      "Bash(aws ssm:*)",
+      "Bash(aws amplify:*)",
+      "Bash(MSYS_NO_PATHCONV=1 aws ssm get-parameter --name \"/nutritrack/ecs/lambda_sg_id\" --query \"Parameter.Value\" --output text)",
+      "mcp__awspricing__get_pricing",
+      "Bash(tasklist /FI \"PID eq 18792\")"
+    ]
+  }
+}

@@ -767,63 +767,47 @@ export async function generateCoachResponse(
             return { success: false, error: responseObj.error };
         }
 
-        const text = responseObj.text;
+        const rawText: string = responseObj.text || '';
 
-        // Extract all FOOD_CARDs
+        // Flexible delimiters — allow optional whitespace & case-insensitive
+        const FOOD_RE   = /={3,}\s*FOOD_CARD_START\s*={3,}([\s\S]*?)={3,}\s*FOOD_CARD_END\s*={3,}/gi;
+        const EX_RE     = /={3,}\s*EXERCISE_CARD_START\s*={3,}([\s\S]*?)={3,}\s*EXERCISE_CARD_END\s*={3,}/gi;
+        const STATS_RE  = /={3,}\s*STATS_CARD_START\s*={3,}([\s\S]*?)={3,}\s*STATS_CARD_END\s*={3,}/gi;
+
         const foodSuggestions: FoodSuggestion[] = [];
-        const foodMatches = text.matchAll(/(?:\[FOOD_CARD:\s*(\{[\s\S]*?\})\s*\]|===FOOD_CARD_START===\s*([\s\S]*?)\s*===FOOD_CARD_END===)/g);
-        for (const match of foodMatches) {
-            try {
-                const rawJson = match[1] || match[2];
-                if (!rawJson) continue;
-                const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-                foodSuggestions.push(JSON.parse(cleanJson));
-            } catch (e) {
-                secureLogger.error('Failed to parse food card JSON');
-            }
-        }
-
-        // Extract all EXERCISE_CARDs
         const exerciseSuggestions: ExerciseSuggestion[] = [];
-        const exerciseMatches = text.matchAll(/(?:\[EXERCISE_CARD:\s*(\{[\s\S]*?\})\s*\]|===EXERCISE_CARD_START===\s*([\s\S]*?)\s*===EXERCISE_CARD_END===)/g);
-        for (const match of exerciseMatches) {
-            try {
-                const rawJson = match[1] || match[2];
-                if (!rawJson) continue;
-                const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-                exerciseSuggestions.push(JSON.parse(cleanJson));
-            } catch (e) {
-                secureLogger.error('Failed to parse exercise card JSON');
-            }
-        }
-
-        // Extract STATS_CARD (only one per response)
         let statsCard: StatsCard | undefined;
-        const statsMatch = text.match(/(?:\[STATS_CARD:\s*(\{[\s\S]*?\})\s*\]|===STATS_CARD_START===\s*([\s\S]*?)\s*===STATS_CARD_END===)/);
-        if (statsMatch) {
-            try {
-                const rawJson = statsMatch[1] || statsMatch[2];
-                if (rawJson) {
-                    const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-                    statsCard = JSON.parse(cleanJson);
-                }
-            } catch (e) {
-                secureLogger.error('Failed to parse stats card JSON');
-            }
+
+        for (const match of rawText.matchAll(FOOD_RE)) {
+            try { foodSuggestions.push(JSON.parse(match[1].trim())); } catch { /* skip malformed */ }
+        }
+        const exMatch = rawText.match(EX_RE);
+        if (exMatch) {
+            const inner = exMatch[0].replace(/={3,}\s*EXERCISE_CARD_(?:START|END)\s*={3,}/gi, '').trim();
+            try { exerciseSuggestions.push(JSON.parse(inner)); } catch { /* skip */ }
+        }
+        const stMatch = rawText.match(STATS_RE);
+        if (stMatch) {
+            const inner = stMatch[0].replace(/={3,}\s*STATS_CARD_(?:START|END)\s*={3,}/gi, '').trim();
+            try { statsCard = JSON.parse(inner); } catch { /* skip */ }
         }
 
-        // Clean text (remove all card tags + stray JSON/markdown artifacts)
-        const cleanedText = text
-            .replace(/\[FOOD_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
-            .replace(/===FOOD_CARD_START===[\s\S]*?===FOOD_CARD_END===/g, '')
-            .replace(/\[EXERCISE_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
-            .replace(/===EXERCISE_CARD_START===[\s\S]*?===EXERCISE_CARD_END===/g, '')
-            .replace(/\[STATS_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
-            .replace(/===STATS_CARD_START===[\s\S]*?===STATS_CARD_END===/g, '')
-            // Strip markdown code fences (```json ... ``` or ``` ... ```)
-            .replace(/```(?:json|javascript|js)?\s*\n?([\s\S]*?)```/g, '')
-            // Strip standalone JSON objects that Qwen sometimes outputs raw
-            .replace(/^\s*\{[\s\S]*\}\s*$/gm, '')
+        // Clean text: strip card delimiter blocks + any JSON that leaked inline
+        const cleanedText = rawText
+            // Remove delimiter blocks (flexible)
+            .replace(/={3,}\s*FOOD_CARD_START\s*={3,}[\s\S]*?={3,}\s*FOOD_CARD_END\s*={3,}/gi, '')
+            .replace(/={3,}\s*EXERCISE_CARD_START\s*={3,}[\s\S]*?={3,}\s*EXERCISE_CARD_END\s*={3,}/gi, '')
+            .replace(/={3,}\s*STATS_CARD_START\s*={3,}[\s\S]*?={3,}\s*STATS_CARD_END\s*={3,}/gi, '')
+            // Strip trailing note
+            .replace(/Ghi chú\s*:[\s\S]*$/i, '')
+            // Strip any markdown code fences with JSON
+            .replace(/```(?:json)?\s*[\s\S]*?```/g, '')
+            // Strip standalone JSON objects that look like card data (contain "name" + "calories")
+            .replace(/\{[^{}]*"name"\s*:[^{}]*"calories"\s*:[^{}]*\}/g, '')
+            // Strip multi-line JSON blocks on their own paragraph lines
+            .replace(/^\s*\{[\s\S]{10,600}?\}\s*$/gm, '')
+            // Collapse 3+ blank lines to 2
+            .replace(/\n{3,}/g, '\n\n')
             .trim();
 
         return {
@@ -832,7 +816,7 @@ export async function generateCoachResponse(
             foodSuggestions: foodSuggestions.length > 0 ? foodSuggestions : undefined,
             exerciseSuggestions: exerciseSuggestions.length > 0 ? exerciseSuggestions : undefined,
             statsCard,
-            foodSuggestion: foodSuggestions[0], // backward compat
+            foodSuggestion: foodSuggestions[0],
         };
     } catch (error) {
         secureLogger.error('Bedrock coach error', { error: error instanceof Error ? error.message : String(error) });

@@ -51,8 +51,8 @@ yarn-error.*
 # Amplify
 .amplify/
 backend/.amplify/
-amplifyconfiguration*
-amplify_outputs.json
+# amplify_outputs.json
+!frontend/amplify_outputs.json
 
 # Terraform
 **/.terraform/

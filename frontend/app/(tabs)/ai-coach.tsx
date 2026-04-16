@@ -5,7 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Colors, Shadows } from '../../src/constants/colors';
 import { useMealStore } from '../../src/store/mealStore';
 import { useFridgeStore } from '../../src/store/fridgeStore';
-import { getUserData, UserData } from '../../src/store/userStore';
+import { getUserData, getOnboardingData, UserData } from '../../src/store/userStore';
 import { generateCoachResponse } from '../../src/services/aiService';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 
@@ -26,6 +26,7 @@ export default function AiCoachScreen() {
     const { messages, setMessages, isLoading, setIsLoading } = useChatStore();
 
     const [userData, setUserData] = useState<UserData | null>(null);
+    const [displayName, setDisplayName] = useState<string>('');
     const scrollViewRef = useRef<ScrollView>(null);
 
     const { getStatsByDate, getTodayMeals } = useMealStore();
@@ -34,8 +35,10 @@ export default function AiCoachScreen() {
 
     useEffect(() => {
         const fetchUser = async () => {
-            const data = await getUserData();
+            const [data, onboarding] = await Promise.all([getUserData(), getOnboardingData()]);
             setUserData(data);
+            // onboarding.name là tên thật user nhập — ưu tiên hơn defaultUser.name ('Admin')
+            setDisplayName(onboarding?.name || data?.name || '');
         };
         fetchUser();
     }, []);
@@ -54,7 +57,7 @@ export default function AiCoachScreen() {
         const fridge = fridgeItems.map(i => `${i.name} (${i.amount})`).join(', ');
 
         return `${t('aiCoach.context.profile')}:
-    - ${t('aiCoach.context.name')}: ${userData?.name || t('aiCoach.context.user')}
+    - ${t('aiCoach.context.name')}: ${displayName || t('aiCoach.context.user')}
     - ${t('aiCoach.context.weight')}: ${userData?.weight}kg
     - ${t('aiCoach.context.goalWeight')}: ${userData?.goalWeight}kg
     - ${t('aiCoach.context.calorieGoal')}: ${userData?.dailyCalories}kcal
