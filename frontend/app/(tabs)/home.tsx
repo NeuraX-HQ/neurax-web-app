@@ -126,9 +126,9 @@ export default function HomeScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            // Only scroll to current week, but don't force select today
-            // so the user stays on the date they were just logging for.
-            flatListRef.current?.scrollToIndex({ index: 500, animated: true });
+            // Quietly scroll to current week if ref exists.
+            // Using animated: false to avoid "snapping" effect on focus gain.
+            flatListRef.current?.scrollToIndex({ index: 26, animated: false });
         }, [])
     );
 
@@ -202,7 +202,8 @@ export default function HomeScreen() {
         currentMonday.setDate(baseDate.getDate() - dayOfWeek);
 
         const weeks = [];
-        for (let weekOffset = -500; weekOffset <= 500; weekOffset++) {
+        // Reduced from 500 to 26 weeks each way (~1 year total) for stability
+        for (let weekOffset = -26; weekOffset <= 26; weekOffset++) {
             const week = [];
             for (let i = 0; i < 7; i++) {
                 const d = new Date(currentMonday);
@@ -811,8 +812,19 @@ export default function HomeScreen() {
                         pagingEnabled
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={{ paddingVertical: 8 }}
-                        initialScrollIndex={500}
+                        initialScrollIndex={26}
                         getItemLayout={(_, index) => ({ length: windowWidth, offset: windowWidth * index, index })}
+                        initialNumToRender={1}
+                        maxToRenderPerBatch={2}
+                        windowSize={3}
+                        onScrollToIndexFailed={(info) => {
+                            setTimeout(() => {
+                                flatListRef.current?.scrollToOffset({
+                                    offset: info.averageItemLength * info.index,
+                                    animated: false
+                                });
+                            }, 100);
+                        }}
                         renderItem={useCallback(({ item: week }: { item: { iso: string; weekdayIndex: number; day: number }[] }) => (
                             <WeekItem
                                 week={week}
@@ -1231,8 +1243,8 @@ export default function HomeScreen() {
                                                     setStripBaseDateStr(cell.iso);
                                                     setShowMonthPicker(false);
                                                     setTimeout(() => {
-                                                        flatListRef.current?.scrollToIndex({ index: 500, animated: true });
-                                                    }, 100);
+                                                        flatListRef.current?.scrollToIndex({ index: 26, animated: true });
+                                                    }, 150);
                                                 }}
                                             >
                                                 <Text

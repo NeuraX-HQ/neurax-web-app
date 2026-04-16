@@ -132,7 +132,14 @@ export default function FoodDetailScreen() {
     const foodData: NutritionInfo | null = currentFoodItem || (params.foodData ? JSON.parse(params.foodData as string) : null);
 
     const { language } = useAppLanguage();
-    const displayFoodName = foodData ? (language === 'vi' ? (foodData.name_vi || foodData.name) : (foodData.name_en || foodData.name)) : '';
+    // Helper to resolve name based on language
+    const resolveName = (item: any) => {
+        if (typeof item === 'string') return item;
+        if (!item) return '';
+        return language === 'vi' ? (item.name_vi || item.name) : (item.name_en || item.name);
+    };
+
+    const displayFoodName = foodData ? resolveName(foodData) : '';
 
     if (!foodData) {
         return (
@@ -414,24 +421,21 @@ export default function FoodDetailScreen() {
                         {ingredientItems.map((ingredient, index) => {
                             let item = ingredient;
                             // Defensive check: if it's a JSON-like string, parse it locally
-                            if (typeof item === 'string' && item.startsWith('{')) {
+                            if (typeof item === 'string' && (item as string).startsWith('{')) {
                                 try { item = JSON.parse(item); } catch { /* fallback to string */ }
                             }
 
                             const isStringIngredient = typeof item === 'string';
-                            let ingredientName = '';
-                            if (isStringIngredient) {
-                                ingredientName = item;
-                            } else {
-                                ingredientName = language === 'vi' ? (item.name_vi || item.name) : (item.name_en || item.name);
-                            }
+                            const ingredientName = resolveName(item);
+
                             const ingredientAmount = isStringIngredient
                                 ? ''
                                 : item.estimated_g
-                                    ? `${item.estimated_g} g`
+                                    ? `${Math.round(item.estimated_g * nutritionMultiplier)} g`
                                     : item.amount || '';
+
                             const ingredientKcal = !isStringIngredient && item.calories !== undefined
-                                ? `${Math.round(item.calories)} kcal`
+                                ? `${Math.round(item.calories * nutritionMultiplier)} kcal`
                                 : '';
                             return (
                                 <View key={`${ingredientName}-${index}`} style={styles.macroDetailRow}>
