@@ -412,27 +412,33 @@ export default function FoodDetailScreen() {
                             </TouchableOpacity>
                         </View>
                         {ingredientItems.map((ingredient, index) => {
-                            const isStringIngredient = typeof ingredient === 'string';
+                            let item = ingredient;
+                            // Defensive check: if it's a JSON-like string, parse it locally
+                            if (typeof item === 'string' && item.startsWith('{')) {
+                                try { item = JSON.parse(item); } catch { /* fallback to string */ }
+                            }
+
+                            const isStringIngredient = typeof item === 'string';
                             let ingredientName = '';
                             if (isStringIngredient) {
-                                ingredientName = ingredient;
+                                ingredientName = item;
                             } else {
-                                ingredientName = language === 'vi' ? (ingredient.name_vi || ingredient.name) : (ingredient.name_en || ingredient.name);
+                                ingredientName = language === 'vi' ? (item.name_vi || item.name) : (item.name_en || item.name);
                             }
                             const ingredientAmount = isStringIngredient
                                 ? ''
-                                : ingredient.estimated_g
-                                    ? `${ingredient.estimated_g} g`
-                                    : ingredient.amount || '';
-                            const ingredientKcal = !isStringIngredient && ingredient.calories !== undefined
-                                ? `${Math.round(ingredient.calories)} kcal`
+                                : item.estimated_g
+                                    ? `${item.estimated_g} g`
+                                    : item.amount || '';
+                            const ingredientKcal = !isStringIngredient && item.calories !== undefined
+                                ? `${Math.round(item.calories)} kcal`
                                 : '';
                             return (
                                 <View key={`${ingredientName}-${index}`} style={styles.macroDetailRow}>
                                     <View style={[
                                         styles.ingredientCheckbox,
-                                        !isStringIngredient && ingredient.source === 'database' && styles.ingredientCheckboxDB,
-                                        !isStringIngredient && ingredient.source === 'ai_estimated' && styles.ingredientCheckboxAI,
+                                        !isStringIngredient && item.source === 'database' && styles.ingredientCheckboxDB,
+                                        !isStringIngredient && item.source === 'ai_estimated' && styles.ingredientCheckboxAI,
                                     ]} />
                                     <Text style={styles.macroDetailLabel}>{ingredientName}</Text>
                                     {!!ingredientAmount && <Text style={styles.macroDetailSub}>{ingredientAmount}</Text>}

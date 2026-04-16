@@ -16,6 +16,7 @@ import { Colors, Shadows } from '../src/constants/colors';
 import { ProfileIcon } from '../src/components/TabIcons';
 import Svg, { Path, Circle, Line, Polyline, Rect } from 'react-native-svg';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
+import * as userService from '../src/services/userService';
 
 // --- Inline SVG Icons ---
 function BackArrow({ size = 22, color = Colors.primary }: { size?: number; color?: string }) {
@@ -227,6 +228,9 @@ export default function ProfileScreen() {
                 // Sync to DynamoDB user model + public stats (fire-and-forget)
                 updateUserProfileInDB(userId, { avatar_url: avatarKey }).catch(() => {});
                 await updateMyPublicStats({ user_id: userId, avatar_url: avatarKey });
+
+                // Sync main User model with the new avatar key
+                userService.pushLocalProfileToCloud(userId).catch(e => console.warn('[USER] Avatar cloud sync failed', e));
             } catch (e) {
                 console.warn('[AVATAR] Upload failed:', e);
                 Alert.alert('Upload Error', 'Could not upload avatar. Please try again.');

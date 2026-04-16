@@ -1,6 +1,6 @@
 import { generateClient } from 'aws-amplify/api';
 import { type Schema } from '../../../backend/amplify/data/resource';
-import { getOnboardingData, OnboardingData, saveOnboardingData, saveUserData } from '../store/userStore';
+import { getOnboardingData, getUserData, OnboardingData, saveOnboardingData, saveUserData } from '../store/userStore';
 
 /** Tính calo mục tiêu từ dữ liệu onboarding (same formula as step9.tsx & home.tsx). */
 function computeDailyCalories(data: OnboardingData): number {
@@ -31,6 +31,60 @@ function generateFriendCode(): string {
     }
     return code;
 }
+
+/**
+ * Pushes the current local Profile/Onboarding state to the cloud.
+ * Run this after any successful local save to ensure sync.
+ */
+export const pushLocalProfileToCloud = async (userId: string) => {
+    try {
+        const [localOnboarding, localUserData, localUserCloud] = await Promise.all([
+            getOnboardingData(),
+            getUserData(),
+            client.models.user.get({ user_id: userId }) // Get current cloud state to merge
+        ]);
+
+        if (!localOnboarding.completed || !localOnboarding.name) {
+            console.log('[USER] Skipping sync: onboarding not complete');
+            return;
+        }
+
+        const existing = localUserCloud?.data;
+        const existingBio = existing?.biometric as any;
+        const existingGoal = existing?.goal as any;
+
+        const input: any = {
+            user_id: userId,
+            display_name: localOnboarding.name,
+            onboarding_status: localOnboarding.completed,
+            avatar_url: localUserData.avatar_url,
+            updated_at: new Date().toISOString(),
+            biometric: {
+                ...existingBio,
+                gender: localOnboarding.gender,
+                height_cm: localOnboarding.height,
+                weight_kg: localOnboarding.currentWeight,
+                active_level: localOnboarding.activityLevel,
+            },
+            goal: {
+                ...existingGoal,
+                target_weight_kg: localOnboarding.targetWeight,
+                daily_calories: computeDailyCalories(localOnboarding),
+            },
+            dietary_profile: {
+                ...(existing?.dietary_profile as any),
+                allergies: localOnboarding.dietaryRestrictions,
+            }
+        };
+
+        const { errors } = await client.models.user.update(input);
+        if (errors) console.error('[USER] Cloud sync failed:', errors);
+        else console.log('[USER] Cloud sync successful');
+
+    } catch (error) {
+        console.error('[USER] pushLocalProfileToCloud error:', error);
+    }
+};
 
 export const createUserProfile = async (userId: string, email: string, onboardingData?: OnboardingData) => {
     try {
@@ -139,6 +193,8 @@ export const syncOnboardingWithDB = async (userId: string, email: string) => {
         const existingUser = await fetchUserProfile(userId);
 
         if (existingUser) {
+            const localUserData = await getUserData();
+
             // Backfill friend_code for existing users who don't have one
             if (!existingUser.friend_code) {
                 try {
@@ -154,21 +210,29 @@ export const syncOnboardingWithDB = async (userId: string, email: string) => {
 
             if (localHasData) {
                 // Local có data thật → push lên cloud
+                const existingBio = existingUser.biometric as any;
+                const existingGoal = existingUser.goal as any;
+                const existingDiet = existingUser.dietary_profile as any;
+
                 const { data: updatedUser } = await client.models.user.update({
                     user_id: userId,
                     display_name: localData.name,
                     onboarding_status: localData.completed,
+                    avatar_url: localUserData.avatar_url,
                     biometric: {
+                        ...existingBio,
                         gender: localData.gender,
                         height_cm: localData.height,
                         weight_kg: localData.currentWeight,
                         active_level: localData.activityLevel,
                     },
                     goal: {
+                        ...existingGoal,
                         target_weight_kg: localData.targetWeight,
                         daily_calories: computeDailyCalories(localData),
                     },
                     dietary_profile: {
+                        ...existingDiet,
                         allergies: localData.dietaryRestrictions,
                     },
                     updated_at: new Date().toISOString(),

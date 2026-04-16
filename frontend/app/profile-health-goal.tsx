@@ -7,10 +7,13 @@ import { getOnboardingData, saveOnboardingData } from '../src/store/userStore';
 import { goals } from '../src/data/constants';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
+import { useAuthStore } from '../src/store/authStore';
+import * as userService from '../src/services/userService';
 
 export default function ProfileHealthGoalScreen() {
     const router = useRouter();
     const { t } = useAppLanguage();
+    const { userId } = useAuthStore();
     const [selected, setSelected] = useState('');
 
     const getGoalLabel = (id: string) => {
@@ -30,6 +33,11 @@ export default function ProfileHealthGoalScreen() {
     const handleSave = async () => {
         if (!selected) return;
         await saveOnboardingData({ goal: selected });
+        
+        if (userId) {
+            userService.pushLocalProfileToCloud(userId).catch(e => console.warn('[USER] Silent sync failed', e));
+        }
+
         router.back();
     };
 

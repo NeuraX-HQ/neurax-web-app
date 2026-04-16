@@ -770,9 +770,9 @@ export async function generateCoachResponse(
         const rawText: string = responseObj.text || '';
 
         // Flexible delimiters — allow optional whitespace & case-insensitive
-        const FOOD_RE   = /={3,}\s*FOOD_CARD_START\s*={3,}([\s\S]*?)={3,}\s*FOOD_CARD_END\s*={3,}/gi;
-        const EX_RE     = /={3,}\s*EXERCISE_CARD_START\s*={3,}([\s\S]*?)={3,}\s*EXERCISE_CARD_END\s*={3,}/gi;
-        const STATS_RE  = /={3,}\s*STATS_CARD_START\s*={3,}([\s\S]*?)={3,}\s*STATS_CARD_END\s*={3,}/gi;
+        const FOOD_RE = /={3,}\s*FOOD_CARD_START\s*={3,}([\s\S]*?)={3,}\s*FOOD_CARD_END\s*={3,}/gi;
+        const EX_RE = /={3,}\s*EXERCISE_CARD_START\s*={3,}([\s\S]*?)={3,}\s*EXERCISE_CARD_END\s*={3,}/gi;
+        const STATS_RE = /={3,}\s*STATS_CARD_START\s*={3,}([\s\S]*?)={3,}\s*STATS_CARD_END\s*={3,}/gi;
 
         const foodSuggestions: FoodSuggestion[] = [];
         const exerciseSuggestions: ExerciseSuggestion[] = [];

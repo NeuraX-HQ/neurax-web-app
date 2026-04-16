@@ -8,11 +8,12 @@ import { useAuthStore } from '../src/store/authStore';
 import { updateUserProfileInDB } from '../src/services/userService';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
+import * as userService from '../src/services/userService';
 
 export default function ProfilePersonalInfoScreen() {
     const router = useRouter();
     const { t } = useAppLanguage();
-    const userId = useAuthStore((state) => state.userId);
+    const { userId } = useAuthStore();
     const [name, setName] = useState('');
     const [isFocused, setIsFocused] = useState(false);
 
@@ -37,6 +38,10 @@ export default function ProfilePersonalInfoScreen() {
         ]);
         // Sync display_name lên DynamoDB (fire-and-forget)
         if (userId) updateUserProfileInDB(userId, { display_name: cleanedName }).catch(() => {});
+
+        if (userId) {
+            userService.pushLocalProfileToCloud(userId).catch(e => console.warn('[USER] Silent sync failed', e));
+        }
 
         router.back();
     };
