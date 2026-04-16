@@ -128,6 +128,11 @@ export default function ProfileScreen() {
     useFocusEffect(
         useCallback(() => {
             const fetchUserData = async () => {
+                // Sync with Cloud proactively if we have a userId
+                if (userId) {
+                    await userService.syncOnboardingWithDB(userId, email || '').catch(e => console.warn('[PROFILE] sync failed', e));
+                }
+
                 const [onboarding, storedUser] = await Promise.all([getOnboardingData(), getUserData()]);
 
                 if (onboarding?.gender) {
