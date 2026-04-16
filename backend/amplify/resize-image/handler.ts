@@ -1,6 +1,5 @@
 import { S3Handler } from 'aws-lambda';
 import { S3Client, HeadObjectCommand, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import sharp from 'sharp';
 
 const s3Client = new S3Client({});
 
@@ -43,14 +42,16 @@ export const handler: S3Handler = async (event) => {
       const originalBuffer = Buffer.concat(chunks);
 
       // 3. Resize — scale down to MAX_DIMENSION on the longest side, keep aspect ratio
+      const sharp = (await import('sharp')).default;
+
       const resizedBuffer = await sharp(originalBuffer)
-        .rotate()                         // auto-rotate by EXIF orientation
+        .rotate()
         .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: 'inside', withoutEnlargement: true })
         .jpeg({ quality: JPEG_QUALITY, progressive: true })
         .toBuffer();
-
+        
       const originalKB = Math.round(originalBuffer.byteLength / 1024);
-      const resizedKB  = Math.round(resizedBuffer.byteLength / 1024);
+      const resizedKB = Math.round(resizedBuffer.byteLength / 1024);
       console.log(`Resized: ${originalKB}KB → ${resizedKB}KB`);
 
       // 4. Save compressed version to media/ (for food-detail display)
