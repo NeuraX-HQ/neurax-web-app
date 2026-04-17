@@ -12,6 +12,7 @@ import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 import { useChatStore, ChatMessage } from '../../src/store/chatStore';
 import { useRecipeStore } from '../../src/store/recipeStore';
 import { Alert } from 'react-native';
+import { toLocalIsoDate } from '../../src/utils/streak';
 
 export default function AiCoachScreen() {
     const { t, language } = useAppLanguage();
@@ -52,7 +53,7 @@ export default function AiCoachScreen() {
     }, [language]);
 
     const constructContext = () => {
-        const stats = getStatsByDate(new Date().toISOString().split('T')[0]);
+        const stats = getStatsByDate(toLocalIsoDate(new Date()));
         const meals = getTodayMeals();
         const fridge = fridgeItems.map(i => `${i.name} (${i.amount})`).join(', ');
 
