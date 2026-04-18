@@ -233,16 +233,6 @@ export interface MacroResponse {
     error?: string;
 }
 
-export interface ChallengeSummaryResponse {
-    success: boolean;
-    data?: {
-        summary: string;
-        leader: string | null;
-        mood: 'celebrate' | 'encourage' | 'neutral';
-    };
-    error?: string;
-}
-
 export interface WeeklyInsightResponse {
     success: boolean;
     data?: {
@@ -261,7 +251,7 @@ export interface WeeklyInsightResponse {
  */
 export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResult> {
     try {
-        const result = await getClient().queries.aiEngine({
+        const result = await getClient().queries.scanImage({
             action: 'analyzeFoodImage',
             payload: JSON.stringify({ s3Key })
         });
@@ -288,6 +278,56 @@ export async function analyzeFoodImage(s3Key: string): Promise<FoodAnalysisResul
             success: false,
             error: error instanceof Error ? error.message : 'Failed to analyze image',
         };
+    }
+}
+
+export async function analyzeFoodLabel(s3Key: string): Promise<FoodAnalysisResult> {
+    try {
+        const result = await getClient().queries.scanImage({
+            action: 'analyzeFoodLabel',
+            payload: JSON.stringify({ s3Key })
+        });
+
+        if (result.errors || !result.data) {
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const rawData = extractAndParseJSON(responseObj.text);
+        return { success: true, data: convertAiToNutritionInfo(rawData) };
+    } catch (error) {
+        secureLogger.error('Food label analysis error', { error: error instanceof Error ? error.message : String(error) });
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to analyze label' };
+    }
+}
+
+export async function scanBarcode(s3Key: string): Promise<FoodAnalysisResult> {
+    try {
+        const result = await getClient().queries.scanImage({
+            action: 'scanBarcode',
+            payload: JSON.stringify({ s3Key })
+        });
+
+        if (result.errors || !result.data) {
+            secureLogger.error('Amplify GraphQL Errors:', { errors: result.errors });
+            return { success: false, error: 'GraphQL error occurred' };
+        }
+
+        const responseObj = JSON.parse(result.data);
+        if (!responseObj.success) {
+            return { success: false, error: responseObj.error };
+        }
+
+        const rawData = extractAndParseJSON(responseObj.text);
+        return { success: true, data: convertAiToNutritionInfo(rawData) };
+    } catch (error) {
+        secureLogger.error('Barcode scan error', { error: error instanceof Error ? error.message : String(error) });
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to scan barcode' };
     }
 }
 
@@ -422,7 +462,7 @@ export async function voiceToFood(audioUri: string): Promise<FoodAnalysisResult 
  * Search for food and get enriched nutrition info through AI + DB verification
  * Fast Path: query Food DB first, fallback to Bedrock AI.
  */
-export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysisResult> {
+export async function generateFood(foodName: string): Promise<FoodAnalysisResult> {
     try {
         // Step 1: FAST PATH - Search DB directly
         try {
@@ -445,7 +485,7 @@ export async function searchFoodNutrition(foodName: string): Promise<FoodAnalysi
 
         // Step 2: Ask Bedrock for ingredient breakdown + estimated nutrition
         const aiResult = await getClient().queries.aiEngine({
-            action: 'searchFoodNutrition',
+            action: 'generateFood',
             payload: JSON.stringify({ foodName })
         });
 
@@ -673,42 +713,6 @@ export async function calculateMacros(userProfileJson: any): Promise<MacroRespon
 }
 
 /**
- * Summarize group challenge progress
- */
-export async function getChallengeSummary(params: {
-    title: string;
-    challengeType: string;
-    targetValue: number;
-    unit: string;
-    daysLeft: number;
-    language: 'vi' | 'en';
-    leaderboard: string;
-    userDisplayName: string;
-}): Promise<ChallengeSummaryResponse> {
-    try {
-        const result = await getClient().queries.aiEngine({
-            action: 'challengeSummary',
-            payload: JSON.stringify(params),
-        });
-
-        if (result.errors || !result.data) {
-            return { success: false, error: 'GraphQL error occurred' };
-        }
-
-        const responseObj = JSON.parse(result.data);
-        if (!responseObj.success) {
-            return { success: false, error: responseObj.error };
-        }
-
-        const data = extractAndParseJSON(responseObj.text);
-        return { success: true, data };
-    } catch (error) {
-        secureLogger.error('Challenge summary error', { error: error instanceof Error ? error.message : String(error) });
-        return { success: false, error: error instanceof Error ? error.message : 'Failed to get challenge summary' };
-    }
-}
-
-/**
  * Generate weekly nutrition insight
  */
 export async function getWeeklyInsight(
@@ -763,59 +767,47 @@ export async function generateCoachResponse(
             return { success: false, error: responseObj.error };
         }
 
-        const text = responseObj.text;
+        const rawText: string = responseObj.text || '';
 
-        // Extract all FOOD_CARDs
+        // Flexible delimiters — allow optional whitespace & case-insensitive
+        const FOOD_RE = /={3,}\s*FOOD_CARD_START\s*={3,}([\s\S]*?)={3,}\s*FOOD_CARD_END\s*={3,}/gi;
+        const EX_RE = /={3,}\s*EXERCISE_CARD_START\s*={3,}([\s\S]*?)={3,}\s*EXERCISE_CARD_END\s*={3,}/gi;
+        const STATS_RE = /={3,}\s*STATS_CARD_START\s*={3,}([\s\S]*?)={3,}\s*STATS_CARD_END\s*={3,}/gi;
+
         const foodSuggestions: FoodSuggestion[] = [];
-        const foodMatches = text.matchAll(/(?:\[FOOD_CARD:\s*(\{[\s\S]*?\})\s*\]|===FOOD_CARD_START===\s*([\s\S]*?)\s*===FOOD_CARD_END===)/g);
-        for (const match of foodMatches) {
-            try {
-                const rawJson = match[1] || match[2];
-                if (!rawJson) continue;
-                const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-                foodSuggestions.push(JSON.parse(cleanJson));
-            } catch (e) {
-                secureLogger.error('Failed to parse food card JSON');
-            }
-        }
-
-        // Extract all EXERCISE_CARDs
         const exerciseSuggestions: ExerciseSuggestion[] = [];
-        const exerciseMatches = text.matchAll(/(?:\[EXERCISE_CARD:\s*(\{[\s\S]*?\})\s*\]|===EXERCISE_CARD_START===\s*([\s\S]*?)\s*===EXERCISE_CARD_END===)/g);
-        for (const match of exerciseMatches) {
-            try {
-                const rawJson = match[1] || match[2];
-                if (!rawJson) continue;
-                const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-                exerciseSuggestions.push(JSON.parse(cleanJson));
-            } catch (e) {
-                secureLogger.error('Failed to parse exercise card JSON');
-            }
-        }
-
-        // Extract STATS_CARD (only one per response)
         let statsCard: StatsCard | undefined;
-        const statsMatch = text.match(/(?:\[STATS_CARD:\s*(\{[\s\S]*?\})\s*\]|===STATS_CARD_START===\s*([\s\S]*?)\s*===STATS_CARD_END===)/);
-        if (statsMatch) {
-            try {
-                const rawJson = statsMatch[1] || statsMatch[2];
-                if (rawJson) {
-                    const cleanJson = rawJson.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-                    statsCard = JSON.parse(cleanJson);
-                }
-            } catch (e) {
-                secureLogger.error('Failed to parse stats card JSON');
-            }
+
+        for (const match of rawText.matchAll(FOOD_RE)) {
+            try { foodSuggestions.push(JSON.parse(match[1].trim())); } catch { /* skip malformed */ }
+        }
+        const exMatch = rawText.match(EX_RE);
+        if (exMatch) {
+            const inner = exMatch[0].replace(/={3,}\s*EXERCISE_CARD_(?:START|END)\s*={3,}/gi, '').trim();
+            try { exerciseSuggestions.push(JSON.parse(inner)); } catch { /* skip */ }
+        }
+        const stMatch = rawText.match(STATS_RE);
+        if (stMatch) {
+            const inner = stMatch[0].replace(/={3,}\s*STATS_CARD_(?:START|END)\s*={3,}/gi, '').trim();
+            try { statsCard = JSON.parse(inner); } catch { /* skip */ }
         }
 
-        // Clean text (remove all card tags)
-        const cleanedText = text
-            .replace(/\[FOOD_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
-            .replace(/===FOOD_CARD_START===[\s\S]*?===FOOD_CARD_END===/g, '')
-            .replace(/\[EXERCISE_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
-            .replace(/===EXERCISE_CARD_START===[\s\S]*?===EXERCISE_CARD_END===/g, '')
-            .replace(/\[STATS_CARD:\s*\{[\s\S]*?\}\s*\]/g, '')
-            .replace(/===STATS_CARD_START===[\s\S]*?===STATS_CARD_END===/g, '')
+        // Clean text: strip card delimiter blocks + any JSON that leaked inline
+        const cleanedText = rawText
+            // Remove delimiter blocks (flexible)
+            .replace(/={3,}\s*FOOD_CARD_START\s*={3,}[\s\S]*?={3,}\s*FOOD_CARD_END\s*={3,}/gi, '')
+            .replace(/={3,}\s*EXERCISE_CARD_START\s*={3,}[\s\S]*?={3,}\s*EXERCISE_CARD_END\s*={3,}/gi, '')
+            .replace(/={3,}\s*STATS_CARD_START\s*={3,}[\s\S]*?={3,}\s*STATS_CARD_END\s*={3,}/gi, '')
+            // Strip trailing note
+            .replace(/Ghi chú\s*:[\s\S]*$/i, '')
+            // Strip any markdown code fences with JSON
+            .replace(/```(?:json)?\s*[\s\S]*?```/g, '')
+            // Strip standalone JSON objects that look like card data (contain "name" + "calories")
+            .replace(/\{[^{}]*"name"\s*:[^{}]*"calories"\s*:[^{}]*\}/g, '')
+            // Strip multi-line JSON blocks on their own paragraph lines
+            .replace(/^\s*\{[\s\S]{10,600}?\}\s*$/gm, '')
+            // Collapse 3+ blank lines to 2
+            .replace(/\n{3,}/g, '\n\n')
             .trim();
 
         return {
@@ -824,7 +816,7 @@ export async function generateCoachResponse(
             foodSuggestions: foodSuggestions.length > 0 ? foodSuggestions : undefined,
             exerciseSuggestions: exerciseSuggestions.length > 0 ? exerciseSuggestions : undefined,
             statsCard,
-            foodSuggestion: foodSuggestions[0], // backward compat
+            foodSuggestion: foodSuggestions[0],
         };
     } catch (error) {
         secureLogger.error('Bedrock coach error', { error: error instanceof Error ? error.message : String(error) });

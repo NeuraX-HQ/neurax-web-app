@@ -8,11 +8,15 @@ import { uploadData, getUrl } from 'aws-amplify/storage';
 import { useAuthStore } from '../src/store/authStore';
 import { getOnboardingData, getUserData, saveUserData, UserData } from '../src/store/userStore';
 import { useFriendStore } from '../src/store/friendStore';
+import { useMealStore, getTodayDate } from '../src/store/mealStore';
+import { getCurrentStreak } from '../src/utils/streak';
 import { updateMyPublicStats } from '../src/services/friendService';
+import { updateUserProfileInDB } from '../src/services/userService';
 import { Colors, Shadows } from '../src/constants/colors';
 import { ProfileIcon } from '../src/components/TabIcons';
 import Svg, { Path, Circle, Line, Polyline, Rect } from 'react-native-svg';
 import { useAppLanguage } from '../src/i18n/LanguageProvider';
+import * as userService from '../src/services/userService';
 
 // --- Inline SVG Icons ---
 function BackArrow({ size = 22, color = Colors.primary }: { size?: number; color?: string }) {
@@ -91,6 +95,11 @@ export default function ProfileScreen() {
     const { t } = useAppLanguage();
     const { logout, email, userId } = useAuthStore();
     const { myFriendCode, loadMyFriendCode, friends, loadFriends } = useFriendStore();
+    const meals = useMealStore(s => s.meals);
+    const streak = React.useMemo(() => {
+        const mealDateSet = new Set(meals.map(m => m.date));
+        return getCurrentStreak(mealDateSet, getTodayDate());
+    }, [meals]);
     const [codeCopied, setCodeCopied] = React.useState(false);
     const [gender, setGender] = React.useState<string>('');
     const [userData, setUserData] = React.useState<UserData>({
@@ -119,6 +128,11 @@ export default function ProfileScreen() {
     useFocusEffect(
         useCallback(() => {
             const fetchUserData = async () => {
+                // Sync with Cloud proactively if we have a userId
+                if (userId) {
+                    await userService.syncOnboardingWithDB(userId, email || '').catch(e => console.warn('[PROFILE] sync failed', e));
+                }
+
                 const [onboarding, storedUser] = await Promise.all([getOnboardingData(), getUserData()]);
 
                 if (onboarding?.gender) {
@@ -126,9 +140,15 @@ export default function ProfileScreen() {
                 }
 
                 if (storedUser) {
-                    setUserData(storedUser);
-                    if (storedUser.avatar_url && !localAvatarRef.current) {
-                        const raw = storedUser.avatar_url;
+                    // Use onboarding values as fallback only when USER_KEY fields are 0/missing
+                    const resolvedUser: UserData = {
+                        ...storedUser,
+                        weight: storedUser.weight > 0 ? storedUser.weight : (onboarding?.currentWeight || 0),
+                        goalWeight: storedUser.goalWeight > 0 ? storedUser.goalWeight : (onboarding?.targetWeight || 0),
+                    };
+                    setUserData(resolvedUser);
+                    if (resolvedUser.avatar_url && !localAvatarRef.current) {
+                        const raw = resolvedUser.avatar_url;
                         if (raw.startsWith('http') || raw.startsWith('file://')) {
                             setAvatarUri(raw);
                         } else {
@@ -210,7 +230,12 @@ export default function ProfileScreen() {
 
                 // Persist the S3 key (not presigned URL — keys don't expire)
                 await saveUserData({ avatar_url: avatarKey });
+                // Sync to DynamoDB user model + public stats (fire-and-forget)
+                updateUserProfileInDB(userId, { avatar_url: avatarKey }).catch(() => {});
                 await updateMyPublicStats({ user_id: userId, avatar_url: avatarKey });
+
+                // Sync main User model with the new avatar key
+                userService.pushLocalProfileToCloud(userId).catch(e => console.warn('[USER] Avatar cloud sync failed', e));
             } catch (e) {
                 console.warn('[AVATAR] Upload failed:', e);
                 Alert.alert('Upload Error', 'Could not upload avatar. Please try again.');
@@ -267,9 +292,9 @@ export default function ProfileScreen() {
     };
 
     const stats = [
-        { label: t('profile.weight'), value: String(userData.weight), unit: 'kg' },
-        { label: t('profile.goal'), value: String(userData.goalWeight), unit: 'kg' },
-        { label: t('profile.streak'), value: String(userData.streak), unit: '🔥' },
+        { label: t('profile.weight'), value: userData.weight > 0 ? String(userData.weight) : '--', unit: 'kg' },
+        { label: t('profile.goal'), value: userData.goalWeight > 0 ? String(userData.goalWeight) : '--', unit: 'kg' },
+        { label: t('profile.streak'), value: String(streak), unit: '🔥' },
     ];
 
     const accountItems = [

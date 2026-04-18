@@ -13,6 +13,19 @@ const mealTypeToBackend = (type: MealType): 'breakfast' | 'lunch' | 'dinner' | '
     return type.toLowerCase() as 'breakfast' | 'lunch' | 'dinner' | 'snack';
 };
 
+/**
+ * Resilient async call with retry logic for network-glitch robustness
+ */
+const retryAsync = async <T>(fn: () => Promise<T>, retries = 2, delay = 1000): Promise<T> => {
+    try {
+        return await fn();
+    } catch (error) {
+        if (retries <= 0) throw error;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return retryAsync(fn, retries - 1, delay * 1.5);
+    }
+};
+
 export interface Meal {
     id: string;
     name: string;
@@ -120,14 +133,7 @@ const getDateNDaysAgo = (n: number): string => {
     return `${year}-${month}-${day}`;
 };
 
-// Retry helper: attempt fn up to `attempts` times with exponential backoff
-const retryAsync = async (fn: () => Promise<void>, attempts = 3): Promise<void> => {
-    for (let i = 0; i < attempts; i++) {
-        try { await fn(); return; } catch {
-            if (i < attempts - 1) await new Promise(r => setTimeout(r, 2000 * (i + 1)));
-        }
-    }
-};
+
 
 export const useMealStore = create<MealState>((set, get) => ({
     meals: [],
@@ -218,7 +224,7 @@ export const useMealStore = create<MealState>((set, get) => ({
                             total_log_days: totalDays,
                             last_log_date: newMeal.date,
                         }));
-                    }).catch(() => {});
+                    }).catch(() => { });
                 }
             } catch {
                 // Non-critical — don't block meal logging
@@ -366,7 +372,15 @@ export const useMealStore = create<MealState>((set, get) => ({
 
             const storedMeals = await AsyncStorage.getItem(STORAGE_KEY);
             if (storedMeals) {
-                const meals = JSON.parse(storedMeals);
+                const meals = JSON.parse(storedMeals).map((meal: any) => ({
+                    ...meal,
+                    ingredients: meal.ingredients?.map((ing: any) => {
+                        if (typeof ing === 'string' && ing.startsWith('{')) {
+                            try { return JSON.parse(ing); } catch { return { name: ing }; }
+                        }
+                        return ing;
+                    }),
+                }));
                 set({ meals });
             } else {
                 set({ meals: [] });
@@ -414,7 +428,12 @@ export const useMealStore = create<MealState>((set, get) => ({
                         carbs: (log.macros as any)?.carbs_g ?? 0,
                         fat: (log.macros as any)?.fat_g ?? 0,
                         servingSize: log.portion_unit || '1 phần',
-                        ingredients: log.ingredients as any[] | undefined,
+                        ingredients: (log.ingredients as any[] | undefined)?.map((ing: any) => {
+                            if (typeof ing === 'string' && ing.startsWith('{')) {
+                                try { return JSON.parse(ing); } catch { return { name: ing }; }
+                            }
+                            return ing;
+                        }),
                         time: log.timestamp ? new Date(log.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
                         date: log.date,
                         image_key: log.image_key ?? undefined,

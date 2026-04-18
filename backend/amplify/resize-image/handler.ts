@@ -44,13 +44,13 @@ export const handler: S3Handler = async (event) => {
 
       // 3. Resize — scale down to MAX_DIMENSION on the longest side, keep aspect ratio
       const resizedBuffer = await sharp(originalBuffer)
-        .rotate()                         // auto-rotate by EXIF orientation
+        .rotate()
         .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: 'inside', withoutEnlargement: true })
         .jpeg({ quality: JPEG_QUALITY, progressive: true })
         .toBuffer();
-
+        
       const originalKB = Math.round(originalBuffer.byteLength / 1024);
-      const resizedKB  = Math.round(resizedBuffer.byteLength / 1024);
+      const resizedKB = Math.round(resizedBuffer.byteLength / 1024);
       console.log(`Resized: ${originalKB}KB → ${resizedKB}KB`);
 
       // 4. Save compressed version to media/ (for food-detail display)

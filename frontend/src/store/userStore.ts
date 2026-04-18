@@ -15,6 +15,7 @@ export interface OnboardingData {
     activityLevel: string;
     dietaryRestrictions: string[];
     completed: boolean;
+    updated_at?: string; // ISO date string
 }
 
 export interface UserData {
@@ -30,6 +31,7 @@ export interface UserData {
     lastWeightUpdate?: string; // ISO date string
     lastMilestoneShown?: number; // streak value when last milestone was shown
     avatar_url?: string;
+    updated_at?: string; // ISO date string
 }
 
 const defaultOnboarding: OnboardingData = {
@@ -60,7 +62,7 @@ const defaultUser: UserData = {
 export const saveOnboardingData = async (data: Partial<OnboardingData>) => {
     try {
         const existing = await getOnboardingData();
-        const updated = { ...existing, ...data };
+        const updated = { ...existing, ...data, updated_at: new Date().toISOString() };
         await AsyncStorage.setItem(ONBOARDING_KEY, JSON.stringify(updated));
         return updated;
     } catch (e) {
@@ -90,7 +92,7 @@ export const getUserData = async (): Promise<UserData> => {
 export const saveUserData = async (data: Partial<UserData>) => {
     try {
         const existing = await getUserData();
-        const updated = { ...existing, ...data };
+        const updated = { ...existing, ...data, updated_at: new Date().toISOString() };
         await AsyncStorage.setItem(USER_KEY, JSON.stringify(updated));
         return updated;
     } catch (e) {

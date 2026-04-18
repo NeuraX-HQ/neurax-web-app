@@ -95,6 +95,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 userId: session.userId,
                 email: session.email,
             });
+
+            // Proactive sync on app resume/start
+            userService.syncOnboardingWithDB(session.userId, session.email).catch((e) => {
+                console.warn('[AUTH] checkSession sync failed:', e);
+            });
+
             return true;
         }
 

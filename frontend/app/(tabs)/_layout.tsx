@@ -14,6 +14,7 @@ import { CameraScannerWithLoading } from '../../src/components/CameraScannerWith
 import { SearchScanner } from '../../src/components/SearchScanner';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
 import { useMealStore } from '../../src/store/mealStore';
+import { toLocalIsoDate } from '../../src/utils/streak';
 
 const BOTTOM_INSET = Platform.OS === 'ios' ? 30 : 14;
 const NAV_HEIGHT = 62;
@@ -354,12 +355,12 @@ export default function TabsLayout() {
     const isAiCoachScreen = pathname.includes('ai-coach');
     const { t } = useAppLanguage();
     const { isAddMenuOpen, setAddMenuOpen, selectedMealType, setSelectedMealType, selectedDateStr } = useMealStore();
-    const todayIso = new Date().toISOString().split('T')[0];
+    const todayIso = toLocalIsoDate(new Date());
     const sd = selectedDateStr || todayIso;
     const isFutureDate = sd > todayIso;
-    // Yesterday: compute manually to avoid importing addDaysToIso
+    // Yesterday: compute manually using local time
     const yd = new Date(); yd.setDate(yd.getDate() - 1);
-    const yesterdayIso = yd.toISOString().split('T')[0];
+    const yesterdayIso = toLocalIsoDate(yd);
     const isTooOldDate = sd < yesterdayIso;
     const [menuOpen, setMenuOpen] = useState(false);
     const [directVoiceVisible, setDirectVoiceVisible] = useState(false);
@@ -459,10 +460,14 @@ export default function TabsLayout() {
                     <>
                         {/* AI Bubble pushed up */}
                         <Animated.View style={[styles.aiBubbleRow, getItemStyle(itemAnims[3])]}>
-                            <View style={styles.aiBubbleContainer}>
+                            <TouchableOpacity
+                                style={styles.aiBubbleContainer}
+                                activeOpacity={0.8}
+                                onPress={() => { closeMenu(); setTimeout(() => router.push('/(tabs)/ai-coach'), 300); }}
+                            >
                                 <BlurView intensity={70} tint="light" style={StyleSheet.absoluteFill} />
                                 <Ionicons name="chatbubble-ellipses-outline" size={24} color="#6366F1" />
-                            </View>
+                            </TouchableOpacity>
                         </Animated.View>
 
                         {/* Scan options: reversed so voice is highest */}

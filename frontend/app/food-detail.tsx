@@ -132,7 +132,14 @@ export default function FoodDetailScreen() {
     const foodData: NutritionInfo | null = currentFoodItem || (params.foodData ? JSON.parse(params.foodData as string) : null);
 
     const { language } = useAppLanguage();
-    const displayFoodName = foodData ? (language === 'vi' ? (foodData.name_vi || foodData.name) : (foodData.name_en || foodData.name)) : '';
+    // Helper to resolve name based on language
+    const resolveName = (item: any) => {
+        if (typeof item === 'string') return item;
+        if (!item) return '';
+        return language === 'vi' ? (item.name_vi || item.name) : (item.name_en || item.name);
+    };
+
+    const displayFoodName = foodData ? resolveName(foodData) : '';
 
     if (!foodData) {
         return (
@@ -412,27 +419,30 @@ export default function FoodDetailScreen() {
                             </TouchableOpacity>
                         </View>
                         {ingredientItems.map((ingredient, index) => {
-                            const isStringIngredient = typeof ingredient === 'string';
-                            let ingredientName = '';
-                            if (isStringIngredient) {
-                                ingredientName = ingredient;
-                            } else {
-                                ingredientName = language === 'vi' ? (ingredient.name_vi || ingredient.name) : (ingredient.name_en || ingredient.name);
+                            let item = ingredient;
+                            // Defensive check: if it's a JSON-like string, parse it locally
+                            if (typeof item === 'string' && (item as string).startsWith('{')) {
+                                try { item = JSON.parse(item); } catch { /* fallback to string */ }
                             }
+
+                            const isStringIngredient = typeof item === 'string';
+                            const ingredientName = resolveName(item);
+
                             const ingredientAmount = isStringIngredient
                                 ? ''
-                                : ingredient.estimated_g
-                                    ? `${ingredient.estimated_g} g`
-                                    : ingredient.amount || '';
-                            const ingredientKcal = !isStringIngredient && ingredient.calories !== undefined
-                                ? `${Math.round(ingredient.calories)} kcal`
+                                : item.estimated_g
+                                    ? `${Math.round(item.estimated_g * nutritionMultiplier)} g`
+                                    : item.amount || '';
+
+                            const ingredientKcal = !isStringIngredient && item.calories !== undefined
+                                ? `${Math.round(item.calories * nutritionMultiplier)} kcal`
                                 : '';
                             return (
                                 <View key={`${ingredientName}-${index}`} style={styles.macroDetailRow}>
                                     <View style={[
                                         styles.ingredientCheckbox,
-                                        !isStringIngredient && ingredient.source === 'database' && styles.ingredientCheckboxDB,
-                                        !isStringIngredient && ingredient.source === 'ai_estimated' && styles.ingredientCheckboxAI,
+                                        !isStringIngredient && item.source === 'database' && styles.ingredientCheckboxDB,
+                                        !isStringIngredient && item.source === 'ai_estimated' && styles.ingredientCheckboxAI,
                                     ]} />
                                     <Text style={styles.macroDetailLabel}>{ingredientName}</Text>
                                     {!!ingredientAmount && <Text style={styles.macroDetailSub}>{ingredientAmount}</Text>}

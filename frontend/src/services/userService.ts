@@ -1,6 +1,24 @@
 import { generateClient } from 'aws-amplify/api';
 import { type Schema } from '../../../backend/amplify/data/resource';
-import { getOnboardingData, OnboardingData, saveOnboardingData } from '../store/userStore';
+import { getOnboardingData, getUserData, OnboardingData, saveOnboardingData, saveUserData } from '../store/userStore';
+
+/** Tính calo mục tiêu từ dữ liệu onboarding (same formula as step9.tsx & home.tsx). */
+function computeDailyCalories(data: OnboardingData): number {
+    const age = data.age || 25;
+    let bmr = (10 * data.currentWeight) + (6.25 * data.height) - (5 * age);
+    bmr += data.gender === 'male' ? 5 : -161;
+    const activityMap: Record<string, number> = {
+        sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, extreme: 1.9,
+    };
+    const tdee = bmr * (activityMap[data.activityLevel] || 1.2);
+    let target = tdee;
+    if (data.goal === 'lose') {
+        target = Math.max(1200, tdee - (data.weightChangeSpeed * 1100));
+    } else if (data.goal === 'gain') {
+        target = tdee + (data.weightChangeSpeed * 1100);
+    }
+    return Math.round(target);
+}
 
 const client = generateClient<Schema>();
 
@@ -13,6 +31,60 @@ function generateFriendCode(): string {
     }
     return code;
 }
+
+/**
+ * Pushes the current local Profile/Onboarding state to the cloud.
+ * Run this after any successful local save to ensure sync.
+ */
+export const pushLocalProfileToCloud = async (userId: string) => {
+    try {
+        const [localOnboarding, localUserData, localUserCloud] = await Promise.all([
+            getOnboardingData(),
+            getUserData(),
+            client.models.user.get({ user_id: userId }) // Get current cloud state to merge
+        ]);
+
+        if (!localOnboarding.completed || !localOnboarding.name) {
+            console.log('[USER] Skipping sync: onboarding not complete');
+            return;
+        }
+
+        const existing = localUserCloud?.data;
+        const existingBio = existing?.biometric as any;
+        const existingGoal = existing?.goal as any;
+
+        const input: any = {
+            user_id: userId,
+            display_name: localOnboarding.name,
+            onboarding_status: localOnboarding.completed,
+            avatar_url: localUserData.avatar_url,
+            updated_at: new Date().toISOString(),
+            biometric: {
+                ...existingBio,
+                gender: localOnboarding.gender,
+                height_cm: localOnboarding.height,
+                weight_kg: localOnboarding.currentWeight,
+                active_level: localOnboarding.activityLevel,
+            },
+            goal: {
+                ...existingGoal,
+                target_weight_kg: localOnboarding.targetWeight,
+                daily_calories: computeDailyCalories(localOnboarding),
+            },
+            dietary_profile: {
+                ...(existing?.dietary_profile as any),
+                allergies: localOnboarding.dietaryRestrictions,
+            }
+        };
+
+        const { errors } = await client.models.user.update(input);
+        if (errors) console.error('[USER] Cloud sync failed:', errors);
+        else console.log('[USER] Cloud sync successful');
+
+    } catch (error) {
+        console.error('[USER] pushLocalProfileToCloud error:', error);
+    }
+};
 
 export const createUserProfile = async (userId: string, email: string, onboardingData?: OnboardingData) => {
     try {
@@ -35,8 +107,7 @@ export const createUserProfile = async (userId: string, email: string, onboardin
             };
             input.goal = {
                 target_weight_kg: onboardingData.targetWeight,
-                // Placeholder cho calo, có thể tính toán chính xác hơn sau
-                daily_calories: 2000, 
+                daily_calories: computeDailyCalories(onboardingData),
             };
             input.dietary_profile = {
                 allergies: onboardingData.dietaryRestrictions,
@@ -76,55 +147,73 @@ export const fetchUserProfile = async (userId: string) => {
     }
 };
 
+/**
+ * Update weight + dailyCalories in DynamoDB after weekly weight check-in
+ */
+export const updateWeightInDB = async (userId: string, weight: number, dailyCalories: number) => {
+    try {
+        const existing = await fetchUserProfile(userId);
+        const bio = (existing?.biometric as any) || {};
+        const goal = (existing?.goal as any) || {};
+        await client.models.user.update({
+            user_id: userId,
+            biometric: { ...bio, weight_kg: weight },
+            goal: { ...goal, daily_calories: dailyCalories },
+            updated_at: new Date().toISOString(),
+        });
+    } catch (error) {
+        console.error('updateWeightInDB error:', error);
+    }
+};
+
+/**
+ * Update top-level user fields (avatar, display_name) in DynamoDB
+ */
+export const updateUserProfileInDB = async (userId: string, updates: {
+    display_name?: string;
+    avatar_url?: string;
+}) => {
+    try {
+        await client.models.user.update({
+            user_id: userId,
+            ...updates,
+            updated_at: new Date().toISOString(),
+        });
+    } catch (error) {
+        console.error('updateUserProfileInDB error:', error);
+    }
+};
+
 export const syncOnboardingWithDB = async (userId: string, email: string) => {
     try {
-        const localData = await getOnboardingData();
-        const localHasData = localData.completed && localData.name !== '';
-
-        // Kiểm tra xem user đã tồn tại trong DB chưa
+        const localOnboarding = await getOnboardingData();
+        const localUser = await getUserData();
         const existingUser = await fetchUserProfile(userId);
 
         if (existingUser) {
-            // Backfill friend_code for existing users who don't have one
+            // Backfill friend_code if missing
             if (!existingUser.friend_code) {
-                try {
-                    await client.models.user.update({
-                        user_id: userId,
-                        friend_code: generateFriendCode(),
-                        updated_at: new Date().toISOString(),
-                    });
-                } catch (e) {
-                    console.warn('[USER] Failed to backfill friend_code:', e);
-                }
+                client.models.user.update({
+                    user_id: userId,
+                    friend_code: generateFriendCode(),
+                    updated_at: new Date().toISOString(),
+                }).catch(() => {});
             }
 
-            if (localHasData) {
-                // Local có data thật → push lên cloud
-                const { data: updatedUser } = await client.models.user.update({
-                    user_id: userId,
-                    display_name: localData.name,
-                    onboarding_status: localData.completed,
-                    biometric: {
-                        gender: localData.gender,
-                        height_cm: localData.height,
-                        weight_kg: localData.currentWeight,
-                        active_level: localData.activityLevel,
-                    },
-                    goal: {
-                        target_weight_kg: localData.targetWeight,
-                        daily_calories: 2000,
-                    },
-                    dietary_profile: {
-                        allergies: localData.dietaryRestrictions,
-                    },
-                    updated_at: new Date().toISOString(),
-                });
-                return updatedUser;
-            } else {
-                // Local trống (mới login / đổi device) → restore từ cloud
+            const localUpdatedAt = localUser.updated_at || localOnboarding.updated_at || '';
+            const cloudUpdatedAt = existingUser.updated_at || '';
+
+            console.log(`[USER] Sync Check - Local: ${localUpdatedAt}, Cloud: ${cloudUpdatedAt}`);
+
+            // CASE 1: Cloud is newer OR Local is empty/stale (New Device / Re-login)
+            if (cloudUpdatedAt > localUpdatedAt || (!localOnboarding.completed && existingUser.onboarding_status)) {
+                console.log('[USER] Cloud is newer. PULLING from cloud...');
+                
                 const bio = existingUser.biometric as any;
                 const goal = existingUser.goal as any;
                 const diet = existingUser.dietary_profile as any;
+
+                // Sync Onboarding Store
                 await saveOnboardingData({
                     name: existingUser.display_name || '',
                     gender: bio?.gender || '',
@@ -134,12 +223,63 @@ export const syncOnboardingWithDB = async (userId: string, email: string) => {
                     targetWeight: goal?.target_weight_kg || 55,
                     dietaryRestrictions: diet?.allergies || [],
                     completed: existingUser.onboarding_status ?? false,
+                    updated_at: cloudUpdatedAt, // Sync the timestamp too
                 });
+
+                // Sync User Store
+                await saveUserData({
+                    name: existingUser.display_name || '',
+                    dailyCalories: Number(goal?.daily_calories) || 1800,
+                    weight: Number(bio?.weight_kg) || 0,
+                    goalWeight: Number(goal?.target_weight_kg) || 0,
+                    avatar_url: existingUser.avatar_url || '',
+                    updated_at: cloudUpdatedAt, // Sync the timestamp too
+                });
+
                 return existingUser;
+            } 
+            
+            // CASE 2: Local is newer (User edited data while offline or on this device recently)
+            if (localUpdatedAt > cloudUpdatedAt && localOnboarding.completed) {
+                console.log('[USER] Local is newer. PUSHING to cloud...');
+                
+                const existingBio = existingUser.biometric as any;
+                const existingGoal = existingUser.goal as any;
+                const existingDiet = existingUser.dietary_profile as any;
+
+                const { data: updatedUser } = await client.models.user.update({
+                    user_id: userId,
+                    display_name: localOnboarding.name,
+                    onboarding_status: localOnboarding.completed,
+                    avatar_url: localUser.avatar_url,
+                    biometric: {
+                        ...existingBio,
+                        gender: localOnboarding.gender,
+                        height_cm: localOnboarding.height,
+                        weight_kg: localOnboarding.currentWeight,
+                        active_level: localOnboarding.activityLevel,
+                    },
+                    goal: {
+                        ...existingGoal,
+                        target_weight_kg: localOnboarding.targetWeight,
+                        daily_calories: computeDailyCalories(localOnboarding),
+                    },
+                    dietary_profile: {
+                        ...existingDiet,
+                        allergies: localOnboarding.dietaryRestrictions,
+                    },
+                    updated_at: localUpdatedAt,
+                });
+                return updatedUser;
             }
+
+            console.log('[USER] Sync - Already up to date');
+            return existingUser;
+
         } else {
-            // User chưa tồn tại trong DB → tạo mới
-            return await createUserProfile(userId, email, localHasData ? localData : undefined);
+            // User doesn't exist in DB -> Create new
+            const localHasData = localOnboarding.completed && localOnboarding.name !== '';
+            return await createUserProfile(userId, email, localHasData ? localOnboarding : undefined);
         }
     } catch (error) {
         console.error('Lỗi syncOnboardingWithDB:', error);

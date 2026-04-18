@@ -31,6 +31,7 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
     const [transcript, setTranscript] = useState('');
     const [analyzing, setAnalyzing] = useState(false);
     const [foodData, setFoodData] = useState<NutritionInfo | null>(null);
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
     useEffect(() => {
         if (visible) {
@@ -38,6 +39,7 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
             setTranscript('');
             setFoodData(null);
             setAnalyzing(false);
+            setErrorMsg(null);
         }
     }, [visible]);
 
@@ -45,6 +47,7 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
         setListening(true);
         setTranscript('');
         setFoodData(null);
+        setErrorMsg(null);
 
         // Start audio recording
         console.log('VoiceModal: Starting audio recording...');
@@ -108,14 +111,9 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
             if (voiceResult.success && voiceResult.data) {
                 if (voiceResult.transcript) setTranscript(voiceResult.transcript);
                 setFoodData(voiceResult.data);
-            } else if (voiceResult.transcript) {
-                // AI nhận diện được giọng nói nhưng cần hỏi thêm (clarify)
-                Alert.alert(
-                    `🎙️ "${voiceResult.transcript}"`,
-                    voiceResult.error || t('voice.error.cantAnalyze'),
-                );
             } else {
-                Alert.alert(t('common.error'), voiceResult.error || t('voice.error.cantAnalyze'));
+                if (voiceResult.transcript) setTranscript(voiceResult.transcript);
+                setErrorMsg(voiceResult.error || t('voice.error.cantAnalyze'));
             }
         } catch (error) {
             Alert.alert(t('common.error'), t('voice.error.analysisFailed'));
@@ -203,7 +201,25 @@ export function VoiceModal({ visible, onClose, onFoodDetected }: VoiceModalProps
                         </View>
                     )}
 
-                    {!!transcript && !foodData && !analyzing && (
+                    {/* Error: food not detected */}
+                    {errorMsg && !analyzing && (
+                        <View style={[vStyles.transcriptBox, { backgroundColor: '#FEF2F2' }]}>
+                            {!!transcript && (
+                                <>
+                                    <Text style={vStyles.transcriptLabel}>{t('voice.youSaid')}</Text>
+                                    <Text style={vStyles.transcriptText}>"{transcript}"</Text>
+                                </>
+                            )}
+                            <Text style={{ fontSize: 14, color: '#DC2626', textAlign: 'center', marginBottom: 16 }}>
+                                {errorMsg}
+                            </Text>
+                            <TouchableOpacity style={[vStyles.searchBtn, { backgroundColor: Colors.primary }]} onPress={startListening}>
+                                <Text style={vStyles.searchBtnText}>{t('voice.retry')}</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {!!transcript && !foodData && !analyzing && !errorMsg && (
                         <View style={vStyles.transcriptBox}>
                             <Text style={vStyles.transcriptLabel}>{t('voice.youSaid')}</Text>
                             <Text style={vStyles.transcriptText}>"{transcript}"</Text>

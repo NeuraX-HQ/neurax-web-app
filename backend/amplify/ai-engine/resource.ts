@@ -6,4 +6,5 @@ export const aiEngine = defineFunction({
   runtime: 22,
   memoryMB: 512,
   timeoutSeconds: 120, // voiceToFood: Transcribe polling + Bedrock can exceed 60s
+  resourceGroupName: 'data',
 });

@@ -7,7 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { analyzeFoodImage, uploadFoodImage } from '../services/aiService';
+import { analyzeFoodImage, analyzeFoodLabel, scanBarcode, uploadFoodImage } from '../services/aiService';
 import { useRouter } from 'expo-router';
 import { useAppLanguage } from '../i18n/LanguageProvider';
 import { BlurView } from 'expo-blur';
@@ -162,6 +162,12 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
         return dataUrl.split(',')[1] || null;
     }, []);
 
+    const analyzeByMode = (s3Key: string) => {
+        if (mode === 'LABEL') return analyzeFoodLabel(s3Key);
+        if (mode === 'BARCODE') return scanBarcode(s3Key);
+        return analyzeFoodImage(s3Key);
+    };
+
     const handleGallery = async () => {
         if (analyzing) return;
 
@@ -185,7 +191,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
 
             // 4. Upload & analyze
             const s3Key = await uploadFoodImage({ uri: asset.uri });
-            const analysisResult = await analyzeFoodImage(s3Key);
+            const analysisResult = await analyzeByMode(s3Key);
             if (analysisResult.success && analysisResult.data) {
                 onClose();
                 router.push({
@@ -232,7 +238,7 @@ export function CameraScanner({ visible, onClose, onAnalyzing }: CameraScannerPr
                 onAnalyzing?.(true);
                 s3Key = await uploadFoodImage({ uri: photo.uri });
             }
-            const analysisResult = await analyzeFoodImage(s3Key);
+            const analysisResult = await analyzeByMode(s3Key);
             if (analysisResult.success && analysisResult.data) {
                 onClose();
                 router.push({

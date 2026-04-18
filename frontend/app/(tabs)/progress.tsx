@@ -326,11 +326,13 @@ export default function ProgressScreen() {
     }, [insightLoading, insightText, daysLogged, dailyAvg, thisWeekTotal, weekProtein, weekCarbs, weekFat, consistency, mealBreakdown]);
 
     const trendPath = useMemo(() => {
-        const filled = monthlyPoints.map((v) => v || 100);
-        const maxV = Math.max(...filled, 1);
-        const pts = filled.map((v, i) => ({
-            x: (i / (filled.length - 1)) * svgWidth,
-            y: svgHeight - (v / maxV) * (svgHeight - 12) - 6,
+        const hasData = monthlyPoints.some((v) => v > 0);
+        const maxV = hasData ? Math.max(...monthlyPoints.filter((v) => v > 0), calorieGoal, 1) : calorieGoal || 2000;
+        const pts = monthlyPoints.map((v, i) => ({
+            x: (i / (monthlyPoints.length - 1)) * svgWidth,
+            y: v > 0
+                ? svgHeight - (v / maxV) * (svgHeight - 12) - 6
+                : svgHeight - 6,  // no data → plot at bottom
         }));
         let d = `M ${pts[0].x},${pts[0].y}`;
         for (let i = 1; i < pts.length; i++) {
@@ -476,7 +478,7 @@ export default function ProgressScreen() {
                         </View>
                     </View>
                     <View style={styles.trendLabels}>
-                        {[4, 3, 2, 1].map((n) => (
+                        {[1, 2, 3, 4].map((n) => (
                             <Text key={n} style={styles.trendLabelText}>{t('progress.monthly.week', { n })}</Text>
                         ))}
                     </View>

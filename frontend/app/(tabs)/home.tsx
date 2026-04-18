@@ -12,6 +12,7 @@ import { drinkTypes } from '../../src/data/constants';
 import { CalorieGauge } from '../../src/components/CalorieGauge';
 import { useMealStore, Meal } from '../../src/store/mealStore';
 import { getOnboardingData, getUserData, saveUserData } from '../../src/store/userStore';
+import { updateWeightInDB } from '../../src/services/userService';
 import { useAuthStore } from '../../src/store/authStore';
 import { useNotificationStore } from '../../src/store/notificationStore';
 import { getUrl } from 'aws-amplify/storage';
@@ -48,6 +49,71 @@ const addDaysToIso = (iso: string, days: number) => {
 
 const startOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
 
+type WeekItemProps = {
+    week: { iso: string; weekdayIndex: number; day: number }[];
+    selectedDateStr: string;
+    todayIso: string;
+    earliestLogDate: string;
+    caloriesByDate: Record<string, number>;
+    dailyCalorieTarget: number;
+    weekdayLabels: string[];
+    windowWidth: number;
+    onSelectDate: (iso: string) => void;
+};
+
+const WeekItem = React.memo(function WeekItem({
+    week, selectedDateStr, todayIso, earliestLogDate,
+    caloriesByDate, dailyCalorieTarget, weekdayLabels, windowWidth, onSelectDate,
+}: WeekItemProps) {
+    return (
+        <View style={[styles.weekContainer, { width: windowWidth }]}>
+            {week.map(item => {
+                const isSelected = item.iso === selectedDateStr;
+                const isPast = item.iso < todayIso;
+                const isToday = item.iso === todayIso;
+                const isFuture = item.iso > todayIso;
+                const isAfterOrOnStart = item.iso >= earliestLogDate;
+
+                let ringStyle = {};
+                if (isPast && isAfterOrOnStart) {
+                    const eaten = caloriesByDate[item.iso];
+                    if (eaten === undefined) {
+                        ringStyle = styles.dayRingDashed;
+                    } else {
+                        const excess = eaten - dailyCalorieTarget;
+                        if (excess <= 100) ringStyle = styles.dayRingGreen;
+                        else if (excess <= 200) ringStyle = styles.dayRingYellow;
+                        else ringStyle = styles.dayRingRed;
+                    }
+                }
+
+                return (
+                    <View key={item.iso} style={styles.dayContainer}>
+                        <View style={[styles.dayRingWrapper, ringStyle]}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.dayItem,
+                                    isSelected && styles.dayItemSelected,
+                                    !isSelected && isToday && styles.dayItemToday,
+                                    isFuture && !isSelected && styles.dayItemFuture,
+                                ]}
+                                onPress={() => onSelectDate(item.iso)}
+                            >
+                                <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
+                                    {weekdayLabels[item.weekdayIndex]}
+                                </Text>
+                                <Text style={[styles.dayDate, isSelected && styles.dayDateSelected]}>
+                                    {item.day}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                );
+            })}
+        </View>
+    );
+});
+
 export default function HomeScreen() {
     const router = useRouter();
     const { width: windowWidth } = useWindowDimensions();
@@ -60,9 +126,9 @@ export default function HomeScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            // Only scroll to current week, but don't force select today
-            // so the user stays on the date they were just logging for.
-            flatListRef.current?.scrollToIndex({ index: 500, animated: true });
+            // Quietly scroll to current week if ref exists.
+            // Using animated: false to avoid "snapping" effect on focus gain.
+            flatListRef.current?.scrollToIndex({ index: 26, animated: false });
         }, [])
     );
 
@@ -91,7 +157,7 @@ export default function HomeScreen() {
 
     // Meal store
     const {
-        meals, activities, loadMeals, getMealsByDate, removeMeal,
+        meals, activities, loadMeals, syncWithCloud, getMealsByDate, removeMeal,
         selectedDateStr: storeSelectedDateStr,
         setSelectedDateStr,
         setSelectedMealType,
@@ -136,7 +202,8 @@ export default function HomeScreen() {
         currentMonday.setDate(baseDate.getDate() - dayOfWeek);
 
         const weeks = [];
-        for (let weekOffset = -500; weekOffset <= 500; weekOffset++) {
+        // Reduced from 500 to 26 weeks each way (~1 year total) for stability
+        for (let weekOffset = -26; weekOffset <= 26; weekOffset++) {
             const week = [];
             for (let i = 0; i < 7; i++) {
                 const d = new Date(currentMonday);
@@ -198,14 +265,20 @@ export default function HomeScreen() {
         setRefreshing(true);
         try {
             await loadMeals();
+            await syncWithCloud();
         } finally {
             setRefreshing(false);
         }
-    }, [loadMeals]);
+    }, [loadMeals, syncWithCloud]);
 
     const withAutoClose = useCallback((action: () => void) => () => {
         if (closeOpenRow()) return;
         action();
+    }, []);
+
+    const handleSelectDate = useCallback((iso: string) => {
+        if (closeOpenRow()) return;
+        setSelectedDateStr(iso);
     }, []);
 
     const stats = useMemo(() => displayedMeals.reduce(
@@ -335,7 +408,7 @@ export default function HomeScreen() {
             if (now - lastDataLoadedRef.current < 30_000) return;
             lastDataLoadedRef.current = now;
 
-            loadMeals();
+            loadMeals().then(() => syncWithCloud());
             const fetchUserData = async () => {
                 const savedWater = await AsyncStorage.getItem(WATER_KEY);
                 if (savedWater) setWaterByDate(JSON.parse(savedWater));
@@ -366,7 +439,7 @@ export default function HomeScreen() {
                 }
             };
             fetchUserData();
-        }, [loadMeals])
+        }, [loadMeals, syncWithCloud])
     );
 
     // Smart Notification Modal trigger logic
@@ -464,6 +537,13 @@ export default function HomeScreen() {
                 setNewCalories(recalculated);
                 // Small delay so the weight modal closes first
                 setTimeout(() => setShowAiModal(true), 400);
+            } else {
+                // Small diff — still persist the recalculated value
+                setDailyCalorieTarget(recalculated);
+                await saveUserData({ dailyCalories: recalculated });
+                // Sync to DynamoDB (fire-and-forget)
+                const userId = require('../../src/store/authStore').useAuthStore.getState().userId;
+                if (userId) updateWeightInDB(userId, newWeight, recalculated);
             }
         }
     };
@@ -473,6 +553,9 @@ export default function HomeScreen() {
         setDailyCalorieTarget(newCalories);
         await saveUserData({ dailyCalories: newCalories });
         setShowAiModal(false);
+        // Sync to DynamoDB (fire-and-forget)
+        const userId = require('../../src/store/authStore').useAuthStore.getState().userId;
+        if (userId) updateWeightInDB(userId, userWeight, newCalories);
     };
 
     // Hydration modal state
@@ -729,59 +812,32 @@ export default function HomeScreen() {
                         pagingEnabled
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={{ paddingVertical: 8 }}
-                        initialScrollIndex={500}
+                        initialScrollIndex={26}
                         getItemLayout={(_, index) => ({ length: windowWidth, offset: windowWidth * index, index })}
-                        renderItem={({ item: week }: { item: { iso: string; weekdayIndex: number; day: number }[] }) => (
-                            <View style={[styles.weekContainer, { width: windowWidth }]}>
-                                {week.map(item => {
-                                    const isSelected = item.iso === selectedDateStr;
-                                    const isPast = item.iso < todayIso;
-                                    const isToday = item.iso === todayIso;
-                                    const isFuture = item.iso > todayIso;
-                                    const isAfterOrOnStart = item.iso >= earliestLogDate;
-
-                                    let ringStyle = {};
-                                    if (isPast && isAfterOrOnStart) {
-                                        const eaten = caloriesByDate[item.iso];
-                                        if (eaten === undefined) {
-                                            ringStyle = styles.dayRingDashed;
-                                        } else {
-                                            const excess = eaten - dailyCalorieTarget;
-                                            if (excess <= 100) {
-                                                ringStyle = styles.dayRingGreen;
-                                            } else if (excess <= 200) {
-                                                ringStyle = styles.dayRingYellow;
-                                            } else {
-                                                ringStyle = styles.dayRingRed;
-                                            }
-                                        }
-                                    }
-
-                                    return (
-                                        <View key={item.iso} style={styles.dayContainer}>
-                                            <View style={[styles.dayRingWrapper, ringStyle]}>
-                                                <TouchableOpacity
-                                                    style={[
-                                                        styles.dayItem,
-                                                        isSelected && styles.dayItemSelected,
-                                                        !isSelected && isToday && styles.dayItemToday,
-                                                        isFuture && !isSelected && styles.dayItemFuture,
-                                                    ]}
-                                                    onPress={withAutoClose(() => setSelectedDateStr(item.iso))}
-                                                >
-                                                    <Text style={[styles.dayLabel, isSelected && styles.dayLabelSelected]}>
-                                                        {weekdayLabels[item.weekdayIndex]}
-                                                    </Text>
-                                                    <Text style={[styles.dayDate, isSelected && styles.dayDateSelected]}>
-                                                        {item.day}
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            </View>
-                                        </View>
-                                    );
-                                })}
-                            </View>
-                        )}
+                        initialNumToRender={1}
+                        maxToRenderPerBatch={2}
+                        windowSize={3}
+                        onScrollToIndexFailed={(info) => {
+                            setTimeout(() => {
+                                flatListRef.current?.scrollToOffset({
+                                    offset: info.averageItemLength * info.index,
+                                    animated: false
+                                });
+                            }, 100);
+                        }}
+                        renderItem={useCallback(({ item: week }: { item: { iso: string; weekdayIndex: number; day: number }[] }) => (
+                            <WeekItem
+                                week={week}
+                                selectedDateStr={selectedDateStr}
+                                todayIso={todayIso}
+                                earliestLogDate={earliestLogDate}
+                                caloriesByDate={caloriesByDate}
+                                dailyCalorieTarget={dailyCalorieTarget}
+                                weekdayLabels={weekdayLabels}
+                                windowWidth={windowWidth}
+                                onSelectDate={handleSelectDate}
+                            />
+                        ), [selectedDateStr, todayIso, earliestLogDate, caloriesByDate, dailyCalorieTarget, weekdayLabels, windowWidth, handleSelectDate])}
                     />
 
                     {/* Calorie Card */}
@@ -1187,8 +1243,8 @@ export default function HomeScreen() {
                                                     setStripBaseDateStr(cell.iso);
                                                     setShowMonthPicker(false);
                                                     setTimeout(() => {
-                                                        flatListRef.current?.scrollToIndex({ index: 500, animated: true });
-                                                    }, 100);
+                                                        flatListRef.current?.scrollToIndex({ index: 26, animated: true });
+                                                    }, 150);
                                                 }}
                                             >
                                                 <Text
@@ -1228,7 +1284,12 @@ export default function HomeScreen() {
                 lastWeight={lastWeight}
                 lastUpdateDate={lastWeightUpdateDate}
                 onSave={handleWeightSave}
-                onDismiss={() => setShowWeightModal(false)}
+                onDismiss={async () => {
+                    // Mark as seen today so the modal does not reappear on the same day
+                    // after app restart (does not change the stored weight value)
+                    await saveUserData({ lastWeightUpdate: new Date().toISOString() });
+                    setShowWeightModal(false);
+                }}
             />
 
             <AiAdjustmentModal

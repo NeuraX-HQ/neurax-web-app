@@ -7,10 +7,11 @@ import { saveOnboardingData, getOnboardingData, OnboardingData, saveUserData } f
 import { useAuthStore } from '../../src/store/authStore';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppLanguage } from '../../src/i18n/LanguageProvider';
+import * as userService from '../../src/services/userService';
 
 export default function Step9() {
     const router = useRouter();
-    const { isAuthenticated } = useAuthStore();
+    const { isAuthenticated, userId, email } = useAuthStore();
     const { t } = useAppLanguage();
     const [data, setData] = useState<OnboardingData | null>(null);
     const fadeAnim = useState(new Animated.Value(0))[0];
@@ -63,6 +64,11 @@ export default function Step9() {
             dailyCalories: finalCalories,
             age: data?.age || 25,
         });
+
+        if (isAuthenticated && userId && email) {
+            userService.syncOnboardingWithDB(userId, email).catch(e => console.warn('[ONBOARDING] sync failed', e));
+        }
+
         if (isAuthenticated) {
             router.replace('/(tabs)/home');
         } else {
